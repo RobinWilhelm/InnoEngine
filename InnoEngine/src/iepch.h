@@ -16,7 +16,7 @@
 #include <cstdint>
 
 #include "SDL3/SDL.h"
-#include "Assert.h"
+#include "IE_Assert.h"
 #include "Log.h"
 
 #include "imgui.h"

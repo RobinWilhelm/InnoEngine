@@ -1,7 +1,7 @@
 #pragma once
 
 #include "SDL3/SDL_log.h"
-#include "Assert.h"
+#include "IE_Assert.h"
 
 #include <vector>
 #include <string>
