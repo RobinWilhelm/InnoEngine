@@ -2,6 +2,12 @@
 
 set(Sandbox_Sources 
 	"src/main.cpp"
+	
+	"src/Sandbox.h"
+	"src/Sandbox.cpp"
+	"src/DemoScene.h"
+	"src/DemoScene.cpp"
+
 )
 
 PREPEND(Sandbox_Sources)

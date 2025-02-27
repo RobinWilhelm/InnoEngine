@@ -4,78 +4,84 @@
 #include <filesystem>
 #include <memory>
 
-enum class AssetLoadStatus : uint16_t
+namespace InnoEngine
 {
-    Empty = 0,
-    NotFound,
-    Queued,
-    Loading,
-    LoadingFailed,
-    Finished,
-    Ready,
-};
-
-class AssetHandle
-{
-    friend class AssetManager;
-
-public:
-    AssetHandle() = default;
-
-    AssetHandle( const AssetHandle& other )
+    enum class AssetLoadStatus : uint16_t
     {
-        m_loadStatus.store( other.m_loadStatus.load( std::memory_order_relaxed ), std::memory_order_relaxed );
-        m_assetUID = other.m_assetUID;
-    }
+        Empty = 0,
+        NotFound,
+        Queued,
+        Loading,
+        LoadingFailed,
+        Finished,
+        Ready,
+    };
 
-    AssetHandle& operator=( const AssetHandle& other )
+    class AssetHandle
     {
-        if ( this == &other )
+        friend class AssetManager;
+
+    public:
+        AssetHandle() = default;
+
+        AssetHandle( const AssetHandle& other )
+        {
+            m_loadStatus.store( other.m_loadStatus.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+            m_assetUID = other.m_assetUID;
+        }
+
+        AssetHandle& operator=( const AssetHandle& other )
+        {
+            if ( this == &other )
+                return *this;
+
+            m_loadStatus.store( other.m_loadStatus.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+            m_assetUID = other.m_assetUID;
             return *this;
-
-        m_loadStatus.store( other.m_loadStatus.load( std::memory_order_relaxed ), std::memory_order_relaxed );
-        m_assetUID = other.m_assetUID;
-        return *this;
-    }
-
-    ~AssetHandle() = default;
-
-    bool loaded()
-    {
-        switch ( m_loadStatus.load( std::memory_order_relaxed ) ) {
-        case AssetLoadStatus::Ready: return true;
-        case AssetLoadStatus::Finished:
-        {    // force a happend-before synchronization with the loader thread
-            std::atomic_thread_fence( std::memory_order_acquire );
-            m_loadStatus.store( AssetLoadStatus::Ready, std::memory_order_relaxed );
-            return true;
         }
-        default: return false;
+
+        ~AssetHandle() = default;
+
+        bool loaded()
+        {
+            switch ( m_loadStatus.load( std::memory_order_relaxed ) ) {
+            case AssetLoadStatus::Ready:
+                return true;
+            case AssetLoadStatus::Finished:
+            {    // force a happend-before synchronization with the loader thread
+                std::atomic_thread_fence( std::memory_order_acquire );
+                m_loadStatus.store( AssetLoadStatus::Ready, std::memory_order_relaxed );
+                return true;
+            }
+            default:
+                return false;
+            }
+            return false;
         }
-        return false;
-    }
 
-protected:
-    InternalAssetUID             m_assetUID   = 0;
-    std::atomic<AssetLoadStatus> m_loadStatus = AssetLoadStatus::Empty;
-};
+    protected:
+        InternalAssetUID             m_assetUID   = 0;
+        std::atomic<AssetLoadStatus> m_loadStatus = AssetLoadStatus::Empty;
+    };
 
-template <typename T>
-class AssetView : public AssetHandle
-{
-    friend class AssetRepository<T>;
-
-public:
-    std::shared_ptr<T> get()
+    template <typename T>
+    class AssetView : public AssetHandle
     {
-        return ms_repository->get_asset( getUID() );
-    }
+        friend class AssetRepository<T>;
 
-    AssetUID<T> getUID() const
-    {
-        return AssetUID<T>( m_assetUID );
-    }
+    public:
+        std::shared_ptr<T> get()
+        {
+            return ms_repository->get_asset( getUID() );
+        }
 
-private:
-    static inline AssetRepository<T>* ms_repository = nullptr;
-};
+        AssetUID<T> getUID() const
+        {
+            return AssetUID<T>( m_assetUID );
+        }
+
+    private:
+        static inline AssetRepository<T>* ms_repository = nullptr;
+    };
+
+}    // namespace InnoEngine

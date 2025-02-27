@@ -1,33 +1,32 @@
 #include "iepch.h"
 #include "Window.h"
 
-std::optional<std::unique_ptr<Window>> Window::create( const WindowCreationParameters& creationParams )
+namespace InnoEngine
 {
-    std::unique_ptr<Window> window( new Window() );
-    window->m_title  = creationParams.title;
-    window->m_width  = creationParams.width;
-    window->m_height = creationParams.height;
-    window->m_flags  = creationParams.flags;
+    auto Window::create( const CreationParams& creationParams ) -> std::optional<std::unique_ptr<Window>>
+    {
+        std::unique_ptr<Window> window( new Window() );
+        window->m_sdlWindow = SDL_CreateWindow( creationParams.title.c_str(), creationParams.width, creationParams.height, creationParams.flags );
+        if ( window->m_sdlWindow == nullptr )
+            return std::nullopt;
 
-    window->m_sdlWindow = SDL_CreateWindow( window->m_title.c_str(), window->m_width, window->m_height, window->m_flags );
-    if ( window->m_sdlWindow == nullptr )
-        return std::nullopt;
+        window->m_params = creationParams;
+        IE_LOG_INFO( "Created Window: {} x {}", creationParams.width, creationParams.height );
+        return window;
+    }
 
-    IE_LOG_INFO("Created Window: %ux%u", window->m_width, window->m_height);
-    return window;
-}
+    int Window::width() const
+    {
+        return static_cast<int>( m_params.width );
+    }
 
-uint32_t Window::get_width() const
-{
-    return m_width;
-}
+    int Window::height() const
+    {
+        return static_cast<int>( m_params.height );
+    }
 
-uint32_t Window::get_height() const
-{
-    return m_height;
-}
-
-SDL_Window* Window::get_sdlwindow() const
-{
-    return m_sdlWindow;
-}
+    auto Window::get_sdlwindow() const -> SDL_Window*
+    {
+        return m_sdlWindow;
+    }
+}    // namespace InnoEngine

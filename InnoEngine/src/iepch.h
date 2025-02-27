@@ -13,6 +13,7 @@
 #include <type_traits>
 #include <typeindex>
 #include <algorithm>
+#include <cstdint>
 
 #include "SDL3/SDL.h"
 #include "Assert.h"
@@ -20,6 +21,9 @@
 
 #include "imgui.h"
 
-
 #include "SimpleMath.h"
 namespace DXSM = DirectX::SimpleMath;
+
+// todo: put somewhere else
+
+

@@ -4,8 +4,8 @@ set(IE_PCH_SOURCE "src/iepch.cpp")
 
 set(InnoEngine_Sources 
 	"${IE_PCH}"	
-	"${IE_PCH_SOURCE}"
-	"src/EntryPoint.cpp"  
+	"${IE_PCH_SOURCE}"  
+	"src/BaseTypes.h"
 	"src/Application.h"
 	"src/Application.cpp"
 	"src/Renderer.h"

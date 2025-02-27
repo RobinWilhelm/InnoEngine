@@ -1,51 +1,55 @@
 #pragma once
 
-class Application;
-class AssetManager;
-class GPURenderer;
-class OrthographicCamera;
-
-class CoreAPI
+namespace InnoEngine
 {
-    friend class Application;
+    class Application;
+    class AssetManager;
+    class GPURenderer;
+    class OrthographicCamera;
 
-private:
-    CoreAPI()  = default;
-    ~CoreAPI() = default;
-
-    static CoreAPI& get_instance()
+    class CoreAPI
     {
-        static CoreAPI coreapi;
-        return coreapi;
-    }
+        friend class Application;
 
-public:
-    CoreAPI( const CoreAPI& )            = delete;
-    CoreAPI& operator=( const CoreAPI& ) = delete;
+    private:
+        CoreAPI()  = default;
+        ~CoreAPI() = default;
 
-    static Application* get_application()
-    {
-        return get_instance().m_app;
-    }
+        static CoreAPI& get_instance()
+        {
+            static CoreAPI coreapi;
+            return coreapi;
+        }
 
-    static AssetManager* get_assetmanager()
-    {
-        return get_instance().m_assetManager;
-    }
+    public:
+        CoreAPI( const CoreAPI& )            = delete;
+        CoreAPI& operator=( const CoreAPI& ) = delete;
 
-    static GPURenderer* get_gpurenderer()
-    {
-        return get_instance().m_renderer;
-    }
+        static Application* get_application()
+        {
+            return get_instance().m_app;
+        }
 
-    static OrthographicCamera* get_camera()
-    {
-        return get_instance().m_camera;
-    }
+        static AssetManager* get_assetmanager()
+        {
+            return get_instance().m_assetManager;
+        }
 
-private:
-    Application*        m_app          = nullptr;
-    AssetManager*       m_assetManager = nullptr;
-    GPURenderer*        m_renderer     = nullptr;
-    OrthographicCamera* m_camera       = nullptr;
-};
+        static GPURenderer* get_gpurenderer()
+        {
+            return get_instance().m_renderer;
+        }
+
+        static OrthographicCamera* get_camera()
+        {
+            return get_instance().m_camera;
+        }
+
+    private:
+        Application*        m_app          = nullptr;
+        AssetManager*       m_assetManager = nullptr;
+        GPURenderer*        m_renderer     = nullptr;
+        OrthographicCamera* m_camera       = nullptr;
+    };
+
+}    // namespace InnoEngine
