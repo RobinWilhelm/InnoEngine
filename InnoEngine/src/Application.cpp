@@ -50,12 +50,13 @@ namespace InnoEngine
 
     Result Application::init( const CreationParams& appParams )
     {
-        if ( !SDL_Init( SDL_INIT_VIDEO ) ) {
+        IE_LOG_INFO("Starting application at: \"{}\"", std::filesystem::current_path().string());
+        if ( !SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS) ) {
             IE_LOG_CRITICAL( "Failed to initialize SDL" );
             return Result::Fail;
         }
 
-        Result result = Result::Success;
+        Result result = Result::Fail;
         // create the core systems
         try {
             if ( appParams.WindowParams.height != 0 && appParams.WindowParams.width != 0 ) {
@@ -75,23 +76,29 @@ namespace InnoEngine
             result = on_init();
             publish_coreapi();
         } catch ( std::exception e ) {
-            IE_LOG_CRITICAL("Initialization failure {}", e.what());
-            return Result::Fail;
+            IE_LOG_CRITICAL( "Application initialization failed: \"{}\"", e.what() );
+            return Result::InitializationError;
         }
 
+        IE_LOG_INFO("Application initialization complete");
+        m_initializationSucceded = true;
         return result;
     }
 
     Result Application::run()
     {
+        if(m_initializationSucceded == false)
+            return Result::InitializationError;
+
         while ( m_mustQuit.load( std::memory_order_relaxed ) == false ) {
 
             SDL_Event event;
             while ( SDL_PollEvent( &event ) != 0 ) {
                 if ( event.type == SDL_EventType::SDL_EVENT_QUIT ) {
+                    IE_LOG_DEBUG("Shutdown requested"); 
                     m_mustQuit = true;
                 }
-                if ( handle_event( &event ) == Result::Fail ) {
+                if ( handle_event( &event ) ) {
                     m_mustQuit = true;
                 }
             }
@@ -103,7 +110,7 @@ namespace InnoEngine
                 m_frameTimingInfo.DeltaTime   = newTime - m_frameTimingInfo.CurrentTime;
                 m_frameTimingInfo.CurrentTime = newTime;
 
-                if ( !update( m_frameTimingInfo.DeltaTime ) ) {
+                if ( IE_FAILED( update( m_frameTimingInfo.DeltaTime ) ) ) {
                     IE_LOG_CRITICAL( "Fixed update failed!" );
                     return Result::Fail;
                 }
@@ -113,8 +120,8 @@ namespace InnoEngine
             else {
                 m_frameTimingInfo.CurrentTime = newTime;
                 while ( m_frameTimingInfo.AccumulatedTime >= m_frameTimingInfo.DeltaTime ) {
-                    if ( !update( m_frameTimingInfo.DeltaTime ) ) {
-                        IE_LOG_CRITICAL( "Fixed update failed!" );
+                    if ( IE_FAILED( update( m_frameTimingInfo.DeltaTime ) ) ) {
+                        IE_LOG_CRITICAL( "update failed!" );
                         return Result::Fail;
                     }
                     m_frameTimingInfo.AccumulatedTime -= m_frameTimingInfo.DeltaTime;
@@ -124,7 +131,8 @@ namespace InnoEngine
 
             render( m_frameTimingInfo.InterpolationFactor, m_camera.get() );
         }
-
+        
+        IE_LOG_INFO("Shutting down");
         shutdown();
         return Result::Success;
     }

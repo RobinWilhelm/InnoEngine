@@ -105,7 +105,7 @@ namespace InnoEngine
                 return view;
             }
             else {
-                IE_LOG_ERROR( "Asset not found! %s", fullPath.string().c_str() );
+                IE_LOG_ERROR( "Asset not found! \"{}\"", fullPath.string() );
                 return std::nullopt;
             }
         }

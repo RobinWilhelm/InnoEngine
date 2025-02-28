@@ -35,7 +35,8 @@ set(InnoEngine_Sources
 	"src/OrthographicCamera.h"
 	"src/OrthographicCamera.cpp"
 	"src/Log.h"
-	"src/Assert.h"
+	"src/Log.cpp"
+	"src/IE_Assert.h"
 )
 
 set(InnoEngine_Shader_Sources  

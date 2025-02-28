@@ -186,6 +186,11 @@ namespace InnoEngine
         }
     }
 
+    IE_Result GPURenderer::init_imgui()
+    {
+        
+    }
+
     void GPURenderer::do_copypass()
     {
         SDL_GPUCommandBuffer* copyCmdbuf = SDL_AcquireGPUCommandBuffer( m_sdlGPUDevice );

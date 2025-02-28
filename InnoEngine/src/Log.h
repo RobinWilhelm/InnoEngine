@@ -67,17 +67,17 @@ namespace InnoEngine
         template <Category category, typename... Args>
         void add( std::string_view fmt, Args... args )
         {
-            m_ulock.lock();
-            LogEntry& log = m_logs.emplace_back();
-            log.Category  = category;
-            log.Timestamp = std::chrono::system_clock::now();
-            log.Message   = std::vformat(fmt, std::make_format_args(args...));
+            std::unique_lock<std::mutex> m_ulock( m_mutex );
+            LogEntry&                    log = m_logs.emplace_back();
+            log.Category                     = category;
+            log.Timestamp                    = std::chrono::system_clock::now();
+            log.Message                      = std::vformat( fmt, std::make_format_args( args... ) );
             m_ulock.unlock();
 
-            std::cout << "\033[" << static_cast<int>( get_category_color( category ) );
-            std::cout << std::format( "{:%H:%M} {} {}", log.Timestamp, get_category_string( category ), log.Message );
-            std::cout << "\033[" << static_cast<int>( AnsiForegroundColor::SystemDefault ) << "\n";
+            printLog(log);       
         };
+
+        void printLog( const LogEntry& log );
 
         constexpr std::string get_category_string( Category cat )
         {
@@ -101,9 +101,9 @@ namespace InnoEngine
         {
             switch ( cat ) {
             case Debug:
-                return AnsiForegroundColor::White;
-            case Info:
                 return AnsiForegroundColor::BrightBlack;
+            case Info:
+                return AnsiForegroundColor::White;
             case Warning:
                 return AnsiForegroundColor::Yellow;
             case Error:
@@ -116,9 +116,8 @@ namespace InnoEngine
         }
 
     private:
-        std::unique_lock<std::mutex> m_ulock;
-        std::mutex                   m_mutex;
-        std::vector<LogEntry>        m_logs;
+        std::mutex            m_mutex;
+        std::vector<LogEntry> m_logs;
     };
 }    // namespace InnoEngine
 

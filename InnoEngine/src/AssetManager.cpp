@@ -26,14 +26,14 @@ namespace InnoEngine
 
             if ( multithreaded ) {
                 assetManager->start_async_loader();
-                IE_LOG_INFO( "AssetManager: Enabled multithreading" );
+                IE_LOG_DEBUG( "AssetManager: Enabled multithreading" );
             }
 
-            IE_LOG_INFO( "Set asset directory to: \"%s\"", assetDir.string().c_str() );
+            IE_LOG_DEBUG( "Set asset directory to: \"{}\"", assetDir.string() );
             return assetManager;
         }
         else {
-            IE_LOG_ERROR( "Asset directory not found!" );
+            IE_LOG_ERROR( "Asset directory not found! \"{}\"", assetDir.string() );
             return std::nullopt;
         }
     }

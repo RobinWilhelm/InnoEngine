@@ -4,6 +4,7 @@ namespace InnoEngine
 {
     enum Result : int32_t
     {
+        InitializationError = -2,
         Fail    = -1,
         Success = 0,
     };

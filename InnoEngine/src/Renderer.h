@@ -4,6 +4,7 @@
 
 #include "GPUPipeline.h"
 #include "RenderCommandBuffer.h"
+#include "BaseTypes.h"
 
 #include <string>
 #include <filesystem>
@@ -64,6 +65,8 @@ namespace InnoEngine
         void submit_pipelines();
 
     private:
+        IE_Result init_imgui();
+
         void do_copypass();
         void do_renderpass();
 

@@ -35,18 +35,18 @@ namespace InnoEngine
             static_assert( std::is_base_of<AssetBase, T>::value == true );
             std::filesystem::path fullDirPath = m_assetDirectoryPath / subDirectory.native();
             if ( std::filesystem::exists( fullDirPath ) == false || std::filesystem::is_directory( fullDirPath ) == false ) {
-                IE_LOG_ERROR( "Asset directory not found! %s", fullDirPath.string().c_str() );
+                IE_LOG_ERROR( "Asset directory not found! \"{}\"", fullDirPath.string() );
                 return false;
             }
 
             std::type_index tyidx = std::type_index( typeid( T ) );
             if ( m_assetRepos.find( tyidx ) != m_assetRepos.end() ) {
-                IE_LOG_ERROR( "Asset repository already added! %s", fullDirPath.string().c_str() );
+                IE_LOG_ERROR( "Asset repository already added! \"{}\"", fullDirPath.string() );
                 return true;
             }
             auto assetRepo = std::make_shared<AssetRepository<T>>( fullDirPath );
             m_assetRepos.insert( std::pair( tyidx, std::static_pointer_cast<AssetRepositoryBase>( assetRepo ) ) );
-            IE_LOG_INFO( "Added asset repo: \"%s\"", subDirectory.string().c_str() );
+            IE_LOG_DEBUG( "Added asset repo: \"{}\"", subDirectory.string() );
             return true;
         }
 

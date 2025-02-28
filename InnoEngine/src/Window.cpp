@@ -11,7 +11,7 @@ namespace InnoEngine
             return std::nullopt;
 
         window->m_params = creationParams;
-        IE_LOG_INFO( "Created Window: {} x {}", creationParams.width, creationParams.height );
+        IE_LOG_DEBUG( "Created Window: {} x {}", creationParams.width, creationParams.height );
         return window;
     }
 

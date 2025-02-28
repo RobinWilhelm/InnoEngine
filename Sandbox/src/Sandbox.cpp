@@ -11,20 +11,21 @@ IE::Result Sandbox::on_init()
 
     auto shaderFormat = m_renderer->get_needed_shaderformat();
     m_assetManager->add_repository<IE::Shader>("Shaders" / shaderFormat.SubDirectory);
+    return IE::Result::Success;
 }
 
 IE::Result Sandbox::update(double deltaTime)
 {
-    return IE::Result();
+    return IE::Result::Success;
 }
 
 void Sandbox::render(float interpFactor, IE::OrthographicCamera* pCamera)
 {
 }
 
-IE::Result Sandbox::handle_event(SDL_Event* event)
+bool Sandbox::handle_event(SDL_Event* event)
 {
-    return IE::Result();
+    return false;
 }
 
 void Sandbox::shutdown()

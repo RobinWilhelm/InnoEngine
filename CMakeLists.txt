@@ -22,7 +22,7 @@ add_subdirectory(extern)
 add_subdirectory(InnoEngine)
 add_subdirectory(Sandbox)	
 
-list (APPEND InnoEngine_ALL_Sources ${InnoEngine_Sources} ${InnoEngine_Shader_Sources})
+list (APPEND InnoEngine_ALL_Sources ${InnoEngine_Sources} ${InnoEngine_Shader_Sources} ${EXTERNAL_SOURCES})
 
 include_directories(${IMGUI_INCLUDE_DIRS})
 include_directories(${DIRECTXTK_INCLUDE_DIRS})

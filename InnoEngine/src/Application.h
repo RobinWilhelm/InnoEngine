@@ -17,25 +17,25 @@ namespace InnoEngine
     class OrthographicCamera;
     class Scene;
 
+    struct FrameTimingInfo
+    {
+        int    FixedSimulationFrequency = 0;
+        double CurrentTime              = 0.0;    // time since app initialization
+        double AccumulatedTime          = 0.0;    // accumulated time since last update
+        double DeltaTime                = 0.0;    // time since last update in seconds
+        float  InterpolationFactor      = 0.0f;
+    };
+
+    struct CreationParams
+    {
+        Window::CreationParams WindowParams;
+        int                    SimulationFrequency = 60;
+        bool                   EnableVSync         = true;
+        std::filesystem::path  AssetDirectory;
+    };
+
     class Application
     {
-        struct FrameTimingInfo
-        {
-            int    FixedSimulationFrequency = 0;
-            double CurrentTime              = 0.0;    // time since app initialization
-            double AccumulatedTime          = 0.0;    // accumulated time since last update
-            double DeltaTime                = 0.0;    // time since last update in seconds
-            float  InterpolationFactor      = 0.0f;
-        };
-
-        struct CreationParams
-        {
-            Window::CreationParams WindowParams;
-            int                    SimulationFrequency = 60;
-            bool                   EnableVSync         = true;
-            std::filesystem::path  AssetDirectory;
-        };
-
     public:
         Application();
         virtual ~Application();
@@ -55,7 +55,7 @@ namespace InnoEngine
         virtual Result on_init()                                                 = 0;
         virtual Result update( double deltaTime )                                = 0;
         virtual void   render( float interpFactor, OrthographicCamera* pCamera ) = 0;
-        virtual Result handle_event( SDL_Event* event )                          = 0;
+        virtual bool   handle_event( SDL_Event* event )                          = 0;    // return true when the application should exit
         virtual void   shutdown()                                                = 0;
 
         void publish_coreapi();
@@ -71,7 +71,8 @@ namespace InnoEngine
 
         std::shared_ptr<Scene> m_scene;
 
-        std::atomic_bool m_mustQuit = false;
+        bool             m_initializationSucceded = false;
+        std::atomic_bool m_mustQuit               = false;
     };
 
 }    // namespace InnoEngine
