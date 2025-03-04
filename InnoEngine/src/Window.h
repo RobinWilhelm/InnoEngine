@@ -1,6 +1,8 @@
 #pragma once
 #include "SDL3/SDL_video.h"
 
+#include "BaseTypes.h"
+
 #include <string>
 #include <memory>
 #include <optional>
@@ -20,7 +22,7 @@ namespace InnoEngine
         };
 
         [[nodiscard]]
-        static auto create( const CreationParams& creationParams ) -> std::optional<std::unique_ptr<Window>>;
+        static auto create( const CreationParams& creationParams ) -> std::optional<Owned<Window>>;
 
         int         width() const;
         int         height() const;

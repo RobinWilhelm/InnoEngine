@@ -11,11 +11,12 @@ namespace InnoEngine
 {
     GPURenderer::~GPURenderer()
     {
-        if ( m_multiThreaded )
-            renderthread_stop();
-
         // destory deviceobjects (pipelines etc) before destroyinf gpudevice!
         m_loadedPipelines.clear();
+
+        if ( m_sdlGPUDevice ) {
+            SDL_WaitForGPUIdle( m_sdlGPUDevice );
+        }
 
         if ( m_window ) {
             SDL_ReleaseWindowFromGPUDevice( m_sdlGPUDevice, m_window->get_sdlwindow() );
@@ -28,9 +29,9 @@ namespace InnoEngine
         }
     }
 
-    auto GPURenderer::create( Window* pWindow, bool multiThreaded ) -> std::optional<std::unique_ptr<GPURenderer>>
+    auto GPURenderer::create( Window* pWindow ) -> std::optional<Owned<GPURenderer>>
     {
-        std::unique_ptr<GPURenderer> renderer( new GPURenderer() );
+        Owned<GPURenderer> renderer( new GPURenderer() );
 
 #ifdef _DEBUG
         renderer->m_sdlGPUDevice = SDL_CreateGPUDevice( SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, true, nullptr );
@@ -52,43 +53,13 @@ namespace InnoEngine
         }
 
         renderer->retrieve_shaderformatinfo();
-
-        renderer->m_multiThreaded = multiThreaded;
-        if ( multiThreaded ) {
-            renderer->create_renderthread();
-            IE_LOG_INFO( "Renderer: Enabled multithreading" );
-        }
         return renderer;
-    }
-
-    void GPURenderer::renderthread_run()
-    {
-        while ( m_run.load( std::memory_order_relaxed ) ) {
-            {
-                std::unique_lock<std::mutex> ulock( m_renderMutex );
-                m_renderCV.wait( ulock, [ this ]() { return m_commandsUpdated == true; } );
-                process_pipelines();
-                m_commandsUpdated   = false;
-                m_renderingFinished = true;
-            }
-            m_updatingCV.notify_one();
-        }
-    }
-
-    void GPURenderer::renderthread_stop()
-    {
-        {
-            std::unique_lock<std::mutex> ulock = wait_for_rendering_finished_and_hold_lock();
-            m_run.store( false, std::memory_order_relaxed );
-        }
-        notify_renderthread();
-        m_renderThread.join();
     }
 
     bool GPURenderer::process_pipelines()
     {
-        if ( m_copyPipelines.size() != 0 ) {
-            do_copypass();
+        for ( auto pipeline : m_copyPipelines ) {
+            pipeline->prepare_render( m_sdlGPUDevice );
         }
 
         if ( m_renderPipelines.size() != 0 ) {
@@ -109,7 +80,7 @@ namespace InnoEngine
         return m_sdlGPUDevice;
     };
 
-    void GPURenderer::set_viewprojectionmatrix( const DXSM::Matrix viewProjection )
+    void GPURenderer::set_camera_matrix( const DXSM::Matrix viewProjection )
     {
         m_viewProjection = viewProjection;
     }
@@ -121,19 +92,6 @@ namespace InnoEngine
         m_computePipelines.clear();
     }
 
-    std::unique_lock<std::mutex> GPURenderer::wait_for_rendering_finished_and_hold_lock()
-    {
-        std::unique_lock<std::mutex> ulock( m_renderMutex );
-        m_updatingCV.wait( ulock, [ this ]() { return m_renderingFinished; } );
-        return ulock;
-    }
-
-    void GPURenderer::notify_renderthread()
-    {
-        if ( m_multiThreaded )
-            m_renderCV.notify_one();
-    }
-
     ShaderFormatInfo GPURenderer::get_needed_shaderformat()
     {
         return m_shaderFormat;
@@ -142,11 +100,6 @@ namespace InnoEngine
     std::string GPURenderer::add_shaderformat_fileextension( std::string_view name )
     {
         return std::string( name ).append( m_shaderFormat.FileNameExtension );
-    }
-
-    bool GPURenderer::is_multithreaded()
-    {
-        return m_multiThreaded;
     }
 
     bool GPURenderer::has_window()
@@ -179,38 +132,6 @@ namespace InnoEngine
             if ( processing & PipelineCommand::Compute )
                 m_computePipelines.push_back( pipeline );
         }
-
-        if ( m_multiThreaded ) {
-            m_commandsUpdated   = true;
-            m_renderingFinished = false;
-        }
-    }
-
-    IE_Result GPURenderer::init_imgui()
-    {
-        
-    }
-
-    void GPURenderer::do_copypass()
-    {
-        SDL_GPUCommandBuffer* copyCmdbuf = SDL_AcquireGPUCommandBuffer( m_sdlGPUDevice );
-        if ( copyCmdbuf == nullptr ) {
-            IE_LOG_ERROR( "AcquireGPUCommandBuffer failed : %s", SDL_GetError() );
-            return;
-        }
-
-        SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass( copyCmdbuf );
-
-        for ( auto pipeline : m_copyPipelines ) {
-            pipeline->dispatch_copycommands( copyCmdbuf, copyPass );
-        }
-
-        SDL_EndGPUCopyPass( copyPass );
-
-        if ( SDL_SubmitGPUCommandBuffer( copyCmdbuf ) == false ) {
-            IE_LOG_ERROR( "SDL_SubmitGPUCommandBuffer failed : %s", SDL_GetError() );
-            return;
-        }
     }
 
     void GPURenderer::do_renderpass()
@@ -229,7 +150,8 @@ namespace InnoEngine
         if ( has_window() ) {
             SDL_GPUTexture* swapchainTexture;
             if ( !SDL_WaitAndAcquireGPUSwapchainTexture( cmdbuf, m_window->get_sdlwindow(), &swapchainTexture, nullptr, nullptr ) ) {
-                IE_LOG_ERROR( "WaitAndAcquireGPUSwapchainTexture failed : %s", SDL_GetError() );
+                SDL_CancelGPUCommandBuffer( cmdbuf );
+                IE_LOG_WARNING( "WaitAndAcquireGPUSwapchainTexture failed : %s", SDL_GetError() );
                 return;
             }
 
@@ -243,7 +165,7 @@ namespace InnoEngine
                 SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass( cmdbuf, &colorTargetInfo, 1, nullptr );
 
                 for ( auto pipeline : m_renderPipelines ) {
-                    pipeline->dispatch_rendercommands( m_viewProjection, cmdbuf, renderPass );
+                    pipeline->swapchain_render( m_viewProjection, cmdbuf, renderPass );
                 }
 
                 SDL_EndGPURenderPass( renderPass );
@@ -254,12 +176,6 @@ namespace InnoEngine
             IE_LOG_ERROR( "SDL_SubmitGPUCommandBuffer failed : %s", SDL_GetError() );
             return;
         }
-    }
-
-    void GPURenderer::create_renderthread()
-    {
-        m_run          = true;
-        m_renderThread = std::thread( &GPURenderer::renderthread_run, this );
     }
 
     void GPURenderer::retrieve_shaderformatinfo()

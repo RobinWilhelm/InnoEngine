@@ -62,8 +62,8 @@ namespace InnoEngine
 
         // Geerbt über GPUPipeline
         bool init( GPURenderer* pRenderer ) override;
-        void dispatch_copycommands( SDL_GPUCommandBuffer* cmdbuf, SDL_GPUCopyPass* renderPass ) override;
-        void dispatch_rendercommands( const DXSM::Matrix& viewProjection, SDL_GPUCommandBuffer* cmdbuf, SDL_GPURenderPass* renderPass ) override;
+        void prepare_render( SDL_GPUDevice* gpudevice ) override;
+        void swapchain_render( const DXSM::Matrix& viewProjection, SDL_GPUCommandBuffer* cmdbuf, SDL_GPURenderPass* renderPass ) override;
 
         const std::string_view get_name() const override;
         void                   sort_commands() override;

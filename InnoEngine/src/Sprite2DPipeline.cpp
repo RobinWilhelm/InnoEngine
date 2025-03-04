@@ -106,12 +106,18 @@ namespace InnoEngine
         return true;
     }
 
-    void Sprite2DPipeline::dispatch_copycommands( SDL_GPUCommandBuffer* cmdbuf, SDL_GPUCopyPass* copyPass )
+    void Sprite2DPipeline::prepare_render( SDL_GPUDevice* gpudevice )
     {
-        IE_ASSERT( m_renderer != nullptr && m_renderer->get_gpudevice() != nullptr );
-        IE_ASSERT( cmdbuf != nullptr && copyPass != nullptr );
+        IE_ASSERT( gpudevice );
         IE_ASSERT( get_commandqueue() != nullptr );
-        (void)cmdbuf;
+
+        SDL_GPUCommandBuffer* copyCmdbuf = SDL_AcquireGPUCommandBuffer( gpudevice );
+        if ( copyCmdbuf == nullptr ) {
+            IE_LOG_ERROR("AcquireGPUCommandBuffer failed: {}", SDL_GetError());
+            return;
+        }
+
+        SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass( copyCmdbuf );
 
         SpriteVertexUniform* dataPtr = nullptr;
         AssetUID<Sprite>     currentSprite;
@@ -124,7 +130,7 @@ namespace InnoEngine
             if ( currentBatch == nullptr || currentSprite != sprite->texture || currentBatch->count >= SpriteBatchSizeMax ) {
                 // unmap and upload previous batch data before changeing to new batch
                 if ( firstBatch == false ) {
-                    SDL_UnmapGPUTransferBuffer( m_renderer->get_gpudevice(), m_spriteTransferBuffer );
+                    SDL_UnmapGPUTransferBuffer( gpudevice, m_spriteTransferBuffer );
                     SDL_GPUTransferBufferLocation tranferBufferLocation { .transfer_buffer = m_spriteTransferBuffer, .offset = 0 };
                     SDL_GPUBufferRegion           bufferRegion { .buffer = get_gpubuffer_by_index( currentBatch->bufferIdx ),
                                                                  .offset = 0,
@@ -137,7 +143,7 @@ namespace InnoEngine
                 currentBatch->texture = sprite->texture;
                 currentSprite         = sprite->texture;
 
-                dataPtr    = static_cast<SpriteVertexUniform*>( SDL_MapGPUTransferBuffer( m_renderer->get_gpudevice(), m_spriteTransferBuffer, true ) );
+                dataPtr    = static_cast<SpriteVertexUniform*>( SDL_MapGPUTransferBuffer( gpudevice, m_spriteTransferBuffer, true ) );
                 firstBatch = false;
             }
 
@@ -154,9 +160,16 @@ namespace InnoEngine
                                                          .size   = static_cast<uint32_t>( currentBatch->count * sizeof( SpriteVertexUniform ) ) };
             SDL_UploadToGPUBuffer( copyPass, &tranferBufferLocation, &bufferRegion, true );
         }
+
+        SDL_EndGPUCopyPass( copyPass );
+
+        if ( SDL_SubmitGPUCommandBuffer( copyCmdbuf ) == false ) {
+            IE_LOG_ERROR( "SDL_SubmitGPUCommandBuffer failed: {}", SDL_GetError() );
+            return;
+        }
     }
 
-    void Sprite2DPipeline::dispatch_rendercommands( const DXSM::Matrix& viewProjection, SDL_GPUCommandBuffer* cmdbuf, SDL_GPURenderPass* renderPass )
+    void Sprite2DPipeline::swapchain_render( const DXSM::Matrix& viewProjection, SDL_GPUCommandBuffer* cmdbuf, SDL_GPURenderPass* renderPass )
     {
         IE_ASSERT( m_renderer != nullptr && m_renderer->get_gpudevice() != nullptr );
         IE_ASSERT( cmdbuf != nullptr && renderPass != nullptr );

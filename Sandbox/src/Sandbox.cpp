@@ -14,20 +14,6 @@ IE::Result Sandbox::on_init()
     return IE::Result::Success;
 }
 
-IE::Result Sandbox::update(double deltaTime)
-{
-    return IE::Result::Success;
-}
-
-void Sandbox::render(float interpFactor, IE::OrthographicCamera* pCamera)
-{
-}
-
-bool Sandbox::handle_event(SDL_Event* event)
-{
-    return false;
-}
-
 void Sandbox::shutdown()
 {
 }

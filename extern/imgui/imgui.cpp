@@ -5570,7 +5570,7 @@ static void ImGui::RenderDimmedBackgrounds()
 }
 
 // This is normally called by Render(). You may want to call it directly if you want to avoid calling Render() but the gain will be very minimal.
-void ImGui::end_frame()
+void ImGui::EndFrame()
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.Initialized);
@@ -5665,13 +5665,13 @@ void ImGui::end_frame()
 // Prepare the data for rendering so you can call GetDrawData()
 // (As with anything within the ImGui:: namspace this doesn't touch your GPU or graphics API at all:
 // it is the role of the ImGui_ImplXXXX_RenderDrawData() function provided by the renderer backend)
-void ImGui::render()
+void ImGui::Render()
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.Initialized);
 
     if (g.FrameCountEnded != g.FrameCount)
-        end_frame();
+        EndFrame();
     if (g.FrameCountRendered == g.FrameCount)
         return;
     g.FrameCountRendered = g.FrameCount;

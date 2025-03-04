@@ -3,6 +3,7 @@
 
 #include "Window.h"
 #include "BaseTypes.h"
+#include "RenderCommandBuffer.h"
 
 #include <memory>
 #include <string>
@@ -15,7 +16,7 @@ namespace InnoEngine
     class GPURenderer;
     class AssetManager;
     class OrthographicCamera;
-    class Scene;
+    class Layer;
 
     struct FrameTimingInfo
     {
@@ -31,7 +32,9 @@ namespace InnoEngine
         Window::CreationParams WindowParams;
         int                    SimulationFrequency = 60;
         bool                   EnableVSync         = true;
+        bool                   RunAsync            = false; // create a separate thread for layer processing
         std::filesystem::path  AssetDirectory;
+        bool                   AsyncAssetLoading = false;
     };
 
     class Application
@@ -49,30 +52,50 @@ namespace InnoEngine
         GPURenderer*  get_renderer() const;
         AssetManager* get_assetmanager() const;
 
+        void enable_debugui( bool enable );
+
         void raise_critical_error( std::string msg );
 
     private:
-        virtual Result on_init()                                                 = 0;
-        virtual Result update( double deltaTime )                                = 0;
-        virtual void   render( float interpFactor, OrthographicCamera* pCamera ) = 0;
-        virtual bool   handle_event( SDL_Event* event )                          = 0;    // return true when the application should exit
-        virtual void   shutdown()                                                = 0;
+        virtual Result on_init()  = 0;
+        virtual void   shutdown() = 0;
+
+        void poll_events();
+        void handle_event( const SDL_Event& event );
+        void update_layers();
+        void render_layers();
+
+        void run_async();
 
         void publish_coreapi();
 
     protected:
-        FrameTimingInfo                     m_frameTimingInfo = {};
-        std::unique_ptr<Window>             m_window;
-        std::unique_ptr<GPURenderer>        m_renderer;
-        std::unique_ptr<AssetManager>       m_assetManager;
-        std::unique_ptr<OrthographicCamera> m_camera;
+        FrameTimingInfo           m_frameTimingInfo = {};
+        Owned<Window>             m_window;
+        Owned<GPURenderer>        m_renderer;
+        Owned<AssetManager>       m_assetManager;
+        Owned<OrthographicCamera> m_camera;
 
         std::condition_variable m_updateCV;
 
-        std::shared_ptr<Scene> m_scene;
-
         bool             m_initializationSucceded = false;
         std::atomic_bool m_mustQuit               = false;
+
+        bool                    m_multiThreaded = false;
+        std::thread             m_asyncApplicationThread;
+        std::mutex              m_asyncMutex;
+        std::condition_variable m_asyncThreadWaiting;
+        std::condition_variable m_mainThreadWaiting;
+        bool                    m_asyncThreadFinished = true;
+        bool                    m_syncComplete        = false;
+
+        // buffered events for async handling
+        DoubleBuffered<std::vector<SDL_Event>> m_eventBuffer;
+
+        std::vector<Layer*> m_layerStack;
+        // keep debuglayer seperate and always topmost
+        Owned<Layer>        m_debugLayer;
+        bool                m_debugui_active = false;
     };
 
 }    // namespace InnoEngine

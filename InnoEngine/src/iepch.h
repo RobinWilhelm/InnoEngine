@@ -23,7 +23,3 @@
 
 #include "SimpleMath.h"
 namespace DXSM = DirectX::SimpleMath;
-
-// todo: put somewhere else
-
-

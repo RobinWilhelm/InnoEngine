@@ -1,5 +1,7 @@
 #pragma once
 
+#include "BaseTypes.h"
+
 #include "SimpleMath.h"
 namespace DXSM = DirectX::SimpleMath;
 
@@ -13,7 +15,7 @@ namespace InnoEngine
 
     public:
         [[nodiscard]]
-        static auto create( float left, float right, float bottom, float top ) -> std::unique_ptr<OrthographicCamera>;
+        static auto create( float left, float right, float bottom, float top ) -> Owned<OrthographicCamera>;
 
         void update();
 

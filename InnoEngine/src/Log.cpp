@@ -1,3 +1,4 @@
+#include "iepch.h"
 #include "Log.h"
 
 void InnoEngine::Logger::printLog(const LogEntry& log)

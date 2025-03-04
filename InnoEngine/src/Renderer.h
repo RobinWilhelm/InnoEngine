@@ -35,7 +35,7 @@ namespace InnoEngine
         ~GPURenderer();
 
         [[nodiscard]]
-        static auto create( Window* pWindow = nullptr, bool multiThreaded = true ) -> std::optional<std::unique_ptr<GPURenderer>>;
+        static auto create( Window* pWindow = nullptr) -> std::optional<Owned<GPURenderer>>;
 
         template <typename T>
         std::optional<std::shared_ptr<T>> require_pipeline();
@@ -47,15 +47,12 @@ namespace InnoEngine
         Window*        get_window() const;
         SDL_GPUDevice* get_gpudevice() const;
 
-        void set_viewprojectionmatrix( const DXSM::Matrix viewProjection );
+        void set_camera_matrix( const DXSM::Matrix viewProjection );
 
-        [[nodiscard]]
-        std::unique_lock<std::mutex> wait_for_rendering_finished_and_hold_lock();
-        void                         notify_renderthread();
+
         ShaderFormatInfo             get_needed_shaderformat();
         std::string                  add_shaderformat_fileextension( std::string_view shaderName );
 
-        bool is_multithreaded();
         bool has_window();
 
         bool enable_vsync( bool enabled );
@@ -65,13 +62,9 @@ namespace InnoEngine
         void submit_pipelines();
 
     private:
-        IE_Result init_imgui();
-
-        void do_copypass();
         void do_renderpass();
 
         void end_frame();
-        void create_renderthread();
         void retrieve_shaderformatinfo();
 
     private:
@@ -79,15 +72,6 @@ namespace InnoEngine
         ShaderFormatInfo m_shaderFormat;
         Window*          m_window = nullptr;
         bool             m_vsync  = true;
-
-        bool                    m_multiThreaded = false;
-        std::thread             m_renderThread;
-        std::atomic_bool        m_run = true;
-        std::mutex              m_renderMutex;
-        std::condition_variable m_renderCV;
-        std::condition_variable m_updatingCV;
-        bool                    m_commandsUpdated   = true;
-        bool                    m_renderingFinished = true;
 
         std::unordered_map<std::type_index, std::shared_ptr<GPUPipeline>> m_loadedPipelines;
 

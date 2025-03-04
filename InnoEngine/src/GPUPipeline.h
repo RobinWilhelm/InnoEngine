@@ -38,8 +38,8 @@ namespace InnoEngine
         virtual const std::string_view get_name() const         = 0;
         virtual uint32_t               needs_processing() const = 0;
         virtual void                   sort_commands() { };
-        virtual void                   dispatch_copycommands( SDL_GPUCommandBuffer* cmdbuf, SDL_GPUCopyPass* renderPass )                                         = 0;
-        virtual void                   dispatch_rendercommands( const DXSM::Matrix& viewProjection, SDL_GPUCommandBuffer* cmdbuf, SDL_GPURenderPass* renderPass ) = 0;
+        virtual void                   prepare_render( SDL_GPUDevice* gpudevice )                                                                          = 0;
+        virtual void                   swapchain_render( const DXSM::Matrix& viewProjection, SDL_GPUCommandBuffer* cmdbuf, SDL_GPURenderPass* renderPass ) = 0;
 
     protected:
         bool                                m_initialized = false;

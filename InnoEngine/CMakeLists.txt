@@ -12,10 +12,10 @@ set(InnoEngine_Sources
 	"src/Renderer.cpp"
 	"src/Sprite2DPipeline.h"
 	"src/Sprite2DPipeline.cpp"
+	"src/ImGuiPipeline.h"
+	"src/ImGuiPipeline.cpp"
 	"src/Sprite.h"
 	"src/Sprite.cpp"
-	"src/Scene.h"
-	"src/Scene.cpp"
 	"src/GPUPipeline.h"
 	"src/GPUPipeline.cpp"
 	"src/RenderCommandBuffer.h"
@@ -37,6 +37,10 @@ set(InnoEngine_Sources
 	"src/Log.h"
 	"src/Log.cpp"
 	"src/IE_Assert.h"
+	"src/DebugUI.h"
+	"src/DebugUI.cpp"
+	"src/Layer.h"
+	"src/Layer.cpp"
 )
 
 set(InnoEngine_Shader_Sources  

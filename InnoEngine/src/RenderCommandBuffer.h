@@ -4,6 +4,7 @@
 #include <vector>
 #include <array>
 #include <algorithm>
+#include <new>
 
 namespace InnoEngine
 {
@@ -151,5 +152,31 @@ namespace InnoEngine
         std::vector<T*>& dispatchqueue = get_dispatching_ptrqueue();
         std::sort( dispatchqueue.begin(), dispatchqueue.end(), compare );
     }
+
+
+    template <typename T>
+    class DoubleBuffered
+    {
+    public:
+        void swap()
+        {
+            m_switch = !m_switch;
+        }
+
+        T& get_first(){
+            return m_switch ? m_second : m_first;    
+        }
+
+        T& get_second()
+        {
+            return m_switch ? m_first : m_second;
+        }
+
+    private:
+        bool m_switch = false;
+        // force it to align to cache lines to prevent false sharing
+        alignas(std::hardware_destructive_interference_size) T m_first;
+        alignas(std::hardware_destructive_interference_size) T m_second;
+    };
 
 }    // namespace InnoEngine
