@@ -72,16 +72,9 @@ namespace InnoEngine
         return true;
     }
 
-    void ImGuiPipeline::release()
-    {
-        ImGui_ImplSDL3_Shutdown();
-        ImGui_ImplSDLGPU3_Shutdown();
-        ImGui::DestroyContext();
-    }
-
     void ImGuiPipeline::submit()
     {
-        if( m_drawData == nullptr )
+        if ( m_drawData == nullptr )
             return;
 
         m_renderCommandLists.clear();
@@ -103,7 +96,7 @@ namespace InnoEngine
 
     uint32_t ImGuiPipeline::needs_processing() const
     {
-        return ( m_renderCommandLists.size() != 0 ) ? PipelineCommand::Render | PipelineCommand::Copy : 0;
+        return ( m_renderCommandLists.size() != 0 ) ? PipelineCommand::Render : 0;
     }
 
     void ImGuiPipeline::prepare_render( SDL_GPUDevice* gpudevice )
@@ -201,7 +194,7 @@ namespace InnoEngine
         ImGui_ImplSDLGPU3_FrameData* fd = &bd->MainWindowFrameData;
 
         // Bind graphics pipeline
-        SDL_BindGPUGraphicsPipeline( renderPass, bd->Pipeline);
+        SDL_BindGPUGraphicsPipeline( renderPass, bd->Pipeline );
 
         // Bind Vertex And Index Buffers
         if ( m_totalVertexCount > 0 ) {

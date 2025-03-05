@@ -14,6 +14,6 @@ IE::Result Sandbox::on_init()
     return IE::Result::Success;
 }
 
-void Sandbox::shutdown()
+void Sandbox::on_shutdown()
 {
 }

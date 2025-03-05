@@ -11,13 +11,11 @@ namespace DXSM = DirectX::SimpleMath;
 namespace InnoEngine
 {
     class GPURenderer;
-    class RenderCommandQueue;
 
     enum PipelineCommand
     {
         Render  = 1,
-        Copy    = 2,
-        Compute = 4
+        Compute = 2
     };
 
     class GPUPipeline
@@ -30,11 +28,10 @@ namespace InnoEngine
         GPUPipeline( GPUPipeline&& other )                 = delete;
         GPUPipeline& operator=( const GPUPipeline& other ) = delete;
         GPUPipeline& operator=( GPUPipeline&& other )      = delete;
-        virtual ~GPUPipeline();
+        virtual ~GPUPipeline()  = default;
 
         virtual bool                   init( GPURenderer* pRenderer ) = 0;
-        virtual void                   release();
-        virtual void                   submit();
+        virtual void                   submit() = 0;
         virtual const std::string_view get_name() const         = 0;
         virtual uint32_t               needs_processing() const = 0;
         virtual void                   sort_commands() { };
@@ -42,9 +39,6 @@ namespace InnoEngine
         virtual void                   swapchain_render( const DXSM::Matrix& viewProjection, SDL_GPUCommandBuffer* cmdbuf, SDL_GPURenderPass* renderPass ) = 0;
 
     protected:
-        bool                                m_initialized = false;
-        GPURenderer*                        m_renderer    = nullptr;
-        SDL_GPUGraphicsPipeline*            m_pipeline    = nullptr;
-        std::shared_ptr<RenderCommandQueue> m_renderCmd;
+        GPURenderer* m_renderer    = nullptr;
     };
 }    // namespace InnoEngine

@@ -58,12 +58,10 @@ namespace InnoEngine
 
     bool GPURenderer::process_pipelines()
     {
-
-
         // simulate some work
-        std::this_thread::sleep_for(5ms);
+        std::this_thread::sleep_for( 2ms );
 
-        for ( auto pipeline : m_copyPipelines ) {
+        for ( auto pipeline : m_renderPipelines ) {
             pipeline->prepare_render( m_sdlGPUDevice );
         }
 
@@ -93,7 +91,6 @@ namespace InnoEngine
     void GPURenderer::end_frame()
     {
         m_renderPipelines.clear();
-        m_copyPipelines.clear();
         m_computePipelines.clear();
     }
 
@@ -132,8 +129,6 @@ namespace InnoEngine
 
             if ( processing & PipelineCommand::Render )
                 m_renderPipelines.push_back( pipeline );
-            if ( processing & PipelineCommand::Copy )
-                m_copyPipelines.push_back( pipeline );
             if ( processing & PipelineCommand::Compute )
                 m_computePipelines.push_back( pipeline );
         }

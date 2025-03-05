@@ -14,7 +14,6 @@ namespace InnoEngine
 
         // Inherited via GPUPipeline
         bool                   init( GPURenderer* pRenderer ) override;
-        virtual void           release() override;
         virtual void           submit() override;
         const std::string_view get_name() const override;
         uint32_t               needs_processing() const override;

@@ -10,6 +10,7 @@ namespace DXSM = DirectX::SimpleMath;
 #include "AssetRepository.h"
 #include "GPUPipeline.h"
 #include "RenderCommandBuffer.h"
+#include "BaseTypes.h"
 
 #include <string>
 #include <memory>
@@ -54,7 +55,7 @@ namespace InnoEngine
             uint16_t         count     = 0;
         };
 
-        using CommandQueue = DoubleBufferedCommandQueue<SpriteBatchInfo>;
+        using CommandQueue = RenderCommandQueue<SpriteBatchInfo>;
 
     public:
         Sprite2DPipeline() = default;
@@ -78,17 +79,22 @@ namespace InnoEngine
         uint32_t       find_free_gpubuffer();
         SDL_GPUBuffer* get_gpubuffer_by_index( uint32_t index ) const;
 
-        Sprite2DPipeline::CommandQueue* get_commandqueue() const;
-
     private:
         bool                                   m_initialized = false;
+        SDL_GPUGraphicsPipeline*               m_pipeline    = nullptr;
         std::weak_ptr<AssetRepository<Sprite>> m_spriteAssets;
+
+        Owned<CommandQueue> m_commandQueue;
+        std::vector<SpriteBatchInfo*> m_sortedCommands; // objects owned by the commandQueue
 
         SDL_GPUTransferBuffer* m_spriteTransferBuffer = nullptr;
 
         std::vector<SDL_GPUBuffer*>              m_gpuBuffer;
         uint16_t                                 m_gpuBuffer_used = 0;
         std::vector<Sprite2DPipeline::BatchData> m_batches;
+
+        // Inherited via GPUPipeline
+        void submit() override;
     };
 
 }    // namespace InnoEngine

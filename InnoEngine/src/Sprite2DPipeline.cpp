@@ -98,7 +98,7 @@ namespace InnoEngine
             return false;
         }
 
-        m_renderCmd    = std::make_shared<DoubleBufferedCommandQueue<SpriteBatchInfo>>();
+        m_commandQueue = std::make_unique<RenderCommandQueue<SpriteBatchInfo>>();
         m_spriteAssets = CoreAPI::get_assetmanager()->get_repository<Sprite>();
         m_batches.reserve( 100 );
 
@@ -109,11 +109,11 @@ namespace InnoEngine
     void Sprite2DPipeline::prepare_render( SDL_GPUDevice* gpudevice )
     {
         IE_ASSERT( gpudevice );
-        IE_ASSERT( get_commandqueue() != nullptr );
+        IE_ASSERT( m_commandQueue != nullptr );
 
         SDL_GPUCommandBuffer* copyCmdbuf = SDL_AcquireGPUCommandBuffer( gpudevice );
         if ( copyCmdbuf == nullptr ) {
-            IE_LOG_ERROR("AcquireGPUCommandBuffer failed: {}", SDL_GetError());
+            IE_LOG_ERROR( "AcquireGPUCommandBuffer failed: {}", SDL_GetError() );
             return;
         }
 
@@ -125,7 +125,7 @@ namespace InnoEngine
         bool       firstBatch   = true;
         BatchData* currentBatch = nullptr;
 
-        for ( Sprite2DPipeline::SpriteBatchInfo* sprite : get_commandqueue()->get_rendercommands() ) {
+        for ( Sprite2DPipeline::SpriteBatchInfo* sprite : m_sortedCommands ) {
             // start new batch when changing texture or max batch size is reached (should be sorted by texture at this point)
             if ( currentBatch == nullptr || currentSprite != sprite->texture || currentBatch->count >= SpriteBatchSizeMax ) {
                 // unmap and upload previous batch data before changeing to new batch
@@ -202,9 +202,15 @@ namespace InnoEngine
 
     void Sprite2DPipeline::sort_commands()
     {
-        IE_ASSERT( get_commandqueue() != nullptr );
-        auto cmdQueue = get_commandqueue();
-        cmdQueue->sort( []( const SpriteBatchInfo* a, const SpriteBatchInfo* b ) {
+        IE_ASSERT( m_commandQueue != nullptr );
+
+        m_sortedCommands.clear();
+        m_sortedCommands.reserve( m_commandQueue->get_dispatching_queue().size() );
+        for ( auto& cmd : m_commandQueue->get_dispatching_queue() ) {
+            m_sortedCommands.push_back( &cmd );
+        }
+
+        std::sort( m_sortedCommands.begin(), m_sortedCommands.end(), []( const SpriteBatchInfo* a, const SpriteBatchInfo* b ) {
             if ( a->texture < b->texture )
                 return true;
 
@@ -217,12 +223,7 @@ namespace InnoEngine
 
     uint32_t Sprite2DPipeline::needs_processing() const
     {
-        return ( get_commandqueue()->get_rendercommands().size() != 0 ) ? PipelineCommand::Render | PipelineCommand::Copy : 0;
-    }
-
-    Sprite2DPipeline::CommandQueue* Sprite2DPipeline::get_commandqueue() const
-    {
-        return static_pointer_cast<Sprite2DPipeline::CommandQueue>( m_renderCmd ).get();
+        return ( m_commandQueue->get_dispatching_queue().size() != 0 ) ? PipelineCommand::Render : 0;
     }
 
     Sprite2DPipeline::BatchData* Sprite2DPipeline::add_batch()
@@ -230,7 +231,6 @@ namespace InnoEngine
         Sprite2DPipeline::BatchData& newbatch = m_batches.emplace_back();
         newbatch.bufferIdx                    = find_free_gpubuffer();
         newbatch.count                        = 0;
-
         return &newbatch;
     }
 
@@ -265,21 +265,24 @@ namespace InnoEngine
         return m_gpuBuffer[ index ];
     }
 
+    void Sprite2DPipeline::submit()
+    {
+        m_commandQueue->on_submit();
+    }
+
     void Sprite2DPipeline::collect( AssetUID<Sprite> spriteUID, float x, float y, float angle, float scale_x, float scale_y, DXSM::Color color, uint16_t layer )
     {
         IE_ASSERT( m_initialized );
-        auto cmdQueue = get_commandqueue();
-        cmdQueue->grow_if_needed();
 
-        SpriteBatchInfo* cmd = cmdQueue->create_entry();
-        cmd->texture         = spriteUID;
-        cmd->info.x          = x;
-        cmd->info.y          = y;
-        cmd->info.z          = 1.0f - ( ( layer == 0 ) ? 0.0f : static_cast<float>( layer ) / ( std::numeric_limits<uint16_t>::max )() );
-        cmd->info.rotation   = angle;
-        cmd->info.scale_w    = scale_x;
-        cmd->info.scale_h    = scale_y;
-        cmd->info.source     = DXSM::Vector4 { 0.0f, 0.0f, 1.0f, 1.0f };
-        cmd->info.color      = color;
+        SpriteBatchInfo& cmd = m_commandQueue->create_entry();
+        cmd.texture          = spriteUID;
+        cmd.info.x           = x;
+        cmd.info.y           = y;
+        cmd.info.z           = 1.0f - ( ( layer == 0 ) ? 0.0f : static_cast<float>( layer ) / ( std::numeric_limits<uint16_t>::max )() );
+        cmd.info.rotation    = angle;
+        cmd.info.scale_w     = scale_x;
+        cmd.info.scale_h     = scale_y;
+        cmd.info.source      = DXSM::Vector4 { 0.0f, 0.0f, 1.0f, 1.0f };
+        cmd.info.color       = color;
     }
 }    // namespace InnoEngine

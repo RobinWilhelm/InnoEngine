@@ -35,7 +35,7 @@ namespace InnoEngine
         ~GPURenderer();
 
         [[nodiscard]]
-        static auto create( Window* pWindow = nullptr) -> std::optional<Owned<GPURenderer>>;
+        static auto create( Window* pWindow = nullptr ) -> std::optional<Owned<GPURenderer>>;
 
         template <typename T>
         std::optional<std::shared_ptr<T>> require_pipeline();
@@ -49,9 +49,8 @@ namespace InnoEngine
 
         void set_camera_matrix( const DXSM::Matrix viewProjection );
 
-
-        ShaderFormatInfo             get_needed_shaderformat();
-        std::string                  add_shaderformat_fileextension( std::string_view shaderName );
+        ShaderFormatInfo get_needed_shaderformat();
+        std::string      add_shaderformat_fileextension( std::string_view shaderName );
 
         bool has_window();
 
@@ -78,7 +77,6 @@ namespace InnoEngine
         // TODO: Create some kind of frameBuffer object
         DXSM::Matrix m_viewProjection;
 
-        std::vector<GPUPipeline*> m_copyPipelines;
         std::vector<GPUPipeline*> m_renderPipelines;
         std::vector<GPUPipeline*> m_computePipelines;
 
