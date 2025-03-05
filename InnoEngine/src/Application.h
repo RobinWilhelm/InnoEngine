@@ -4,11 +4,13 @@
 #include "Window.h"
 #include "BaseTypes.h"
 #include "RenderCommandBuffer.h"
+#include "Profiler.h"
 
 #include <memory>
 #include <string>
 #include <condition_variable>
 #include <filesystem>
+#include <array>
 
 namespace InnoEngine
 {
@@ -17,6 +19,7 @@ namespace InnoEngine
     class AssetManager;
     class OrthographicCamera;
     class Layer;
+    class Profiler;
 
     struct FrameTimingInfo
     {
@@ -57,10 +60,19 @@ namespace InnoEngine
 
         void raise_critical_error( std::string msg );
 
-    private:
-        virtual Result on_init()  = 0;
-        virtual void   shutdown() = 0;
+        float get_fps();
+        float get_timing( ProfileElements element );
 
+    private:
+        virtual Result on_init()     = 0;
+        virtual void   on_shutdown() = 0;
+
+        // Only relevant if application is running async
+        // All data sharing between the threads has to be in here
+        virtual void on_synchronize();
+
+        // internal use only
+        void synchronize();
         void poll_events();
         void handle_event( const SDL_Event& event );
         void update_layers();
@@ -69,6 +81,7 @@ namespace InnoEngine
         void run_async();
 
         void publish_coreapi();
+        void update_profiledata();
 
     protected:
         FrameTimingInfo           m_frameTimingInfo = {};
@@ -76,7 +89,9 @@ namespace InnoEngine
         Owned<GPURenderer>        m_renderer;
         Owned<AssetManager>       m_assetManager;
         Owned<OrthographicCamera> m_camera;
-
+#ifdef ENABLE_PROFILER
+        Owned<Profiler> m_profiler;
+#endif
         std::condition_variable m_updateCV;
 
         bool             m_initializationSucceded = false;
@@ -97,6 +112,8 @@ namespace InnoEngine
         // keep debuglayer seperate and always topmost
         Owned<Layer>        m_debugLayer;
         bool                m_debugui_active = false;
+
+        std::array<float, static_cast<int>( ProfileElements::COUNT )> m_profileData;
     };
 
 }    // namespace InnoEngine

@@ -58,6 +58,11 @@ namespace InnoEngine
 
     bool GPURenderer::process_pipelines()
     {
+
+
+        // simulate some work
+        std::this_thread::sleep_for(5ms);
+
         for ( auto pipeline : m_copyPipelines ) {
             pipeline->prepare_render( m_sdlGPUDevice );
         }

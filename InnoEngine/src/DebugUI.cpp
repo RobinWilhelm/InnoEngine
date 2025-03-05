@@ -1,9 +1,12 @@
 #include "iepch.h"
 #include "DebugUI.h"
 
+#include "CoreAPI.h"
+#include "Application.h"
 #include "Renderer.h"
 #include "Window.h"
 #include "ImGuiPipeline.h"
+#include "Profiler.h"
 
 #include "imgui_impl_sdlgpu3.h"
 #include "imgui_impl_sdl3.h"
@@ -26,7 +29,9 @@ namespace InnoEngine
     void DebugUI::update( double deltaTime )
     {    
         (void)deltaTime;
-        std::this_thread::sleep_for(10ms);
+
+        // simulate some work
+        std::this_thread::sleep_for(5ms);
     }
 
     void DebugUI::render( float interpFactor, GPURenderer* renderer )
@@ -36,8 +41,20 @@ namespace InnoEngine
         imgui_begin_frame();
 
         // draw here
-        ImGui::ShowDemoWindow();
+        //ImGui::ShowDemoWindow();
 
+        if(ImGui::Begin("Debug")) {
+
+           ImGui::Text("FPS: %.0f", CoreAPI::get_application()->get_fps());  
+           ImGui::Text("Frametime: %.2fms", CoreAPI::get_application()->get_timing(ProfileElements::TotalFrame) * 1000);
+
+           ImGui::Text("Mainthread: %.2fms", CoreAPI::get_application()->get_timing(ProfileElements::MainThreadTotal) * 1000);
+           ImGui::Text("Updatethread: %.2fms", CoreAPI::get_application()->get_timing(ProfileElements::UpdateThreadTotal) * 1000);
+
+           ImGui::Text("Update: %.2fms", CoreAPI::get_application()->get_timing(ProfileElements::Update) * 1000);
+           ImGui::Text("Render: %.2fms", CoreAPI::get_application()->get_timing(ProfileElements::Render) * 1000);
+        }
+        ImGui::End();
         imgui_end_frame();
     }
 

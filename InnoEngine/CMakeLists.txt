@@ -41,6 +41,9 @@ set(InnoEngine_Sources
 	"src/DebugUI.cpp"
 	"src/Layer.h"
 	"src/Layer.cpp"
+	"src/Profiler.h"
+	"src/Profiler.cpp"
+	"src/SimpleAverageCalc.h"
 )
 
 set(InnoEngine_Shader_Sources  

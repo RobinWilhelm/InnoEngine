@@ -11,9 +11,18 @@
 #include "Shader.h"
 #include "DebugUI.h"
 #include "RenderCommandBuffer.h"
+#include "Profiler.h"
 
 namespace InnoEngine
 {
+#ifdef ENABLE_PROFILER
+    #define PROFILE_START( x ) ( m_profiler->start( x ) )
+    #define PROFILE_STOP( x )  ( m_profiler->stop( x ) )
+#else
+    #define PROFILE_START( x )
+    #define PROFILE_STOP( x )
+#endif
+
     Application::Application()
     {
     }
@@ -47,12 +56,19 @@ namespace InnoEngine
                 std::unique_lock<std::mutex> ulock( m_asyncMutex );
                 m_asyncThreadWaiting.wait( ulock, [ this ]() { return m_syncComplete; } );
 
+                m_profiler->start( ProfileElements::UpdateThreadTotal );
+
                 for ( const auto& event : m_eventBuffer.get_second() )
                     handle_event( event );
 
+                m_profiler->start( ProfileElements::Update );
                 update_layers();
                 m_camera->update();
+                m_profiler->stop( ProfileElements::Update );
+
                 render_layers();
+
+                m_profiler->stop( ProfileElements::UpdateThreadTotal );
 
                 m_syncComplete        = false;
                 m_asyncThreadFinished = true;
@@ -61,7 +77,7 @@ namespace InnoEngine
         }
     }
 
-    void Application::shutdown()
+    void Application::on_shutdown()
     {
         m_mustQuit.store( true, std::memory_order_relaxed );
     }
@@ -90,6 +106,11 @@ namespace InnoEngine
             auto assetManagerOpt = AssetManager::create( appParams.AssetDirectory, appParams.AsyncAssetLoading );
             m_assetManager       = std::move( assetManagerOpt.value() );
 
+#ifdef ENABLE_PROFILER
+            auto profilerOpt = Profiler::create();
+            m_profiler       = std::move( profilerOpt.value() );
+#endif
+
             set_simulation_target_frequency( appParams.SimulationFrequency );
             m_multiThreaded = appParams.RunAsync;
 
@@ -117,53 +138,63 @@ namespace InnoEngine
 
         while ( m_mustQuit.load( std::memory_order_relaxed ) == false ) {
 
+            m_profiler->start( ProfileElements::TotalFrame );
+            m_profiler->start( ProfileElements::MainThreadTotal );
+
             poll_events();
 
             if ( m_multiThreaded == false ) {
+                update_profiledata();
+
+                m_profiler->start( ProfileElements::Update );
                 update_layers();
                 m_camera->update();
+                m_profiler->stop( ProfileElements::Update );
+
+                m_profiler->start( ProfileElements::Render );
                 render_layers();
 
                 m_renderer->set_camera_matrix( m_camera->get_viewprojectionmatrix() );
                 m_renderer->submit_pipelines();
                 m_renderer->process_pipelines();
+
+                m_profiler->stop( ProfileElements::Render );
             }
             else {
-                DXSM::Matrix mainCameraMatrix;
-
-                // sync new events with update thread and recieve rendercommands
-                {
+                {    // hold mutex while we are synchronising data with the async thread
                     std::unique_lock<std::mutex> ulock( m_asyncMutex );
                     m_mainThreadWaiting.wait( ulock, [ this ]() { return m_asyncThreadFinished; } );
-
-                    mainCameraMatrix = m_camera->get_viewprojectionmatrix();
-                    m_eventBuffer.swap();
-                    m_eventBuffer.get_first().clear();
-                    m_renderer->submit_pipelines();
+                    
+                    synchronize();
 
                     m_syncComplete        = true;
                     m_asyncThreadFinished = false;
                 }
                 m_asyncThreadWaiting.notify_one();
 
-                m_renderer->set_camera_matrix( mainCameraMatrix );
+                m_profiler->start( ProfileElements::Render );
                 m_renderer->process_pipelines();
+                m_profiler->stop( ProfileElements::Render );
             }
+
+            m_profiler->stop( ProfileElements::MainThreadTotal );
+            m_profiler->stop( ProfileElements::TotalFrame );
+            m_profiler->update();
         }
 
         if ( m_multiThreaded )
             m_asyncApplicationThread.join();
 
         IE_LOG_INFO( "Shutting down" );
-        shutdown();
+        on_shutdown();
         return Result::Success;
     }
 
-    void Application::set_simulation_target_frequency( int updatesPerSecond )
+    void Application::set_simulation_target_frequency( int updateFrequency )
     {
-        m_frameTimingInfo.FixedSimulationFrequency = updatesPerSecond;
-        m_frameTimingInfo.DeltaTime                = 1.0f / updatesPerSecond;
-        m_frameTimingInfo.DeltaTicks               = 1'000'000'000 / updatesPerSecond;
+        m_frameTimingInfo.FixedSimulationFrequency = updateFrequency;
+        m_frameTimingInfo.DeltaTime                = 1.0f / updateFrequency;
+        m_frameTimingInfo.DeltaTicks               = updateFrequency > 0 ? TicksPerSecond / updateFrequency : 0;
     }
 
     Window* Application::get_window() const
@@ -198,6 +229,35 @@ namespace InnoEngine
     {
         IE_LOG_CRITICAL( "Critical error: {}", msg.c_str() );
         m_mustQuit.store( true, std::memory_order_relaxed );
+    }
+
+    float Application::get_fps()
+    {
+        return 1.0f / m_profileData[ static_cast<uint32_t>( ProfileElements::TotalFrame ) ];
+    }
+
+    float Application::get_timing( ProfileElements element )
+    {
+        return m_profileData[ static_cast<uint32_t>( element ) ];
+    }
+
+    void Application::on_synchronize()
+    {
+    }
+
+    void Application::synchronize()
+    {
+        m_renderer->set_camera_matrix(m_camera->get_viewprojectionmatrix());
+        m_eventBuffer.swap();
+        m_eventBuffer.get_first().clear();
+        m_renderer->submit_pipelines();
+
+        update_profiledata();
+
+        on_synchronize();
+
+        m_syncComplete        = true;
+        m_asyncThreadFinished = false;
     }
 
     void Application::poll_events()
@@ -239,11 +299,11 @@ namespace InnoEngine
     void Application::update_layers()
     {
         // double newTime = static_cast<double>( SDL_GetTicksNS() ) / 1'000'000'000.0;
-        uint64_t newTime = SDL_GetTicksNS();
+        uint64_t newTime = getTickCount64();
         m_frameTimingInfo.AccumulatedTicks += newTime - m_frameTimingInfo.CurrentTicks;
 
         if ( m_frameTimingInfo.FixedSimulationFrequency == 0 ) {
-            m_frameTimingInfo.DeltaTime    = static_cast<double>( newTime - m_frameTimingInfo.CurrentTicks ) / 1'000'000'000.0;
+            m_frameTimingInfo.DeltaTime    = static_cast<double>( newTime - m_frameTimingInfo.CurrentTicks ) / TicksPerSecond;
             m_frameTimingInfo.CurrentTicks = newTime;
 
             for ( auto layer : m_layerStack ) {
@@ -280,5 +340,13 @@ namespace InnoEngine
         coreapi.m_assetManager = m_assetManager.get();
         coreapi.m_renderer     = m_renderer.get();
         coreapi.m_camera       = m_camera.get();
+    }
+
+    void Application::update_profiledata()
+    {
+        IE_ASSERT( m_profiler != nullptr );
+        for ( size_t i = 0; i < static_cast<uint32_t>( ProfileElements::COUNT ); ++i ) {
+            m_profileData[ i ] = m_profiler->get_average( static_cast<ProfileElements>( i ) ) / TicksPerSecond;
+        }
     }
 }    // namespace InnoEngine
