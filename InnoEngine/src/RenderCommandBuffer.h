@@ -20,8 +20,8 @@ namespace InnoEngine
     public:
         RenderCommandQueue( size_t expectedQueueSize = 1000 )
         {
-            m_firstQueue.reserve( expectedQueueSize );
-            m_secondQueue.reserve( expectedQueueSize );
+            m_collectQueue.reserve( expectedQueueSize );
+            m_dispatchQueue.reserve( expectedQueueSize );
         }
 
         virtual ~RenderCommandQueue() = default;
@@ -30,51 +30,49 @@ namespace InnoEngine
         T& create_entry()
         {
             grow_if_needed();
-            auto&  ccmd   = get_collecting_queue();
-            return ccmd.emplace_back();
+            return m_collectQueue.emplace_back();
         }
 
         void grow_if_needed()
         {
-            auto& ccmd = get_collecting_queue();
-            if ( ccmd.size() == ccmd.capacity() ) {
+            if (m_collectQueue.size() == m_collectQueue.capacity() ) {
                 // Grow by a factor of 2.
-                ccmd.reserve( ccmd.capacity() * 2 );
+                m_collectQueue.reserve(m_collectQueue.capacity() * 2 );
             }
         }
 
         void on_submit()
         {
-            size_t items = get_collecting_queue().size();
+            size_t items = m_collectQueue.size();
             if ( items != 0 ) {
                 switch_buffers();
 
                 // clear to get ready for collecting next frames commands
-                auto& collectQueue = get_collecting_queue();
-                collectQueue.clear();
-                collectQueue.reserve( items );
+                m_collectQueue.clear();
+                m_collectQueue.reserve( items );
             }
         }
 
         void switch_buffers()
         {
-            m_collectingQueue = ( m_collectingQueue == RenderBufferQueue::First ) ? RenderBufferQueue::Second : RenderBufferQueue::First;
+            // make a pointer swap
+            m_collectQueue.swap(m_dispatchQueue);
         }
 
         std::vector<T>& get_collecting_queue()
         {
-            return ( m_collectingQueue == RenderBufferQueue::First ) ? m_firstQueue : m_secondQueue;
+            return m_collectQueue;
         }
 
         std::vector<T>& get_dispatching_queue()
         {
-            return ( m_collectingQueue == RenderBufferQueue::First ) ? m_secondQueue : m_firstQueue;
+            return m_dispatchQueue;
         }
 
     private:
-        RenderBufferQueue m_collectingQueue = RenderBufferQueue::First;
-        std::vector<T>    m_firstQueue;
-        std::vector<T>    m_secondQueue;
+        // force it to align to cache lines to prevent false sharing
+        alignas(std::hardware_destructive_interference_size) std::vector<T>    m_collectQueue;
+        alignas(std::hardware_destructive_interference_size) std::vector<T>    m_dispatchQueue;
     };
 
     template <typename T>

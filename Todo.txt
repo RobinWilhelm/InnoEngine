@@ -1,6 +1,5 @@
 TODO List:
 
 - fix possible false sharing in Profiler 
-- refactor rendercommandbuffer
 - output shaderbuffer info with shadercross
 - add runtime shader compiling and loading
