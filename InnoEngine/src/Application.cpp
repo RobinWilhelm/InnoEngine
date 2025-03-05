@@ -110,9 +110,9 @@ namespace InnoEngine
         if ( m_initializationSucceded == false )
             return Result::InitializationError;
 
-        if ( m_multiThreaded )          {
-            m_asyncApplicationThread = std::thread(&Application::run_async, this );
-            IE_LOG_DEBUG("Created async application thread");
+        if ( m_multiThreaded ) {
+            m_asyncApplicationThread = std::thread( &Application::run_async, this );
+            IE_LOG_DEBUG( "Created async application thread" );
         }
 
         while ( m_mustQuit.load( std::memory_order_relaxed ) == false ) {
@@ -138,6 +138,7 @@ namespace InnoEngine
 
                     mainCameraMatrix = m_camera->get_viewprojectionmatrix();
                     m_eventBuffer.swap();
+                    m_eventBuffer.get_first().clear();
                     m_renderer->submit_pipelines();
 
                     m_syncComplete        = true;
@@ -162,6 +163,7 @@ namespace InnoEngine
     {
         m_frameTimingInfo.FixedSimulationFrequency = updatesPerSecond;
         m_frameTimingInfo.DeltaTime                = 1.0f / updatesPerSecond;
+        m_frameTimingInfo.DeltaTicks               = 1'000'000'000 / updatesPerSecond;
     }
 
     Window* Application::get_window() const
@@ -188,6 +190,7 @@ namespace InnoEngine
         }
 
         IE_ASSERT( m_debugLayer != nullptr );
+        IE_LOG_DEBUG( "Debug UI {}", enabled ? "enabled" : "disabled" );
         m_debugui_active = enabled;
     }
 
@@ -203,7 +206,6 @@ namespace InnoEngine
         while ( SDL_PollEvent( &event ) != 0 ) {
 
             if ( m_multiThreaded ) {
-                m_eventBuffer.get_first().clear();
                 m_eventBuffer.get_first().emplace_back( event );
             }
             else {
@@ -217,6 +219,7 @@ namespace InnoEngine
                    event.window.windowID == SDL_GetWindowID( m_window->get_sdlwindow() ) ) ) {
                 IE_LOG_DEBUG( "Shutdown requested" );
                 m_mustQuit = true;
+                break;
             }
         }
     }
@@ -235,12 +238,13 @@ namespace InnoEngine
 
     void Application::update_layers()
     {
-        double newTime = static_cast<double>( SDL_GetTicksNS() ) / 1'000'000'000.0;
-        m_frameTimingInfo.AccumulatedTime += newTime - m_frameTimingInfo.CurrentTime;
+        // double newTime = static_cast<double>( SDL_GetTicksNS() ) / 1'000'000'000.0;
+        uint64_t newTime = SDL_GetTicksNS();
+        m_frameTimingInfo.AccumulatedTicks += newTime - m_frameTimingInfo.CurrentTicks;
 
         if ( m_frameTimingInfo.FixedSimulationFrequency == 0 ) {
-            m_frameTimingInfo.DeltaTime   = newTime - m_frameTimingInfo.CurrentTime;
-            m_frameTimingInfo.CurrentTime = newTime;
+            m_frameTimingInfo.DeltaTime    = static_cast<double>( newTime - m_frameTimingInfo.CurrentTicks ) / 1'000'000'000.0;
+            m_frameTimingInfo.CurrentTicks = newTime;
 
             for ( auto layer : m_layerStack ) {
                 layer->update( m_frameTimingInfo.DeltaTime );
@@ -253,9 +257,8 @@ namespace InnoEngine
             m_frameTimingInfo.InterpolationFactor = 0.0f;
         }
         else {
-            m_frameTimingInfo.CurrentTime = newTime;
-
-            while ( m_frameTimingInfo.AccumulatedTime >= m_frameTimingInfo.DeltaTime ) {
+            m_frameTimingInfo.CurrentTicks = newTime;
+            while ( m_frameTimingInfo.AccumulatedTicks >= m_frameTimingInfo.DeltaTicks ) {
                 for ( auto layer : m_layerStack ) {
                     layer->update( m_frameTimingInfo.DeltaTime );
                 }
@@ -264,9 +267,9 @@ namespace InnoEngine
                 if ( m_debugui_active )
                     m_debugLayer->update( m_frameTimingInfo.DeltaTime );
 
-                m_frameTimingInfo.AccumulatedTime -= m_frameTimingInfo.DeltaTime;
+                m_frameTimingInfo.AccumulatedTicks -= m_frameTimingInfo.DeltaTicks;
             }
-            m_frameTimingInfo.InterpolationFactor = static_cast<float>( m_frameTimingInfo.AccumulatedTime / m_frameTimingInfo.DeltaTime );
+            m_frameTimingInfo.InterpolationFactor = static_cast<float>( m_frameTimingInfo.AccumulatedTicks ) / m_frameTimingInfo.DeltaTicks;
         }
     }
 

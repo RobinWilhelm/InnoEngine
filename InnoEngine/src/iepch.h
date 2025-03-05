@@ -14,6 +14,7 @@
 #include <typeindex>
 #include <algorithm>
 #include <cstdint>
+#include <chrono>
 
 #include "SDL3/SDL.h"
 #include "IE_Assert.h"
@@ -23,3 +24,5 @@
 
 #include "SimpleMath.h"
 namespace DXSM = DirectX::SimpleMath;
+
+using namespace std::chrono_literals;

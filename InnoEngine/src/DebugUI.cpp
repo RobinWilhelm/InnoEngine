@@ -26,6 +26,7 @@ namespace InnoEngine
     void DebugUI::update( double deltaTime )
     {    
         (void)deltaTime;
+        std::this_thread::sleep_for(10ms);
     }
 
     void DebugUI::render( float interpFactor, GPURenderer* renderer )

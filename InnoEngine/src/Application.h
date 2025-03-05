@@ -20,11 +20,12 @@ namespace InnoEngine
 
     struct FrameTimingInfo
     {
-        int    FixedSimulationFrequency = 0;
-        double CurrentTime              = 0.0;    // time since app initialization
-        double AccumulatedTime          = 0.0;    // accumulated time since last update
-        double DeltaTime                = 0.0;    // time since last update in seconds
-        float  InterpolationFactor      = 0.0f;
+        int      FixedSimulationFrequency = 0;
+        uint64_t CurrentTicks             = 0;      // time since app initialization
+        uint64_t AccumulatedTicks         = 0;      // accumulated time since last update
+        uint64_t DeltaTicks               = 0;      // time sinc last update in ticks
+        double   DeltaTime                = 0.0;    // time since last update in seconds
+        float    InterpolationFactor      = 0.0f;
     };
 
     struct CreationParams
@@ -32,7 +33,7 @@ namespace InnoEngine
         Window::CreationParams WindowParams;
         int                    SimulationFrequency = 60;
         bool                   EnableVSync         = true;
-        bool                   RunAsync            = false; // create a separate thread for layer processing
+        bool                   RunAsync            = false;    // create a separate thread for layer processing
         std::filesystem::path  AssetDirectory;
         bool                   AsyncAssetLoading = false;
     };
