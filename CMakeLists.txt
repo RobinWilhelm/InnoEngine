@@ -22,7 +22,9 @@ add_subdirectory(extern)
 add_subdirectory(InnoEngine)
 add_subdirectory(Sandbox)	
 
-list (APPEND InnoEngine_ALL_Sources ${InnoEngine_Sources} ${InnoEngine_Shader_Sources} ${EXTERNAL_SOURCES})
+set(OTHER_SOURCES "todo.txt" "README.md")
+
+list (APPEND InnoEngine_ALL_Sources ${InnoEngine_Sources} ${InnoEngine_Shader_Sources} ${EXTERNAL_SOURCES} ${OTHER_SOURCES})
 
 include_directories(${IMGUI_INCLUDE_DIRS})
 include_directories(${DIRECTXTK_INCLUDE_DIRS})
@@ -35,7 +37,7 @@ add_library(InnoEngine STATIC ${InnoEngine_ALL_Sources})
 
 # add shaders to the project but do not compile them
 if(MSVC)
-	set_property(SOURCE ${InnoEngine_Shader_Sources} PROPERTY VS_SETTINGS "ExcludedFromBuild=true")	
+	set_property(SOURCE ${InnoEngine_Shader_Sources} ${OTHER_SOURCES} PROPERTY VS_SETTINGS "ExcludedFromBuild=true")	
 endif()
 
 # compiler warning settings

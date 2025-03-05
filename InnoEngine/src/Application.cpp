@@ -164,7 +164,7 @@ namespace InnoEngine
                 {    // hold mutex while we are synchronising data with the async thread
                     std::unique_lock<std::mutex> ulock( m_asyncMutex );
                     m_mainThreadWaiting.wait( ulock, [ this ]() { return m_asyncThreadFinished; } );
-                    
+
                     synchronize();
 
                     m_syncComplete        = true;
@@ -247,7 +247,7 @@ namespace InnoEngine
 
     void Application::synchronize()
     {
-        m_renderer->set_camera_matrix(m_camera->get_viewprojectionmatrix());
+        m_renderer->set_camera_matrix( m_camera->get_viewprojectionmatrix() );
         m_eventBuffer.swap();
         m_eventBuffer.get_first().clear();
         m_renderer->submit_pipelines();
