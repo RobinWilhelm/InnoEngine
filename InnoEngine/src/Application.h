@@ -64,8 +64,9 @@ namespace InnoEngine
         float get_timing( ProfileElements element );
 
     private:
-        virtual Result on_init()     = 0;
-        virtual void   on_shutdown() = 0;
+        virtual void   on_init_assets( AssetManager* assetmanager ) = 0;
+        virtual Result on_init()                                    = 0;
+        virtual void   on_shutdown()                                = 0;
 
         // Only relevant if application is running async
         // All data sharing between the threads has to be in here
@@ -83,15 +84,14 @@ namespace InnoEngine
         void publish_coreapi();
         void update_profiledata();
 
-    protected:
-        FrameTimingInfo           m_frameTimingInfo = {};
-        Owned<Window>             m_window;
-        Owned<GPURenderer>        m_renderer;
-        Owned<AssetManager>       m_assetManager;
-        Owned<OrthographicCamera> m_camera;
-#ifdef ENABLE_PROFILER
-        Owned<Profiler> m_profiler;
-#endif
+    private:
+        FrameTimingInfo         m_frameTimingInfo = {};
+        Own<Window>             m_window;
+        Own<GPURenderer>        m_renderer;
+        Own<AssetManager>       m_assetManager;
+        Own<OrthographicCamera> m_camera;
+        Own<Profiler>           m_profiler;
+
         std::condition_variable m_updateCV;
 
         bool             m_initializationSucceded = false;
@@ -110,10 +110,10 @@ namespace InnoEngine
 
         std::vector<Layer*> m_layerStack;
         // keep debuglayer seperate and always topmost
-        Owned<Layer>        m_debugLayer;
+        Own<Layer>          m_debugLayer;
         bool                m_debugui_active = false;
 
-        std::array<float, static_cast<int>( ProfileElements::COUNT )> m_profileData;
+        std::array<float, static_cast<int>( ProfileElements::Count )> m_profileData;
     };
 
 }    // namespace InnoEngine

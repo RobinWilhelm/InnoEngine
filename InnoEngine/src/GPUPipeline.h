@@ -28,17 +28,13 @@ namespace InnoEngine
         GPUPipeline( GPUPipeline&& other )                 = delete;
         GPUPipeline& operator=( const GPUPipeline& other ) = delete;
         GPUPipeline& operator=( GPUPipeline&& other )      = delete;
-        virtual ~GPUPipeline()  = default;
+        virtual ~GPUPipeline()                             = default;
 
-        virtual bool                   init( GPURenderer* pRenderer ) = 0;
-        virtual void                   submit() = 0;
-        virtual const std::string_view get_name() const         = 0;
-        virtual uint32_t               needs_processing() const = 0;
-        virtual void                   sort_commands() { };
-        virtual void                   prepare_render( SDL_GPUDevice* gpudevice )                                                                          = 0;
-        virtual void                   swapchain_render( const DXSM::Matrix& viewProjection, SDL_GPUCommandBuffer* cmdbuf, SDL_GPURenderPass* renderPass ) = 0;
+        virtual bool init( GPURenderer* pRenderer )                                                                                                    = 0;
+        virtual void prepare_render( const RenderCommandBuffer& render_command_buffer, SDL_GPUDevice* gpudevice )                                      = 0;
+        virtual void swapchain_render( const RenderCommandBuffer& render_command_buffer, SDL_GPUCommandBuffer* cmdbuf, SDL_GPURenderPass* renderPass ) = 0;
 
     protected:
-        GPURenderer* m_renderer    = nullptr;
+        GPURenderer* m_renderer = nullptr;
     };
 }    // namespace InnoEngine

@@ -16,10 +16,10 @@ namespace InnoEngine
         AverageCalc( uint32_t numProbes, uint32_t probeFrequency );
         ~AverageCalc() = default;
 
-        void Init( uint32_t numProbes, uint32_t probeFrequency );
+        void init( uint32_t numProbes, uint32_t probeFrequency );
 
-        bool      Update( ProbeType probe);
-        ProbeType GetAverage();
+        bool      update( ProbeType probe);
+        ProbeType get_average();
 
     private:
         std::vector<ProbeType> m_lastProbes          = {};
@@ -32,20 +32,20 @@ namespace InnoEngine
     template <typename ProbeType>
     inline AverageCalc<ProbeType>::AverageCalc( uint32_t numProbes, uint32_t probeFrequency )
     {
-        Init( numProbes, probeFrequency );
+        init( numProbes, probeFrequency );
     }
 
     template <typename ProbeType>
-    inline void AverageCalc<ProbeType>::Init( uint32_t numProbes, uint32_t probeFrequency )
+    inline void AverageCalc<ProbeType>::init( uint32_t numProbes, uint32_t probeFrequency )
     {
         m_lastProbes.resize( numProbes );
         m_timeBetweenUpates = probeFrequency > 0 ? TicksPerSecond / probeFrequency : 0;
     }
 
     template <typename ProbeType>
-    inline bool AverageCalc<ProbeType>::Update(ProbeType probe)
+    inline bool AverageCalc<ProbeType>::update(ProbeType probe)
     {
-        if ( m_timeBetweenUpates > 0 && getTickCount64() - m_lastUpdateTimestamp < m_timeBetweenUpates ) {
+        if ( m_timeBetweenUpates > 0 && get_tick_count() - m_lastUpdateTimestamp < m_timeBetweenUpates ) {
             return false;
         }
 
@@ -60,12 +60,12 @@ namespace InnoEngine
 
         m_averageProbe = sum / static_cast<int32_t>( m_lastProbes.size() );
 
-        m_lastUpdateTimestamp = getTickCount64();
+        m_lastUpdateTimestamp = get_tick_count();
         return true;
     }
 
     template <typename ProbeType>
-    inline ProbeType AverageCalc<ProbeType>::GetAverage()
+    inline ProbeType AverageCalc<ProbeType>::get_average()
     {
         return m_averageProbe;
     }

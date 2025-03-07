@@ -1,5 +1,6 @@
 #include "imgui.h"
 
+#include "BaseTypes.h"
 #include "Layer.h"
 
 #include <optional>
@@ -16,7 +17,7 @@ namespace InnoEngine
 
     public:
         [[nodiscard]]
-        static auto create( GPURenderer* renderer ) -> std::optional<std::unique_ptr<DebugUI>>;
+        static auto create( GPURenderer* renderer ) -> std::optional<Own<DebugUI>>;
 
         // Inherited via Layer
         void update( double deltaTime ) override;
@@ -25,9 +26,6 @@ namespace InnoEngine
 
     private:
         void imgui_begin_frame();
-        void imgui_end_frame();
-
-    private:
-        std::shared_ptr<ImGuiPipeline> m_pipeline = nullptr;
+        void imgui_end_frame( GPURenderer* pRenderer );
     };
 }    // namespace InnoEngine

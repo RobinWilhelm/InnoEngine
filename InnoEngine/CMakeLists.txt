@@ -44,6 +44,8 @@ set(InnoEngine_Sources
 	"src/Profiler.h"
 	"src/Profiler.cpp"
 	"src/SimpleAverageCalc.h"
+	"src/Texture2D.h"
+	"src/Texture2D.cpp"
 )
 
 set(InnoEngine_Shader_Sources  

@@ -15,7 +15,7 @@ namespace InnoEngine
 
     public:
         [[nodiscard]]
-        static auto create( float left, float right, float bottom, float top ) -> Owned<OrthographicCamera>;
+        static auto create( float left, float right, float bottom, float top ) -> Own<OrthographicCamera>;
 
         void update();
 

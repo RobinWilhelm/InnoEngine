@@ -2,57 +2,52 @@
 #include "SDL3/SDL_video.h"
 #include "SDL3/SDL_gpu.h"
 
+#include "BaseTypes.h"
+#include "Texture2D.h"
+
 #include "SimpleMath.h"
 namespace DXSM = DirectX::SimpleMath;
 
-#include "Asset.h"
-
-#include <filesystem>
-
 namespace InnoEngine
 {
-    class Sprite2DPipeline;
     class GPURenderer;
 
-    class Sprite : public Asset<Sprite>
+    class Sprite
     {
-        friend class Sprite2DPipeline;
+        friend class GPURenderer;
 
     public:
-        virtual ~Sprite();
+        Sprite() = default;
 
-        bool load_from_file( std::filesystem::path fullPath ) override;
-        bool create_device_ressources( GPURenderer* pRenderer );
-        void release_device_ressources();
+        Sprite( Ref<Texture2D> texture ) :
+            m_texture( texture )
+        {
+            IE_ASSERT( m_texture != nullptr );
+        };
 
         SDL_PixelFormat get_format() const;
-        int        width() const;
-        int        height() const;
+        int             width() const;
+        int             height() const;
 
-        SDL_GPUTexture* get_sdltexture();
-        SDL_GPUBuffer*  get_sdlvertexbuffer();
-        SDL_GPUBuffer*  get_sdlindexbuffer();
+        void set_texture( const Ref<Texture2D> texture, const DXSM::Vector4&& source_rect );
+        void set_source_rect( const DXSM::Vector4&& source_rect );    // source area of the texture
+        void set_position( const DXSM::Vector2&& position );
+        void set_layer( uint16_t layer );
+        void set_color( const DXSM::Color&& color );
+        void set_rotation( float rotation );
+        void set_scale( const DXSM::Vector2&& scale );
 
-        void render( float x, float y, DXSM::Color color = { 1.0f, 1.0f, 1.0f, 1.0f }, uint16_t layer = 0 );
-        void render( float x, float y, float angle, float scale, DXSM::Color color = { 1.0f, 1.0f, 1.0f, 1.0f }, uint16_t layer = 0 );
+        void render();
 
     private:
-        bool                              m_ready     = false;
-        GPURenderer*                      m_renderer  = nullptr;
-        std::shared_ptr<Sprite2DPipeline> m_pipeline  = nullptr;
-        SDL_Surface*                      m_imageData = nullptr;
-        std::filesystem::path             m_textureFilePath;
-        SDL_PixelFormat                   m_format = SDL_PIXELFORMAT_UNKNOWN;
-        uint32_t                          m_width = 0, m_height = 0;
-
-        SDL_GPUTexture* m_texture      = nullptr;
-        SDL_GPUSampler* m_sampler      = nullptr;
-        SDL_GPUBuffer*  m_vertexBuffer = nullptr;
-        SDL_GPUBuffer*  m_indexBuffer  = nullptr;
-
-        SDL_GPUBufferBinding         m_vertexBufferBinding   = {};
-        SDL_GPUBufferBinding         m_indexBufferBinding    = {};
-        SDL_GPUTextureSamplerBinding m_textureSamplerBinding = {};
+        GPURenderer*   m_renderer   = nullptr;
+        Ref<Texture2D> m_texture    = nullptr;
+        DXSM::Vector4  m_sourceRect = { 0.0f, 0.0f, 1.0f, 1.0f };
+        DXSM::Vector2  m_position   = { 0, 0 };
+        DXSM::Color    m_color      = { 1.0f, 1.0f, 1.0f, 1.0f };
+        DXSM::Vector2  m_scale      = { 1.0f, 1.0f };
+        float          m_rotation   = 0.0f;
+        uint16_t       m_layer      = 0;
     };
 
 }    // namespace InnoEngine

@@ -45,10 +45,11 @@ namespace InnoEngine
         }
     }
 
-    bool ImGuiPipeline::init( GPURenderer* renderer )
+    Result ImGuiPipeline::initialize( GPURenderer* renderer )
     {
         IE_ASSERT( renderer != nullptr && renderer->get_window() != nullptr );
-        m_renderer = renderer;
+        if ( m_initialized )
+            return Result::AlreadyInitialized;
 
         // Setup Dear ImGui context
         ImGui::CreateContext();
@@ -69,40 +70,12 @@ namespace InnoEngine
         ImGui_ImplSDLGPU3_Init( &init_info );
 
         m_initialized = true;
-        return true;
+        return Result::Success;
     }
 
-    void ImGuiPipeline::submit()
-    {
-        if ( m_drawData == nullptr )
-            return;
-
-        m_renderCommandLists.clear();
-        m_renderCommandLists.reserve( m_drawData->CmdListsCount );
-        for ( int n = 0; n < m_drawData->CmdListsCount; n++ ) {
-            const ImDrawList* drawList   = m_drawData->CmdLists[ n ];
-            auto&             renderList = m_renderCommandLists.emplace_back();
-            renderList.CommandBuffer     = drawList->CmdBuffer;
-            renderList.VertexBuffer      = drawList->VtxBuffer;
-            renderList.IndexBuffer       = drawList->IdxBuffer;
-        }
-        m_drawData = nullptr;
-    }
-
-    const std::string_view ImGuiPipeline::get_name() const
-    {
-        return "ImGuiPipeline";
-    }
-
-    uint32_t ImGuiPipeline::needs_processing() const
-    {
-        return ( m_renderCommandLists.size() != 0 ) ? PipelineCommand::Render : 0;
-    }
-
-    void ImGuiPipeline::prepare_render( SDL_GPUDevice* gpudevice )
+    void ImGuiPipeline::prepare_render( const CommandData& command_data, SDL_GPUDevice* gpudevice )
     {
         IE_ASSERT( gpudevice );
-        IE_ASSERT( m_renderCommandLists.size() != 0 );
 
         SDL_GPUCommandBuffer* copyCmdbuf = SDL_AcquireGPUCommandBuffer( gpudevice );
         if ( copyCmdbuf == nullptr ) {
@@ -111,16 +84,16 @@ namespace InnoEngine
         }
 
         // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-        int fb_width  = (int)( m_displaySize.x * m_frameBufferScale.x );
-        int fb_height = (int)( m_displaySize.y * m_frameBufferScale.y );
-        if ( fb_width <= 0 || fb_height <= 0 || m_totalVertexCount <= 0 )
+        int fb_width  = (int)( command_data.DisplaySize.x * command_data.FrameBufferScale.x );
+        int fb_height = (int)( command_data.DisplaySize.y * command_data.FrameBufferScale.y );
+        if ( fb_width <= 0 || fb_height <= 0 || command_data.TotalVertexCount <= 0 )
             return;
 
         ImGui_ImplSDLGPU3_Data*      bd = ImGui::GetCurrentContext() ? (ImGui_ImplSDLGPU3_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
         ImGui_ImplSDLGPU3_FrameData* fd = &bd->MainWindowFrameData;
 
-        uint32_t vertex_size = m_totalVertexCount * sizeof( ImDrawVert );
-        uint32_t index_size  = m_totalIndexCount * sizeof( ImDrawIdx );
+        uint32_t vertex_size = command_data.TotalVertexCount * sizeof( ImDrawVert );
+        uint32_t index_size  = command_data.TotalIndexCount * sizeof( ImDrawIdx );
         if ( fd->VertexBuffer == nullptr || fd->VertexBufferSize < vertex_size )
             create_or_resize_buffer( &fd->VertexBuffer, &fd->VertexBufferSize, vertex_size, SDL_GPU_BUFFERUSAGE_VERTEX );
         if ( fd->IndexBuffer == nullptr || fd->IndexBufferSize < index_size )
@@ -141,7 +114,7 @@ namespace InnoEngine
 
         ImDrawVert* vtx_dst = (ImDrawVert*)SDL_MapGPUTransferBuffer( gpudevice, vertex_transferbuffer, true );
         ImDrawIdx*  idx_dst = (ImDrawIdx*)SDL_MapGPUTransferBuffer( gpudevice, index_transferbuffer, true );
-        for ( const auto& cmdList : m_renderCommandLists ) {
+        for ( const auto& cmdList : command_data.RenderCommandLists ) {
             memcpy( vtx_dst, cmdList.VertexBuffer.Data, cmdList.VertexBuffer.Size * sizeof( ImDrawVert ) );
             memcpy( idx_dst, cmdList.IndexBuffer.Data, cmdList.IndexBuffer.Size * sizeof( ImDrawIdx ) );
             vtx_dst += cmdList.VertexBuffer.Size;
@@ -180,13 +153,11 @@ namespace InnoEngine
         }
     }
 
-    void ImGuiPipeline::swapchain_render( const DXSM::Matrix& viewProjection, SDL_GPUCommandBuffer* cmdbuf, SDL_GPURenderPass* renderPass )
+    void ImGuiPipeline::swapchain_render( const CommandData& command_data, SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass )
     {
-        (void)viewProjection;
-
         // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-        int fb_width  = (int)( m_displaySize.x * m_frameBufferScale.x );
-        int fb_height = (int)( m_displaySize.y * m_frameBufferScale.y );
+        int fb_width  = (int)( command_data.DisplaySize.x * command_data.FrameBufferScale.x );
+        int fb_height = (int)( command_data.DisplaySize.y * command_data.FrameBufferScale.y );
         if ( fb_width <= 0 || fb_height <= 0 )
             return;
 
@@ -194,18 +165,18 @@ namespace InnoEngine
         ImGui_ImplSDLGPU3_FrameData* fd = &bd->MainWindowFrameData;
 
         // Bind graphics pipeline
-        SDL_BindGPUGraphicsPipeline( renderPass, bd->Pipeline );
+        SDL_BindGPUGraphicsPipeline( render_pass, bd->Pipeline );
 
         // Bind Vertex And Index Buffers
-        if ( m_totalVertexCount > 0 ) {
+        if ( command_data.TotalVertexCount > 0 ) {
             SDL_GPUBufferBinding vertex_buffer_binding = {};
             vertex_buffer_binding.buffer               = fd->VertexBuffer;
             vertex_buffer_binding.offset               = 0;
             SDL_GPUBufferBinding index_buffer_binding  = {};
             index_buffer_binding.buffer                = fd->IndexBuffer;
             index_buffer_binding.offset                = 0;
-            SDL_BindGPUVertexBuffers( renderPass, 0, &vertex_buffer_binding, 1 );
-            SDL_BindGPUIndexBuffer( renderPass, &index_buffer_binding,
+            SDL_BindGPUVertexBuffers( render_pass, 0, &vertex_buffer_binding, 1 );
+            SDL_BindGPUIndexBuffer( render_pass, &index_buffer_binding,
                                     sizeof( ImDrawIdx ) == 2 ? SDL_GPU_INDEXELEMENTSIZE_16BIT : SDL_GPU_INDEXELEMENTSIZE_32BIT );
         }
 
@@ -217,7 +188,7 @@ namespace InnoEngine
         viewport.h               = (float)fb_height;
         viewport.min_depth       = 0.0f;
         viewport.max_depth       = 1.0f;
-        SDL_SetGPUViewport( renderPass, &viewport );
+        SDL_SetGPUViewport( render_pass, &viewport );
 
         // Setup scale and translation
         // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos
@@ -228,23 +199,22 @@ namespace InnoEngine
             float translation[ 2 ];
         } ubo;
 
-        ubo.scale[ 0 ]       = 2.0f / m_displaySize.x;
-        ubo.scale[ 1 ]       = 2.0f / m_displaySize.y;
-        ubo.translation[ 0 ] = -1.0f - m_displayPos.x * ubo.scale[ 0 ];
-        ubo.translation[ 1 ] = -1.0f - m_displayPos.y * ubo.scale[ 1 ];
-        SDL_PushGPUVertexUniformData( cmdbuf, 0, &ubo, sizeof( UBO ) );
+        ubo.scale[ 0 ]       = 2.0f / command_data.DisplaySize.x;
+        ubo.scale[ 1 ]       = 2.0f / command_data.DisplaySize.y;
+        ubo.translation[ 0 ] = -1.0f - command_data.DisplayPos.x * ubo.scale[ 0 ];
+        ubo.translation[ 1 ] = -1.0f - command_data.DisplayPos.y * ubo.scale[ 1 ];
+        SDL_PushGPUVertexUniformData( gpu_cmd_buf, 0, &ubo, sizeof( UBO ) );
 
         // Will project scissor/clipping rectangles into framebuffer space
-        ImVec2 clip_off   = m_displayPos;          // (0,0) unless using multi-viewports
-        ImVec2 clip_scale = m_frameBufferScale;    // (1,1) unless using retina display which are often (2,2)
+        ImVec2 clip_off   = command_data.DisplayPos;          // (0,0) unless using multi-viewports
+        ImVec2 clip_scale = command_data.FrameBufferScale;    // (1,1) unless using retina display which are often (2,2)
 
         // Render command lists
         // (Because we merged all buffers into a single one, we maintain our own offset into them)
         int global_vtx_offset = 0;
         int global_idx_offset = 0;
-        for ( const auto& cmdList : m_renderCommandLists ) {
+        for ( const auto& cmdList : command_data.RenderCommandLists ) {
             for ( const auto& renderCmd : cmdList.CommandBuffer ) {
-
                 /*
                 // Usercallbacks are not supported for now
                 if ( pcmd->UserCallback != nullptr ) {
@@ -279,13 +249,13 @@ namespace InnoEngine
                     scissor_rect.y        = (int)clip_min.y;
                     scissor_rect.w        = (int)( clip_max.x - clip_min.x );
                     scissor_rect.h        = (int)( clip_max.y - clip_min.y );
-                    SDL_SetGPUScissor( renderPass, &scissor_rect );
+                    SDL_SetGPUScissor( render_pass, &scissor_rect );
 
                     // Bind DescriptorSet with font or user texture
-                    SDL_BindGPUFragmentSamplers( renderPass, 0, (SDL_GPUTextureSamplerBinding*)renderCmd.GetTexID(), 1 );
+                    SDL_BindGPUFragmentSamplers( render_pass, 0, (SDL_GPUTextureSamplerBinding*)renderCmd.GetTexID(), 1 );
 
                     // Draw
-                    SDL_DrawGPUIndexedPrimitives( renderPass, renderCmd.ElemCount, 1, renderCmd.IdxOffset + global_idx_offset,
+                    SDL_DrawGPUIndexedPrimitives( render_pass, renderCmd.ElemCount, 1, renderCmd.IdxOffset + global_idx_offset,
                                                   renderCmd.VtxOffset + global_vtx_offset, 0 );
                 }
             }
@@ -299,18 +269,7 @@ namespace InnoEngine
         // SDL_SetGPUScissor() to set back a full viewport which is likely to fix things for 99% users but technically this is not perfect. (See github
         // #4644)
         SDL_Rect scissor_rect { 0, 0, fb_width, fb_height };
-        SDL_SetGPUScissor( renderPass, &scissor_rect );
-    }
-
-    void ImGuiPipeline::collect( ImDrawData* drawData )
-    {
-        IE_ASSERT( drawData != nullptr );
-        m_frameBufferScale = drawData->FramebufferScale;
-        m_totalIndexCount  = drawData->TotalIdxCount;
-        m_totalVertexCount = drawData->TotalVtxCount;
-        m_displayPos       = drawData->DisplayPos;
-        m_displaySize      = drawData->DisplaySize;
-        m_drawData         = drawData;
+        SDL_SetGPUScissor( render_pass, &scissor_rect );
     }
 
     void ImGuiPipeline::create_or_resize_buffer( SDL_GPUBuffer** buffer, uint32_t* old_size, uint32_t new_size, SDL_GPUBufferUsageFlags usage )

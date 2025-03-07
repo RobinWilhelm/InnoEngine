@@ -2,15 +2,20 @@
 
 #include "AssetManager.h"
 #include "Renderer.h"
-#include "Sprite.h"
+#include "Texture2D.h"
 #include "Shader.h"
+
+
+void Sandbox::on_init_assets(IE::AssetManager* assetmanager)
+{
+    assetmanager->add_repository<IE::Texture2D>("Images");
+
+    auto shaderFormat = get_renderer()->get_needed_shaderformat();
+    assetmanager->add_repository<IE::Shader>("Shaders" / shaderFormat.SubDirectory);
+}
 
 IE::Result Sandbox::on_init()
 {
-    m_assetManager->add_repository<IE::Sprite>("Images");
-
-    auto shaderFormat = m_renderer->get_needed_shaderformat();
-    m_assetManager->add_repository<IE::Shader>("Shaders" / shaderFormat.SubDirectory);
     return IE::Result::Success;
 }
 

@@ -93,23 +93,23 @@ namespace InnoEngine
         Result result = Result::Fail;
         // create the core systems
         try {
+            auto assetManagerOpt = AssetManager::create( appParams.AssetDirectory, appParams.AsyncAssetLoading );
+            m_assetManager       = std::move( assetManagerOpt.value() );
+
+            on_init_assets( m_assetManager.get() );
+
             if ( appParams.WindowParams.height != 0 && appParams.WindowParams.width != 0 ) {
                 auto windowOpt = Window::create( appParams.WindowParams );
                 m_window       = std::move( windowOpt.value() );
                 m_camera       = OrthographicCamera::create( 0, appParams.WindowParams.width, appParams.WindowParams.height, 0 );
             }
 
-            auto renderOpt = GPURenderer::create( m_window.get() );
+            auto renderOpt = GPURenderer::create( m_window.get(), m_assetManager.get() );
             m_renderer     = std::move( renderOpt.value() );
             m_renderer->enable_vsync( appParams.EnableVSync );
 
-            auto assetManagerOpt = AssetManager::create( appParams.AssetDirectory, appParams.AsyncAssetLoading );
-            m_assetManager       = std::move( assetManagerOpt.value() );
-
-#ifdef ENABLE_PROFILER
             auto profilerOpt = Profiler::create();
             m_profiler       = std::move( profilerOpt.value() );
-#endif
 
             set_simulation_target_frequency( appParams.SimulationFrequency );
             m_multiThreaded = appParams.RunAsync;
@@ -155,8 +155,8 @@ namespace InnoEngine
                 render_layers();
 
                 m_renderer->set_camera_matrix( m_camera->get_viewprojectionmatrix() );
-                m_renderer->submit_pipelines();
-                m_renderer->process_pipelines();
+                m_renderer->on_synchronize();
+                m_renderer->render();
 
                 m_profiler->stop( ProfileElements::Render );
             }
@@ -173,7 +173,7 @@ namespace InnoEngine
                 m_asyncThreadWaiting.notify_one();
 
                 m_profiler->start( ProfileElements::Render );
-                m_renderer->process_pipelines();
+                m_renderer->render();
                 m_profiler->stop( ProfileElements::Render );
             }
 
@@ -250,7 +250,7 @@ namespace InnoEngine
         m_renderer->set_camera_matrix( m_camera->get_viewprojectionmatrix() );
         m_eventBuffer.swap();
         m_eventBuffer.get_first().clear();
-        m_renderer->submit_pipelines();
+        m_renderer->on_synchronize();
 
         update_profiledata();
 
@@ -299,7 +299,7 @@ namespace InnoEngine
     void Application::update_layers()
     {
         // double newTime = static_cast<double>( SDL_GetTicksNS() ) / 1'000'000'000.0;
-        uint64_t newTime = getTickCount64();
+        uint64_t newTime = get_tick_count();
         m_frameTimingInfo.AccumulatedTicks += newTime - m_frameTimingInfo.CurrentTicks;
 
         if ( m_frameTimingInfo.FixedSimulationFrequency == 0 ) {
@@ -345,7 +345,7 @@ namespace InnoEngine
     void Application::update_profiledata()
     {
         IE_ASSERT( m_profiler != nullptr );
-        for ( size_t i = 0; i < static_cast<uint32_t>( ProfileElements::COUNT ); ++i ) {
+        for ( size_t i = 0; i < static_cast<uint32_t>( ProfileElements::Count ); ++i ) {
             m_profileData[ i ] = m_profiler->get_average( static_cast<ProfileElements>( i ) ) / TicksPerSecond;
         }
     }

@@ -19,6 +19,7 @@
 #include "SDL3/SDL.h"
 #include "IE_Assert.h"
 #include "Log.h"
+#include "CoreAPI.h"
 
 #include "imgui.h"
 

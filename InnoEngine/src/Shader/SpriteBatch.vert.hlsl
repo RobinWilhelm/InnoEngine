@@ -28,15 +28,18 @@ Output main(uint id : SV_VertexID)
     uint spriteIndex = id / 6;
     uint vert = QuadIndices[id % 6];
     SpriteData sprite = DataBuffer[spriteIndex];
-
-    float c = cos(sprite.Rotation);
-    float s = sin(sprite.Rotation);
-
     float2 coord = QuadVertices[vert];
-    coord *= sprite.Scale;
-    float2x2 rotation = { c, s, -s, c };
-    coord = mul(coord, rotation);
-
+    
+    if (sprite.Rotation != 0.0f)
+    {
+        float c = cos(sprite.Rotation);
+        float s = sin(sprite.Rotation);
+    
+        coord *= sprite.Scale;
+        float2x2 rotation = { c, s, -s, c };
+        coord = mul(coord, rotation);
+    }
+    
     float4 coordWithDepth = float4(coord.x + sprite.X, coord.y + sprite.Y, sprite.Z, 1.0f);
     
     float2 texcoord[4] =
@@ -46,9 +49,8 @@ Output main(uint id : SV_VertexID)
         { sprite.SourceRect.x, sprite.SourceRect.y + sprite.SourceRect.z },
         { sprite.SourceRect.x + sprite.SourceRect.w, sprite.SourceRect.y + sprite.SourceRect.z }
     };
-    
-    
-    Output output;    
+        
+    Output output;
     output.Position = mul(ViewProjectionMatrix, coordWithDepth);
     output.TexCoord = texcoord[vert];
     output.Color = sprite.Color;

@@ -16,7 +16,7 @@ namespace InnoEngine
         Render,
 
         // keep as last
-        COUNT
+        Count
     };
 
     constexpr std::string GetProfileElementString( ProfileElements elem )
@@ -32,7 +32,7 @@ namespace InnoEngine
             return "Update";
         case ProfileElements::Render:
             return "Render";
-        case ProfileElements::COUNT:
+        case ProfileElements::Count:
             return "Invalid Profileelement";
         }
         return "Unknown";
@@ -40,17 +40,18 @@ namespace InnoEngine
 
     class Profiler
     {
-        struct Timing
+        struct alignas( std::hardware_destructive_interference_size ) Timing
         {
-            uint64_t Current;
-            uint64_t TotalFrame;
+            uint64_t              Current;
+            uint64_t              TotalFrame;
+            AverageCalc<uint64_t> AverageCalc;
         };
 
         Profiler() = default;
 
     public:
         [[nodiscard]]
-        static auto create() -> std::optional<Owned<Profiler>>;
+        static auto create() -> std::optional<Own<Profiler>>;
 
         void update();
 
@@ -60,8 +61,6 @@ namespace InnoEngine
         float get_average( ProfileElements element );
 
     private:
-        // TODO prevent false sharing
-        std::array<Timing, static_cast<size_t>( ProfileElements::COUNT )>                m_timings;
-        std::array<AverageCalc<uint64_t>, static_cast<size_t>( ProfileElements::COUNT )> m_timingsAvg;
+        std::array<Timing, static_cast<size_t>( ProfileElements::Count )> m_timings;
     };
 }    // namespace InnoEngine

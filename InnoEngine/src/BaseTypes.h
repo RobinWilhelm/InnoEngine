@@ -7,21 +7,27 @@
 namespace InnoEngine
 {
     template <typename T>
-    using Owned = std::unique_ptr<T>;
+    using Own = std::unique_ptr<T>;
 
-    enum Result : int32_t
+    template <typename T>
+    using Ref = std::shared_ptr<T>;
+
+    enum class Result : int32_t
     {
         InitializationError = -2,
         Fail                = -1,
         Success             = 0,
+        AlreadyInitialized  = 1,
     };
 
-#define IE_FAILED( x )  ( x < 0 )
-#define IE_SUCCESS( x ) ( x >= 0 )
+#define IE_FAILED( x )  ( static_cast<int32_t>(x) < 0 )
+#define IE_SUCCESS( x ) ( static_cast<int32_t>(x) >= 0 )
 
-    inline uint64_t getTickCount64(){ return SDL_GetTicksNS(); };
+    inline uint64_t get_tick_count()
+    {
+        return SDL_GetTicksNS();
+    };
+
     constexpr int TicksPerSecond = 1'000'000'000;
-
-#define ENABLE_PROFILER
 
 }    // namespace InnoEngine

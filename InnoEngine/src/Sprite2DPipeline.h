@@ -4,73 +4,59 @@
 #include "SimpleMath.h"
 namespace DXSM = DirectX::SimpleMath;
 
+#include "BaseTypes.h"
 #include "Sprite.h"
 #include "Asset.h"
 #include "AssetView.h"
 #include "AssetRepository.h"
-#include "GPUPipeline.h"
-#include "RenderCommandBuffer.h"
-#include "BaseTypes.h"
 
 #include <string>
 #include <memory>
 
 namespace InnoEngine
 {
-    class Sprite2DPipeline : public GPUPipeline
+    class Sprite2DPipeline
     {
     public:
-        struct Vertex
+        struct BatchData
         {
-            float x = 0.0f, y = 0.0f, z = 0.0f;
-            float u = 0.0f, v = 0.0f;
+            AssetUID<Texture2D> texture;
+            uint16_t            bufferIdx = 0;
+            uint16_t            count     = 0;
         };
 
-        struct SpriteVertexUniform
+        struct Command
         {
-            float         x, y, z, rotation;
-            float         scale_w, scale_h, padding_a, padding_b;
-            DXSM::Vector4 source;
-            DXSM::Color   color;
-        };
+            Command() = default;
 
-        struct SpriteBatchInfo
-        {
-            SpriteBatchInfo() = default;
-
-            SpriteBatchInfo( SpriteBatchInfo&& other )
+            Command( Command&& other )
             {
                 texture = other.texture;
                 info    = other.info;
             }
 
-            AssetUID<Sprite>                      texture;
-            Sprite2DPipeline::SpriteVertexUniform info;
+            AssetUID<Texture2D> texture;
+
+            struct VertexUniform
+            {
+                float           x, y;
+                uint32_t        z;
+                float           rotation;
+                float           scale_w, scale_h, padding_a, padding_b;
+                DXSM::Vector4 source;
+                DXSM::Color     color;
+            } info;
         };
 
-        struct BatchData
-        {
-            AssetUID<Sprite> texture;
-            uint16_t         bufferIdx = 0;
-            uint16_t         count     = 0;
-        };
-
-        using CommandQueue = RenderCommandQueue<SpriteBatchInfo>;
+        using CommandList = std::vector<Command>;
 
     public:
         Sprite2DPipeline() = default;
         virtual ~Sprite2DPipeline();
 
-        // Geerbt über GPUPipeline
-        bool init( GPURenderer* pRenderer ) override;
-        void prepare_render( SDL_GPUDevice* gpudevice ) override;
-        void swapchain_render( const DXSM::Matrix& viewProjection, SDL_GPUCommandBuffer* cmdbuf, SDL_GPURenderPass* renderPass ) override;
-
-        const std::string_view get_name() const override;
-        void                   sort_commands() override;
-        uint32_t               needs_processing() const override;
-
-        void collect( AssetUID<Sprite> spriteUID, float x, float y, float angle = 0.0f, float scale_x = 1.0f, float scale_y = 1.0f, DXSM::Color color = { 1.0f, 1.0f, 1.0f, 1.0f }, uint16_t layer = 0 );
+        Result initialize( GPURenderer* pRenderer, AssetManager* assetmanager);
+        void   prepare_render( const CommandList& command_list, SDL_GPUDevice* gpudevice );
+        void   swapchain_render( const DXSM::Matrix& view_projection, const CommandList& command_list, SDL_GPUCommandBuffer* cmdbuf, SDL_GPURenderPass* renderPass );
 
     private:
         BatchData* add_batch();
@@ -79,22 +65,23 @@ namespace InnoEngine
         uint32_t       find_free_gpubuffer();
         SDL_GPUBuffer* get_gpubuffer_by_index( uint32_t index ) const;
 
-    private:
-        bool                                   m_initialized = false;
-        SDL_GPUGraphicsPipeline*               m_pipeline    = nullptr;
-        std::weak_ptr<AssetRepository<Sprite>> m_spriteAssets;
+        void sort_commands( const CommandList& command_list );
 
-        Owned<CommandQueue> m_commandQueue;
-        std::vector<SpriteBatchInfo*> m_sortedCommands; // objects owned by the commandQueue
+    private:
+        bool                     m_initialized    = false;
+        GPURenderer*             m_renderer       = nullptr;
+        SDL_GPUGraphicsPipeline* m_pipeline       = nullptr;
+        SDL_GPUSampler*          m_defaultSampler = nullptr;
+
+        Ref<AssetRepository<Texture2D>> m_textureAssets;
+
+        std::vector<const Command*> m_sortedCommands;    // objects owned by the RenderCommandBuffer
 
         SDL_GPUTransferBuffer* m_spriteTransferBuffer = nullptr;
 
         std::vector<SDL_GPUBuffer*>              m_gpuBuffer;
         uint16_t                                 m_gpuBuffer_used = 0;
         std::vector<Sprite2DPipeline::BatchData> m_batches;
-
-        // Inherited via GPUPipeline
-        void submit() override;
     };
 
 }    // namespace InnoEngine

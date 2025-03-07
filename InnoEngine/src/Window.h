@@ -22,7 +22,7 @@ namespace InnoEngine
         };
 
         [[nodiscard]]
-        static auto create( const CreationParams& creationParams ) -> std::optional<Owned<Window>>;
+        static auto create( const CreationParams& creationParams ) -> std::optional<Own<Window>>;
 
         int         width() const;
         int         height() const;
