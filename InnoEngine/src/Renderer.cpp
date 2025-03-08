@@ -21,6 +21,12 @@ namespace InnoEngine
             SpriteCommandBuffer.reserve( 20000 );
         }
 
+        void clear()
+        {
+            SpriteCommandBuffer.clear();
+            ImGuiCommandBuffer.RenderCommandLists.clear();
+        }
+
         DXSM::Matrix                           CameraMatrix;
         std::vector<Sprite2DPipeline::Command> SpriteCommandBuffer;
         ImGuiPipeline::CommandData             ImGuiCommandBuffer;
@@ -33,8 +39,8 @@ namespace InnoEngine
         {
             IE_ASSERT( renderer != nullptr && assetmanager != nullptr );
 
-            // m_sprite2DPipeline = std::make_unique<Sprite2DPipeline>();
-            // IE_ASSERT( IE_SUCCESS( m_sprite2DPipeline->initialize( renderer, assetmanager ) ) );
+            m_sprite2DPipeline = std::make_unique<Sprite2DPipeline>();
+            IE_ASSERT( IE_SUCCESS( m_sprite2DPipeline->initialize( renderer, assetmanager ) ) );
 
             m_imguiPipeline = std::make_unique<ImGuiPipeline>();
             IE_ASSERT( IE_SUCCESS( m_imguiPipeline->initialize( renderer ) ) );
@@ -43,21 +49,18 @@ namespace InnoEngine
 
         void prepare( SDL_GPUDevice* device )
         {
-            (void)device;
             IE_ASSERT( m_initialized );
-             RenderCommandBuffer& render_cmd_buf = m_renderCommandBuffer.get_second();
-            // m_sprite2DPipeline->prepare_render( render_cmd_buf.SpriteCommandBuffer, device );
-             m_imguiPipeline->prepare_render( render_cmd_buf.ImGuiCommandBuffer, device );
+            RenderCommandBuffer& render_cmd_buf = m_renderCommandBuffer.get_second();
+            m_sprite2DPipeline->prepare_render( render_cmd_buf.SpriteCommandBuffer, device );
+            m_imguiPipeline->prepare_render( render_cmd_buf.ImGuiCommandBuffer, device );
         }
 
         void render( SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass )
         {
-            (void)gpu_cmd_buf;
-            (void)render_pass;
             IE_ASSERT( m_initialized );
-             RenderCommandBuffer& render_cmd_buf = m_renderCommandBuffer.get_second();
-            // m_sprite2DPipeline->swapchain_render( render_cmd_buf.CameraMatrix, render_cmd_buf.SpriteCommandBuffer, gpu_cmd_buf, render_pass );
-             m_imguiPipeline->swapchain_render( render_cmd_buf.ImGuiCommandBuffer, gpu_cmd_buf, render_pass );
+            RenderCommandBuffer& render_cmd_buf = m_renderCommandBuffer.get_second();
+            m_sprite2DPipeline->swapchain_render( render_cmd_buf.CameraMatrix, render_cmd_buf.SpriteCommandBuffer, gpu_cmd_buf, render_pass );
+            m_imguiPipeline->swapchain_render( render_cmd_buf.ImGuiCommandBuffer, gpu_cmd_buf, render_pass );
         }
 
         RenderCommandBuffer& get_command_buffer()
@@ -68,6 +71,7 @@ namespace InnoEngine
         void on_synchronize()
         {
             m_renderCommandBuffer.swap();
+            get_command_buffer().clear();
         }
 
     private:
@@ -81,6 +85,8 @@ namespace InnoEngine
     {
         if ( m_sdlGPUDevice ) {
             SDL_WaitForGPUIdle( m_sdlGPUDevice );
+
+            m_pipelineProcessor.reset();
 
             if ( m_window ) {
                 SDL_ReleaseWindowFromGPUDevice( m_sdlGPUDevice, m_window->get_sdlwindow() );
@@ -171,6 +177,10 @@ namespace InnoEngine
     void GPURenderer::render()
     {
         IE_ASSERT( m_initialized );
+
+        // simulate some work
+        std::this_thread::sleep_for(5ms);
+
         m_pipelineProcessor->prepare( get_gpudevice() );
 
         SDL_GPUCommandBuffer* gpu_cmd_buf = SDL_AcquireGPUCommandBuffer( m_sdlGPUDevice );

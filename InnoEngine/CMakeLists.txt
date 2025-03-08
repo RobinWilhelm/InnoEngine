@@ -16,8 +16,6 @@ set(InnoEngine_Sources
 	"src/ImGuiPipeline.cpp"
 	"src/Sprite.h"
 	"src/Sprite.cpp"
-	"src/GPUPipeline.h"
-	"src/GPUPipeline.cpp"
 	"src/RenderCommandBuffer.h"
 	"src/RenderCommandBuffer.cpp"
 	"src/Window.h"

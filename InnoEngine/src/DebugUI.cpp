@@ -16,17 +16,17 @@ namespace InnoEngine
         return debugui;
     }
 
-    void DebugUI::update( double deltaTime )
+    void DebugUI::update( double delta_time )
     {
-        (void)deltaTime;
+        (void)delta_time;
 
         // simulate some work
         std::this_thread::sleep_for( 5ms );
     }
 
-    void DebugUI::render( float interpFactor, GPURenderer* renderer )
+    void DebugUI::render( float interp_factor, GPURenderer* renderer )
     {
-        (void)interpFactor;
+        (void)interp_factor;
         imgui_begin_frame();
 
         if ( ImGui::Begin( "Debug" ) ) {
@@ -44,9 +44,9 @@ namespace InnoEngine
         imgui_end_frame( renderer );
     }
 
-    bool DebugUI::handle_event( const SDL_Event& pEvent )
+    bool DebugUI::handle_event( const SDL_Event& event )
     {
-        return ImGui_ImplSDL3_ProcessEvent( &pEvent );
+        return ImGui_ImplSDL3_ProcessEvent( &event);
     }
 
     void DebugUI::imgui_begin_frame()
@@ -56,9 +56,10 @@ namespace InnoEngine
         ImGui::NewFrame();
     }
 
-    void DebugUI::imgui_end_frame( GPURenderer* pRenderer )
+    void DebugUI::imgui_end_frame( GPURenderer* renderer )
     {
+        (void)renderer;
         ImGui::Render();
-        pRenderer->add_imgui_draw_data( ImGui::GetDrawData() );
+        renderer->add_imgui_draw_data( ImGui::GetDrawData() );
     }
 }    // namespace InnoEngine

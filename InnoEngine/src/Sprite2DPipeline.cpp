@@ -29,6 +29,16 @@ namespace InnoEngine
         }
         m_gpuBuffer.clear();
         m_batches.clear();
+
+        if ( m_defaultSampler ) {
+            SDL_ReleaseGPUSampler( m_device, m_defaultSampler );
+            m_defaultSampler = nullptr;
+        }
+
+        if ( m_pipeline ) {
+            SDL_ReleaseGPUGraphicsPipeline( m_device, m_pipeline );
+            m_pipeline = nullptr;
+        }
     }
 
     Result Sprite2DPipeline::initialize( GPURenderer* renderer, AssetManager* assetmanager )

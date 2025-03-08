@@ -51,7 +51,7 @@ namespace InnoEngine
 
     public:
         Sprite2DPipeline() = default;
-        virtual ~Sprite2DPipeline();
+        ~Sprite2DPipeline();
 
         Result initialize( GPURenderer* renderer, AssetManager* assetmanager );
         void   prepare_render( const CommandList& command_list, SDL_GPUDevice* gpudevice );
