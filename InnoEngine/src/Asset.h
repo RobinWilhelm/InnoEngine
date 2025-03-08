@@ -1,6 +1,7 @@
 #pragma once
 #include <filesystem>
 #include <memory>
+#include <string_view>
 
 namespace InnoEngine
 {
@@ -104,8 +105,10 @@ namespace InnoEngine
     class AssetBase
     {
     public:
-        virtual ~AssetBase()                                          = default;
-        virtual bool load_from_file( std::filesystem::path fullPath ) = 0;
+        virtual ~AssetBase() = default;
+
+        virtual bool                  load_from_file( const std::filesystem::path& full_path, std::string_view file_name ) = 0;
+        virtual std::filesystem::path build_path( const std::filesystem::path& folder, std::string_view file_name )     = 0;
     };
 
     template <typename T>
@@ -121,8 +124,14 @@ namespace InnoEngine
             return m_assetUID;
         }
 
+        std::filesystem::path get_path()
+        {
+            return m_fullPath;
+        }
+
     private:
         AssetUID<T> m_assetUID;
+        std::filesystem::path m_fullPath;
     };
 
 }    // namespace InnoEngine

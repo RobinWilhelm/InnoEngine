@@ -7,10 +7,10 @@
 
 namespace InnoEngine
 {
-    bool Texture2D::load_from_file( std::filesystem::path fullPath )
+    bool Texture2D::load_from_file( const std::filesystem::path& full_path, std::string_view file_name )
     {
-        // Load the texture
-        m_surface = IMG_Load( fullPath.string().c_str() );
+        (void)file_name;
+        m_surface = IMG_Load( full_path.string().c_str() );
         if ( m_surface == nullptr ) {
             SDL_Log( "%s: %s", std::source_location::current().function_name(), "Could not load image!" );
             return false;
@@ -20,6 +20,11 @@ namespace InnoEngine
         m_height = static_cast<uint32_t>( m_surface->h );
         m_format = m_surface->format;
         return true;
+    }
+
+    std::filesystem::path Texture2D::build_path( const std::filesystem::path& folder, std::string_view file_name )
+    {
+        return folder / file_name;
     }
 
     Result Texture2D::create_device_ressources( Ref<SDL_GPUDevice> device )
@@ -119,6 +124,7 @@ namespace InnoEngine
     {
         return 0;
     }
+
     SDL_GPUTexture* Texture2D::get_sdltexture() const
     {
         return m_texture;

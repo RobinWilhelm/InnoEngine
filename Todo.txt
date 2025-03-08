@@ -3,6 +3,7 @@ TODO List:
 - output shaderbuffer info with shadercross
 - add runtime shader compiling and loading
 
+- figure out how to properly handle the case when runnging in headless mode
 - SDF font loading and rendering https://github.com/Chlumsky/msdfgen8
 - use layers as depth values (probably 24bit depth 8bit stencil)
 - refactor AssetManager

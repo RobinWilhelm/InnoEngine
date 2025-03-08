@@ -10,10 +10,10 @@ int main()
     creationParams.EnableVSync = true;
     creationParams.SimulationFrequency = 0;
     creationParams.AssetDirectory = "..\\..\\..\\assets";
-    creationParams.RunAsync = true;
+    creationParams.RunAsync = false;
 
     Sandbox sandbox;
     sandbox.init(creationParams);
-    sandbox.enable_debugui(true);
+    sandbox.enable_debugui(false);
     return static_cast<int>( sandbox.run() );
 }

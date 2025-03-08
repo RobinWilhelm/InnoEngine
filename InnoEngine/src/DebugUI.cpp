@@ -32,13 +32,13 @@ namespace InnoEngine
         if ( ImGui::Begin( "Debug" ) ) {
 
             ImGui::Text( "FPS: %.0f", CoreAPI::get_application()->get_fps() );
-            ImGui::Text( "Frametime: %.2fms", CoreAPI::get_application()->get_timing( ProfileElements::TotalFrame ) * 1000 );
+            ImGui::Text( "Frametime: %.2fms", CoreAPI::get_application()->get_timing( ProfilePoint::TotalFrame ) * 1000 );
 
-            ImGui::Text( "Mainthread: %.2fms", CoreAPI::get_application()->get_timing( ProfileElements::MainThreadTotal ) * 1000 );
-            ImGui::Text( "Updatethread: %.2fms", CoreAPI::get_application()->get_timing( ProfileElements::UpdateThreadTotal ) * 1000 );
+            ImGui::Text( "Mainthread: %.2fms", CoreAPI::get_application()->get_timing( ProfilePoint::MainThreadTotal ) * 1000 );
+            ImGui::Text( "Updatethread: %.2fms", CoreAPI::get_application()->get_timing( ProfilePoint::UpdateThreadTotal ) * 1000 );
 
-            ImGui::Text( "Update: %.2fms", CoreAPI::get_application()->get_timing( ProfileElements::Update ) * 1000 );
-            ImGui::Text( "Render: %.2fms", CoreAPI::get_application()->get_timing( ProfileElements::Render ) * 1000 );
+            ImGui::Text( "Update: %.2fms", CoreAPI::get_application()->get_timing( ProfilePoint::Update ) * 1000 );
+            ImGui::Text( "Render: %.2fms", CoreAPI::get_application()->get_timing( ProfilePoint::Render ) * 1000 );
         }
         ImGui::End();
         imgui_end_frame( renderer );

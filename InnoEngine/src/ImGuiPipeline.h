@@ -18,7 +18,6 @@ namespace InnoEngine
 
         struct CommandData
         {
-            ImDrawData*                    DawData         = nullptr;
             int                            TotalVertexCount = 0;
             int                            TotalIndexCount  = 0;
             ImVec2                         DisplayPos       = { 0, 0 };
@@ -34,8 +33,8 @@ namespace InnoEngine
 
         // Inherited via GPUPipeline
         Result initialize( GPURenderer* renderer );
-        void   prepare_render( const CommandData& command_list, SDL_GPUDevice* gpudevice );
-        void   swapchain_render( const CommandData& command_list, SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass );
+        void   prepare_render( const CommandData& command_data, SDL_GPUDevice* gpudevice );
+        void   swapchain_render( const CommandData& command_data, SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass );
 
     private:
         void create_or_resize_buffer( SDL_GPUBuffer** buffer, uint32_t* old_size, uint32_t new_size, SDL_GPUBufferUsageFlags usage );

@@ -31,9 +31,9 @@ namespace InnoEngine
     {
         m_debugLayer.reset();
         m_assetManager.reset();
+        m_camera.reset();
         m_renderer.reset();
         m_window.reset();
-        m_camera.reset();
 
         SDL_Quit();
     }
@@ -56,19 +56,19 @@ namespace InnoEngine
                 std::unique_lock<std::mutex> ulock( m_asyncMutex );
                 m_asyncThreadWaiting.wait( ulock, [ this ]() { return m_syncComplete; } );
 
-                m_profiler->start( ProfileElements::UpdateThreadTotal );
+                m_profiler->start( ProfilePoint::UpdateThreadTotal );
 
                 for ( const auto& event : m_eventBuffer.get_second() )
                     handle_event( event );
 
-                m_profiler->start( ProfileElements::Update );
+                m_profiler->start( ProfilePoint::Update );
                 update_layers();
                 m_camera->update();
-                m_profiler->stop( ProfileElements::Update );
+                m_profiler->stop( ProfilePoint::Update );
 
                 render_layers();
 
-                m_profiler->stop( ProfileElements::UpdateThreadTotal );
+                m_profiler->stop( ProfilePoint::UpdateThreadTotal );
 
                 m_syncComplete        = false;
                 m_asyncThreadFinished = true;
@@ -84,10 +84,16 @@ namespace InnoEngine
 
     Result Application::init( const CreationParams& appParams )
     {
+        if ( appParams.Headless != false ||
+            appParams.WindowParams.height == 0 || appParams.WindowParams.width == 0) {
+            IE_LOG_CRITICAL( "Headless mode not fully supported yet" );
+            return Result::InvalidParameters;
+        }
+
         IE_LOG_INFO( "Starting application at: \"{}\"", std::filesystem::current_path().string() );
         if ( !SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS ) ) {
             IE_LOG_CRITICAL( "Failed to initialize SDL" );
-            return Result::Fail;
+            return Result::InitializationError;
         }
 
         Result result = Result::Fail;
@@ -96,16 +102,16 @@ namespace InnoEngine
             auto assetManagerOpt = AssetManager::create( appParams.AssetDirectory, appParams.AsyncAssetLoading );
             m_assetManager       = std::move( assetManagerOpt.value() );
 
+            auto windowOpt = Window::create( appParams.WindowParams );
+            m_window       = std::move( windowOpt.value() );
+            m_camera       = OrthographicCamera::create( 0, appParams.WindowParams.width, appParams.WindowParams.height, 0 );
+
+            auto renderOpt = GPURenderer::create();
+            m_renderer     = std::move( renderOpt.value() );
+
             on_init_assets( m_assetManager.get() );
 
-            if ( appParams.WindowParams.height != 0 && appParams.WindowParams.width != 0 ) {
-                auto windowOpt = Window::create( appParams.WindowParams );
-                m_window       = std::move( windowOpt.value() );
-                m_camera       = OrthographicCamera::create( 0, appParams.WindowParams.width, appParams.WindowParams.height, 0 );
-            }
-
-            auto renderOpt = GPURenderer::create( m_window.get(), m_assetManager.get() );
-            m_renderer     = std::move( renderOpt.value() );
+            m_renderer->initialize( m_window.get(), m_assetManager.get() );
             m_renderer->enable_vsync( appParams.EnableVSync );
 
             auto profilerOpt = Profiler::create();
@@ -138,27 +144,27 @@ namespace InnoEngine
 
         while ( m_mustQuit.load( std::memory_order_relaxed ) == false ) {
 
-            m_profiler->start( ProfileElements::TotalFrame );
-            m_profiler->start( ProfileElements::MainThreadTotal );
+            m_profiler->start( ProfilePoint::TotalFrame );
+            m_profiler->start( ProfilePoint::MainThreadTotal );
 
             poll_events();
 
             if ( m_multiThreaded == false ) {
                 update_profiledata();
 
-                m_profiler->start( ProfileElements::Update );
+                m_profiler->start( ProfilePoint::Update );
                 update_layers();
                 m_camera->update();
-                m_profiler->stop( ProfileElements::Update );
+                m_profiler->stop( ProfilePoint::Update );
 
-                m_profiler->start( ProfileElements::Render );
+                m_profiler->start( ProfilePoint::Render );
                 render_layers();
 
-                m_renderer->set_camera_matrix( m_camera->get_viewprojectionmatrix() );
+                m_renderer->add_view_projection( m_camera->get_viewprojectionmatrix() );
                 m_renderer->on_synchronize();
                 m_renderer->render();
 
-                m_profiler->stop( ProfileElements::Render );
+                m_profiler->stop( ProfilePoint::Render );
             }
             else {
                 {    // hold mutex while we are synchronising data with the async thread
@@ -172,13 +178,13 @@ namespace InnoEngine
                 }
                 m_asyncThreadWaiting.notify_one();
 
-                m_profiler->start( ProfileElements::Render );
+                m_profiler->start( ProfilePoint::Render );
                 m_renderer->render();
-                m_profiler->stop( ProfileElements::Render );
+                m_profiler->stop( ProfilePoint::Render );
             }
 
-            m_profiler->stop( ProfileElements::MainThreadTotal );
-            m_profiler->stop( ProfileElements::TotalFrame );
+            m_profiler->stop( ProfilePoint::MainThreadTotal );
+            m_profiler->stop( ProfilePoint::TotalFrame );
             m_profiler->update();
         }
 
@@ -233,10 +239,10 @@ namespace InnoEngine
 
     float Application::get_fps()
     {
-        return 1.0f / m_profileData[ static_cast<uint32_t>( ProfileElements::TotalFrame ) ];
+        return 1.0f / m_profileData[ static_cast<uint32_t>( ProfilePoint::TotalFrame ) ];
     }
 
-    float Application::get_timing( ProfileElements element )
+    float Application::get_timing( ProfilePoint element )
     {
         return m_profileData[ static_cast<uint32_t>( element ) ];
     }
@@ -247,7 +253,7 @@ namespace InnoEngine
 
     void Application::synchronize()
     {
-        m_renderer->set_camera_matrix( m_camera->get_viewprojectionmatrix() );
+        m_renderer->add_view_projection( m_camera->get_viewprojectionmatrix() );
         m_eventBuffer.swap();
         m_eventBuffer.get_first().clear();
         m_renderer->on_synchronize();
@@ -345,8 +351,8 @@ namespace InnoEngine
     void Application::update_profiledata()
     {
         IE_ASSERT( m_profiler != nullptr );
-        for ( size_t i = 0; i < static_cast<uint32_t>( ProfileElements::Count ); ++i ) {
-            m_profileData[ i ] = m_profiler->get_average( static_cast<ProfileElements>( i ) ) / TicksPerSecond;
+        for ( size_t i = 0; i < static_cast<uint32_t>( ProfilePoint::Count ); ++i ) {
+            m_profileData[ i ] = m_profiler->get_average( static_cast<ProfilePoint>( i ) ) / TicksPerSecond;
         }
     }
 }    // namespace InnoEngine

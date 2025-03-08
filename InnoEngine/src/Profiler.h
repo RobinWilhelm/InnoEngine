@@ -6,7 +6,7 @@
 
 namespace InnoEngine
 {
-    enum class ProfileElements
+    enum class ProfilePoint
     {
         TotalFrame = 0,
         MainThreadTotal,
@@ -19,20 +19,20 @@ namespace InnoEngine
         Count
     };
 
-    constexpr std::string GetProfileElementString( ProfileElements elem )
+    constexpr std::string GetProfileElementString( ProfilePoint ppoint )
     {
-        switch ( elem ) {
-        case ProfileElements::TotalFrame:
+        switch ( ppoint ) {
+        case ProfilePoint::TotalFrame:
             return "Total";
-        case ProfileElements::MainThreadTotal:
+        case ProfilePoint::MainThreadTotal:
             return "MainThreadTotal";
-        case ProfileElements::UpdateThreadTotal:
+        case ProfilePoint::UpdateThreadTotal:
             return "UpdateThreadTotal";
-        case ProfileElements::Update:
+        case ProfilePoint::Update:
             return "Update";
-        case ProfileElements::Render:
+        case ProfilePoint::Render:
             return "Render";
-        case ProfileElements::Count:
+        case ProfilePoint::Count:
             return "Invalid Profileelement";
         }
         return "Unknown";
@@ -55,12 +55,12 @@ namespace InnoEngine
 
         void update();
 
-        void start( ProfileElements element );
-        void stop( ProfileElements element );
+        void start( ProfilePoint ppoint );
+        void stop( ProfilePoint ppoint );
 
-        float get_average( ProfileElements element );
+        float get_average( ProfilePoint ppoint );
 
     private:
-        std::array<Timing, static_cast<size_t>( ProfileElements::Count )> m_timings;
+        std::array<Timing, static_cast<size_t>( ProfilePoint::Count )> m_timings;
     };
 }    // namespace InnoEngine

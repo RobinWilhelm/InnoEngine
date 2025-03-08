@@ -20,12 +20,12 @@ namespace InnoEngine
     Sprite2DPipeline::~Sprite2DPipeline()
     {
         if ( m_spriteTransferBuffer ) {
-            SDL_ReleaseGPUTransferBuffer( m_renderer->get_gpudevice(), m_spriteTransferBuffer );
+            SDL_ReleaseGPUTransferBuffer( m_device, m_spriteTransferBuffer );
             m_spriteTransferBuffer = nullptr;
         }
 
         for ( auto gpubuffer : m_gpuBuffer ) {
-            SDL_ReleaseGPUBuffer( m_renderer->get_gpudevice(), gpubuffer );
+            SDL_ReleaseGPUBuffer( m_device, gpubuffer );
         }
         m_gpuBuffer.clear();
         m_batches.clear();
@@ -33,26 +33,27 @@ namespace InnoEngine
 
     Result Sprite2DPipeline::initialize( GPURenderer* renderer, AssetManager* assetmanager )
     {
-        IE_ASSERT( renderer != nullptr && assetmanager != nullptr);
+        IE_ASSERT( renderer != nullptr && renderer->has_window() && assetmanager != nullptr );
 
         if ( m_initialized ) {
             IE_LOG_WARNING( "Pipeline already initialized!" );
             return Result::AlreadyInitialized;
         }
 
-        m_renderer = renderer;
+        m_device           = renderer->get_gpudevice();
+        SDL_Window* window = renderer->get_window()->get_sdlwindow();
 
         auto shaderRepo = assetmanager->get_repository<Shader>();
         IE_ASSERT( shaderRepo != nullptr );
 
         // load shaders
-        auto vertexShaderAsset = shaderRepo->require_asset( m_renderer->add_shaderformat_fileextension( "SpriteBatch.vert" ) );
+        auto vertexShaderAsset = shaderRepo->require_asset( "SpriteBatch.vert" );
         if ( vertexShaderAsset.has_value() == false ) {
             IE_LOG_ERROR( "Vertex Shader not found!" );
             return Result::InitializationError;
         }
 
-        auto fragmentShaderAsset = shaderRepo->require_asset( m_renderer->add_shaderformat_fileextension( "TextureXColor.frag" ) );
+        auto fragmentShaderAsset = shaderRepo->require_asset( "TextureXColor.frag" );
         if ( fragmentShaderAsset.has_value() == false ) {
             IE_LOG_ERROR( "Fragment Shader not found!" );
             return Result::InitializationError;
@@ -61,12 +62,12 @@ namespace InnoEngine
         AssetView<Shader>& vertexShader   = vertexShaderAsset.value();
         AssetView<Shader>& fragmentShader = fragmentShaderAsset.value();
 
-        IE_ASSERT( IE_SUCCESS( vertexShader.get()->create_device_ressources( m_renderer, { 0, 0, 1, 1 } ) ) );
-        IE_ASSERT( IE_SUCCESS( fragmentShader.get()->create_device_ressources( m_renderer, { 1, 0, 0, 0 } ) ) );
+        IE_ASSERT( IE_SUCCESS( vertexShader.get()->create_device_ressources( m_device, { 0, 0, 1, 1 } ) ) );
+        IE_ASSERT( IE_SUCCESS( fragmentShader.get()->create_device_ressources( m_device, { 1, 0, 0, 0 } ) ) );
 
         // Create the pipeline
         SDL_GPUColorTargetDescription colorTargets[ 1 ]     = {};
-        colorTargets[ 0 ].format                            = SDL_GetGPUSwapchainTextureFormat( m_renderer->get_gpudevice(), m_renderer->get_window()->get_sdlwindow() );
+        colorTargets[ 0 ].format                            = SDL_GetGPUSwapchainTextureFormat( m_device, window );
         colorTargets[ 0 ].blend_state.src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
         colorTargets[ 0 ].blend_state.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
         colorTargets[ 0 ].blend_state.color_blend_op        = SDL_GPU_BLENDOP_ADD;
@@ -82,7 +83,7 @@ namespace InnoEngine
         pipelineCreateInfo.target_info.color_target_descriptions = colorTargets;
         pipelineCreateInfo.target_info.num_color_targets         = 1;
 
-        m_pipeline = SDL_CreateGPUGraphicsPipeline( m_renderer->get_gpudevice(), &pipelineCreateInfo );
+        m_pipeline = SDL_CreateGPUGraphicsPipeline( m_device, &pipelineCreateInfo );
         if ( m_pipeline == nullptr ) {
             IE_LOG_ERROR( "Failed to create pipeline!" );
             return Result::InitializationError;
@@ -92,7 +93,7 @@ namespace InnoEngine
         tbufferCreateInfo.usage                           = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
         tbufferCreateInfo.size                            = SpriteBatchSizeMax * sizeof( Command::VertexUniform );
 
-        m_spriteTransferBuffer = SDL_CreateGPUTransferBuffer( m_renderer->get_gpudevice(), &tbufferCreateInfo );
+        m_spriteTransferBuffer = SDL_CreateGPUTransferBuffer( m_device, &tbufferCreateInfo );
         if ( m_spriteTransferBuffer == nullptr ) {
             IE_LOG_ERROR( "Failed to create GPUTransferBuffer!" );
             return Result::InitializationError;
@@ -106,7 +107,7 @@ namespace InnoEngine
         sampler_create_info.address_mode_v           = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
         sampler_create_info.address_mode_w           = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
 
-        m_defaultSampler = SDL_CreateGPUSampler( m_renderer->get_gpudevice(), &sampler_create_info );
+        m_defaultSampler = SDL_CreateGPUSampler( m_device, &sampler_create_info );
         if ( m_defaultSampler == nullptr ) {
             IE_LOG_ERROR( "Failed to create GPUSampler!" );
             return Result::InitializationError;
@@ -166,7 +167,7 @@ namespace InnoEngine
 
         // unmap and upload last batch data
         if ( current_batch && current_batch->count > 0 ) {
-            SDL_UnmapGPUTransferBuffer( m_renderer->get_gpudevice(), m_spriteTransferBuffer );
+            SDL_UnmapGPUTransferBuffer( m_device, m_spriteTransferBuffer );
             SDL_GPUTransferBufferLocation tranferBufferLocation { .transfer_buffer = m_spriteTransferBuffer, .offset = 0 };
             SDL_GPUBufferRegion           bufferRegion { .buffer = get_gpubuffer_by_index( current_batch->bufferIdx ),
                                                          .offset = 0,
@@ -186,7 +187,7 @@ namespace InnoEngine
     {
         (void)command_list;
 
-        IE_ASSERT( m_renderer != nullptr && m_renderer->get_gpudevice() != nullptr );
+        IE_ASSERT( m_device != nullptr );
         IE_ASSERT( gpu_cmd_buf != nullptr && render_pass != nullptr );
 
         SDL_BindGPUGraphicsPipeline( render_pass, m_pipeline );
@@ -203,8 +204,8 @@ namespace InnoEngine
             auto texture = m_textureAssets->get_asset( m_batches[ i ].texture );
 
             SDL_GPUTextureSamplerBinding texture_sampler_binding = {};
-            texture_sampler_binding.sampler = m_defaultSampler;
-            texture_sampler_binding.texture = texture->get_sdltexture();
+            texture_sampler_binding.sampler                      = m_defaultSampler;
+            texture_sampler_binding.texture                      = texture->get_sdltexture();
 
             SDL_BindGPUFragmentSamplers( render_pass, 0, &texture_sampler_binding, 1 );
 
@@ -259,7 +260,7 @@ namespace InnoEngine
         createInfo.usage                   = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ;
         createInfo.size                    = SpriteBatchSizeMax * sizeof( Command::VertexUniform );
 
-        buffer = SDL_CreateGPUBuffer( m_renderer->get_gpudevice(), &createInfo );
+        buffer = SDL_CreateGPUBuffer( m_device, &createInfo );
         if ( buffer == nullptr ) {
             // TODO: this needs to be handled better
             IE_LOG_ERROR( "SDL_CreateGPUBuffer failed : {0}", SDL_GetError() );

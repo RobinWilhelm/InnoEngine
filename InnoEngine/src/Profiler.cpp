@@ -21,19 +21,19 @@ namespace InnoEngine
         }
     }
 
-    void Profiler::start( ProfileElements element )
+    void Profiler::start( ProfilePoint ppoint )
     {
-        m_timings[ static_cast<uint32_t>( element ) ].Current = get_tick_count();
+        m_timings[ static_cast<uint32_t>( ppoint ) ].Current = get_tick_count();
     }
 
-    void Profiler::stop( ProfileElements element )
+    void Profiler::stop( ProfilePoint ppoint )
     {
-        uint64_t deltaTime = get_tick_count() - m_timings[ static_cast<uint32_t>( element ) ].Current;
-        m_timings[ static_cast<uint32_t>( element ) ].TotalFrame += deltaTime;
+        uint64_t deltaTime = get_tick_count() - m_timings[ static_cast<uint32_t>( ppoint ) ].Current;
+        m_timings[ static_cast<uint32_t>( ppoint ) ].TotalFrame += deltaTime;
     }
 
-    float Profiler::get_average( ProfileElements element )
+    float Profiler::get_average( ProfilePoint ppoint )
     {
-        return m_timings[ static_cast<uint32_t>( element ) ].AverageCalc.get_average();
+        return m_timings[ static_cast<uint32_t>( ppoint ) ].AverageCalc.get_average();
     }
 }    // namespace InnoEngine

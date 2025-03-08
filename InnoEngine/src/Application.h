@@ -1,10 +1,10 @@
 #pragma once
 #include "SDL3/SDL_events.h"
 
-#include "Window.h"
 #include "BaseTypes.h"
-#include "RenderCommandBuffer.h"
+#include "Window.h"
 #include "Profiler.h"
+#include "RenderCommandBuffer.h"
 
 #include <memory>
 #include <string>
@@ -14,12 +14,10 @@
 
 namespace InnoEngine
 {
-    class Window;
     class GPURenderer;
     class AssetManager;
     class OrthographicCamera;
     class Layer;
-    class Profiler;
 
     struct FrameTimingInfo
     {
@@ -34,6 +32,7 @@ namespace InnoEngine
     struct CreationParams
     {
         Window::CreationParams WindowParams;
+        bool                   Headless = false;
         int                    SimulationFrequency = 60;
         bool                   EnableVSync         = true;
         bool                   RunAsync            = false;    // create a separate thread for layer processing
@@ -61,7 +60,7 @@ namespace InnoEngine
         void raise_critical_error( std::string msg );
 
         float get_fps();
-        float get_timing( ProfileElements element );
+        float get_timing( ProfilePoint element );
 
     private:
         virtual void   on_init_assets( AssetManager* assetmanager ) = 0;
@@ -113,7 +112,7 @@ namespace InnoEngine
         Own<Layer>          m_debugLayer;
         bool                m_debugui_active = false;
 
-        std::array<float, static_cast<int>( ProfileElements::Count )> m_profileData;
+        std::array<float, static_cast<int>( ProfilePoint::Count )> m_profileData;
     };
 
 }    // namespace InnoEngine

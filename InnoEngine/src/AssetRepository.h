@@ -90,31 +90,32 @@ namespace InnoEngine
             if ( is_available( name ) || static_cast<InternalAssetUID>( m_nextFree ) == ( std::numeric_limits<InternalAssetUID>::max )() )
                 return std::nullopt;
 
-            std::filesystem::path fullPath = m_directory / name;
-            if ( std::filesystem::exists( fullPath ) && std::filesystem::is_regular_file( fullPath ) ) {
+            std::shared_ptr<T> asset = std::make_shared<T>();
+            asset->m_fullPath        = asset->build_path( m_directory, name );
+
+            if ( std::filesystem::exists( asset->m_fullPath ) && std::filesystem::is_regular_file( asset->m_fullPath ) ) {
                 std::shared_ptr<AssetView<T>> view = std::make_shared<AssetView<T>>();
                 view->m_loadStatus.store( AssetLoadStatus::Empty, std::memory_order_relaxed );
                 view->m_assetUID = m_nextFree;
-                if ( static_cast<InternalAssetUID>( m_nextFree ) < ( std::numeric_limits<InternalAssetUID>::max )() ) {
-                    m_nextFree++;
-                }
+                IE_ASSERT( static_cast<InternalAssetUID>( m_nextFree ) < ( std::numeric_limits<InternalAssetUID>::max )() );
+                m_nextFree++;
 
                 m_lookupByName.insert( { std::string( name ), view } );
-                m_loaded.emplace_back( std::make_shared<T>() );
+                m_loaded.emplace_back( asset );
                 m_loaded[ view->m_assetUID ]->m_assetUID = view->m_assetUID;
                 return view;
             }
             else {
-                IE_LOG_ERROR( "Asset not found! \"{}\"", fullPath.string() );
+                IE_LOG_ERROR( "Asset not found! \"{}\"", asset->m_fullPath.string() );
                 return std::nullopt;
             }
         }
 
         bool load( AssetHandle* handle, std::string_view name ) override
         {
-            AssetView<T>*              view   = static_cast<AssetView<T>*>( handle );
-            std::shared_ptr<AssetBase> pAsset = get_asset( view->getUID() );
-            if ( pAsset && pAsset->load_from_file( m_directory / name ) ) {
+            AssetView<T>*              view  = static_cast<AssetView<T>*>( handle );
+            std::shared_ptr<Asset<T>> asset = get_asset( view->getUID() );
+            if ( asset && asset->load_from_file( asset->m_fullPath, name ) ) {
                 std::atomic_thread_fence( std::memory_order_release );
                 view->m_loadStatus.store( AssetLoadStatus::Finished, std::memory_order_relaxed );
                 return true;

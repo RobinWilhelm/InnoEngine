@@ -1,10 +1,9 @@
 #pragma once
 #include "SDL3/SDL_gpu.h"
 
-#include "SimpleMath.h"
-namespace DXSM = DirectX::SimpleMath;
-
 #include "BaseTypes.h"
+#include "Renderer.h"
+
 #include "Sprite.h"
 #include "Asset.h"
 #include "AssetView.h"
@@ -39,12 +38,12 @@ namespace InnoEngine
 
             struct VertexUniform
             {
-                float           x, y;
-                uint32_t        z;
-                float           rotation;
-                float           scale_w, scale_h, padding_a, padding_b;
+                float         x, y;
+                uint32_t      z;
+                float         rotation;
+                float         scale_w, scale_h, padding_a, padding_b;
                 DXSM::Vector4 source;
-                DXSM::Color     color;
+                DXSM::Color   color;
             } info;
         };
 
@@ -54,7 +53,7 @@ namespace InnoEngine
         Sprite2DPipeline() = default;
         virtual ~Sprite2DPipeline();
 
-        Result initialize( GPURenderer* pRenderer, AssetManager* assetmanager);
+        Result initialize( GPURenderer* renderer, AssetManager* assetmanager );
         void   prepare_render( const CommandList& command_list, SDL_GPUDevice* gpudevice );
         void   swapchain_render( const DXSM::Matrix& view_projection, const CommandList& command_list, SDL_GPUCommandBuffer* cmdbuf, SDL_GPURenderPass* renderPass );
 
@@ -69,7 +68,7 @@ namespace InnoEngine
 
     private:
         bool                     m_initialized    = false;
-        GPURenderer*             m_renderer       = nullptr;
+        GPUDeviceRef             m_device         = nullptr;
         SDL_GPUGraphicsPipeline* m_pipeline       = nullptr;
         SDL_GPUSampler*          m_defaultSampler = nullptr;
 

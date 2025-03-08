@@ -5,6 +5,8 @@
 #include "BaseTypes.h"
 #include "Asset.h"
 
+#include <string_view>
+
 namespace InnoEngine
 {
     class GPURenderer;
@@ -12,7 +14,9 @@ namespace InnoEngine
     class Texture2D : public Asset<Texture2D>
     {
     public:
-        bool   load_from_file( std::filesystem::path fullPath ) override;
+        bool                  load_from_file( const std::filesystem::path& full_path, std::string_view file_name ) override;
+        std::filesystem::path build_path( const std::filesystem::path& folder, std::string_view file_name ) override;
+
         Result create_device_ressources( Ref<SDL_GPUDevice> device );
         void   release_device_ressources();
 

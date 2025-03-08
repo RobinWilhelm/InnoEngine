@@ -6,6 +6,8 @@
 #include "Window.h"
 
 #include "Texture2D.h"
+#include "Sprite.h"
+#include "Shader.h"
 
 #include "Sprite2DPipeline.h"
 #include "ImGuiPipeline.h"
@@ -31,8 +33,8 @@ namespace InnoEngine
         {
             IE_ASSERT( renderer != nullptr && assetmanager != nullptr );
 
-            m_sprite2DPipeline = std::make_unique<Sprite2DPipeline>();
-            IE_ASSERT( IE_SUCCESS( m_sprite2DPipeline->initialize( renderer, assetmanager ) ) );
+            // m_sprite2DPipeline = std::make_unique<Sprite2DPipeline>();
+            // IE_ASSERT( IE_SUCCESS( m_sprite2DPipeline->initialize( renderer, assetmanager ) ) );
 
             m_imguiPipeline = std::make_unique<ImGuiPipeline>();
             IE_ASSERT( IE_SUCCESS( m_imguiPipeline->initialize( renderer ) ) );
@@ -41,18 +43,21 @@ namespace InnoEngine
 
         void prepare( SDL_GPUDevice* device )
         {
+            (void)device;
             IE_ASSERT( m_initialized );
-            RenderCommandBuffer& render_cmd_buf = m_renderCommandBuffer.get_second();
-            m_sprite2DPipeline->prepare_render( render_cmd_buf.SpriteCommandBuffer, device );
-            m_imguiPipeline->prepare_render( render_cmd_buf.ImGuiCommandBuffer, device );
+             RenderCommandBuffer& render_cmd_buf = m_renderCommandBuffer.get_second();
+            // m_sprite2DPipeline->prepare_render( render_cmd_buf.SpriteCommandBuffer, device );
+             m_imguiPipeline->prepare_render( render_cmd_buf.ImGuiCommandBuffer, device );
         }
 
         void render( SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass )
         {
+            (void)gpu_cmd_buf;
+            (void)render_pass;
             IE_ASSERT( m_initialized );
-            RenderCommandBuffer& render_cmd_buf = m_renderCommandBuffer.get_second();
-            m_sprite2DPipeline->swapchain_render( render_cmd_buf.CameraMatrix, render_cmd_buf.SpriteCommandBuffer, gpu_cmd_buf, render_pass );
-            m_imguiPipeline->swapchain_render( render_cmd_buf.ImGuiCommandBuffer, gpu_cmd_buf, render_pass );
+             RenderCommandBuffer& render_cmd_buf = m_renderCommandBuffer.get_second();
+            // m_sprite2DPipeline->swapchain_render( render_cmd_buf.CameraMatrix, render_cmd_buf.SpriteCommandBuffer, gpu_cmd_buf, render_pass );
+             m_imguiPipeline->swapchain_render( render_cmd_buf.ImGuiCommandBuffer, gpu_cmd_buf, render_pass );
         }
 
         RenderCommandBuffer& get_command_buffer()
@@ -76,25 +81,28 @@ namespace InnoEngine
     {
         if ( m_sdlGPUDevice ) {
             SDL_WaitForGPUIdle( m_sdlGPUDevice );
-        }
 
-        if ( m_window ) {
-            SDL_ReleaseWindowFromGPUDevice( m_sdlGPUDevice, m_window->get_sdlwindow() );
-            m_window = nullptr;
-        }
+            if ( m_window ) {
+                SDL_ReleaseWindowFromGPUDevice( m_sdlGPUDevice, m_window->get_sdlwindow() );
+                m_window = nullptr;
+            }
 
-        if ( m_sdlGPUDevice ) {
+#ifdef _DEBUG
+            if ( m_sdlGPUDevice.use_count() != 1 ) {
+                IE_LOG_ERROR( "Not all Deviceobjects are released!" );
+            }
+#endif
             SDL_DestroyGPUDevice( m_sdlGPUDevice );
             m_sdlGPUDevice = nullptr;
         }
     }
 
-    auto GPURenderer::create( Window* window, AssetManager* assetmanager ) -> std::optional<Own<GPURenderer>>
+    auto GPURenderer::create() -> std::optional<Own<GPURenderer>>
     {
         Own<GPURenderer> renderer( new GPURenderer() );
 
 #ifdef _DEBUG
-        renderer->m_sdlGPUDevice = SDL_CreateGPUDevice( SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, true, nullptr );
+        renderer->m_sdlGPUDevice = GPUDeviceRef::create( SDL_CreateGPUDevice( SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, true, nullptr ) );
 #else
         renderer->m_sdlGPUDevice = SDL_CreateGPUDevice( SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, false, nullptr );
 #endif
@@ -104,18 +112,29 @@ namespace InnoEngine
             return std::nullopt;
         }
 
-        renderer->m_window = window;
-        if ( renderer->m_window ) {
-            if ( !SDL_ClaimWindowForGPUDevice( renderer->m_sdlGPUDevice, renderer->m_window->get_sdlwindow() ) ) {
+        renderer->m_pipelineProcessor = std::make_unique<PipelineProcessor>();
+        renderer->retrieve_shaderformatinfo();
+        return renderer;
+    }
+
+    Result GPURenderer::initialize( Window* window, AssetManager* assetmanager )
+    {
+        if ( m_initialized ) {
+            IE_LOG_WARNING( "GPURenderer: Trying to initialize more than once!" );
+            return Result::AlreadyInitialized;
+        }
+
+        m_window = window;
+        if ( m_window ) {
+            if ( !SDL_ClaimWindowForGPUDevice( m_sdlGPUDevice, m_window->get_sdlwindow() ) ) {
                 IE_LOG_CRITICAL( "GPUClaimWindow failed" );
-                return std::nullopt;
+                return Result::InitializationError;
             }
         }
 
-        renderer->m_pipelineProcessor = std::make_unique<PipelineProcessor>();
-        renderer->m_pipelineProcessor->initialize( renderer.get(), assetmanager );
-        renderer->retrieve_shaderformatinfo();
-        return renderer;
+        m_pipelineProcessor->initialize( this, assetmanager );
+        m_initialized = true;
+        return Result::Success;
     }
 
     Window* GPURenderer::get_window() const
@@ -123,25 +142,10 @@ namespace InnoEngine
         return m_window;
     }
 
-    SDL_GPUDevice* GPURenderer::get_gpudevice() const
+    GPUDeviceRef GPURenderer::get_gpudevice() const
     {
         return m_sdlGPUDevice;
     };
-
-    void GPURenderer::set_camera_matrix( const DXSM::Matrix view_projection )
-    {
-        m_pipelineProcessor->get_command_buffer().CameraMatrix = view_projection;
-    }
-
-    ShaderFormatInfo GPURenderer::get_needed_shaderformat()
-    {
-        return m_shaderFormat;
-    }
-
-    std::string GPURenderer::add_shaderformat_fileextension( std::string_view name )
-    {
-        return std::string( name ).append( m_shaderFormat.FileNameExtension );
-    }
 
     bool GPURenderer::has_window()
     {
@@ -166,6 +170,7 @@ namespace InnoEngine
 
     void GPURenderer::render()
     {
+        IE_ASSERT( m_initialized );
         m_pipelineProcessor->prepare( get_gpudevice() );
 
         SDL_GPUCommandBuffer* gpu_cmd_buf = SDL_AcquireGPUCommandBuffer( m_sdlGPUDevice );
@@ -207,20 +212,25 @@ namespace InnoEngine
         }
     }
 
-    void GPURenderer::add_sprite( const Sprite& sprite )
+    void GPURenderer::add_view_projection( const DXSM::Matrix view_projection )
+    {
+        m_pipelineProcessor->get_command_buffer().CameraMatrix = view_projection;
+    }
+
+    void GPURenderer::add_sprite( const Sprite* sprite )
     {
         auto& render_cmd_buf = m_pipelineProcessor->get_command_buffer();
 
         Sprite2DPipeline::Command& cmd = render_cmd_buf.SpriteCommandBuffer.emplace_back();
-        cmd.texture                    = sprite.m_texture->get_uid();
-        cmd.info.x                     = sprite.m_position.x;
-        cmd.info.y                     = sprite.m_position.y;
-        cmd.info.z                     = sprite.m_layer;
-        cmd.info.rotation              = sprite.m_rotation;
-        cmd.info.scale_w               = sprite.m_scale.x;
-        cmd.info.scale_h               = sprite.m_scale.y;
-        cmd.info.source                = sprite.m_sourceRect;
-        cmd.info.color                 = sprite.m_color;
+        cmd.texture                    = sprite->m_texture->get_uid();
+        cmd.info.x                     = sprite->m_position.x;
+        cmd.info.y                     = sprite->m_position.y;
+        cmd.info.z                     = sprite->m_layer;
+        cmd.info.rotation              = sprite->m_rotation;
+        cmd.info.scale_w               = sprite->m_scale.x;
+        cmd.info.scale_h               = sprite->m_scale.y;
+        cmd.info.source                = sprite->m_sourceRect;
+        cmd.info.color                 = sprite->m_color;
     }
 
     void GPURenderer::add_imgui_draw_data( ImDrawData* draw_data )
@@ -248,23 +258,25 @@ namespace InnoEngine
     void GPURenderer::retrieve_shaderformatinfo()
     {
         SDL_GPUShaderFormat backendFormats = SDL_GetGPUShaderFormats( m_sdlGPUDevice );
+        auto&               shaderFormat   = Shader::ms_shaderFormat;
+
         if ( backendFormats & SDL_GPU_SHADERFORMAT_SPIRV ) {
-            m_shaderFormat.SubDirectory      = "SPIRV";
-            m_shaderFormat.Format            = SDL_GPU_SHADERFORMAT_SPIRV;
-            m_shaderFormat.EntryPoint        = "main";
-            m_shaderFormat.FileNameExtension = ".spv";
+            shaderFormat.SubDirectory      = "SPIRV";
+            shaderFormat.Format            = SDL_GPU_SHADERFORMAT_SPIRV;
+            shaderFormat.EntryPoint        = "main";
+            shaderFormat.FileNameExtension = ".spv";
         }
         else if ( backendFormats & SDL_GPU_SHADERFORMAT_MSL ) {
-            m_shaderFormat.SubDirectory      = "MSL";
-            m_shaderFormat.Format            = SDL_GPU_SHADERFORMAT_MSL;
-            m_shaderFormat.EntryPoint        = "main0";
-            m_shaderFormat.FileNameExtension = ".msl";
+            shaderFormat.SubDirectory      = "MSL";
+            shaderFormat.Format            = SDL_GPU_SHADERFORMAT_MSL;
+            shaderFormat.EntryPoint        = "main0";
+            shaderFormat.FileNameExtension = ".msl";
         }
         else if ( backendFormats & SDL_GPU_SHADERFORMAT_DXIL ) {
-            m_shaderFormat.SubDirectory      = "DXIL";
-            m_shaderFormat.Format            = SDL_GPU_SHADERFORMAT_DXIL;
-            m_shaderFormat.EntryPoint        = "main";
-            m_shaderFormat.FileNameExtension = ".dxil";
+            shaderFormat.SubDirectory      = "DXIL";
+            shaderFormat.Format            = SDL_GPU_SHADERFORMAT_DXIL;
+            shaderFormat.EntryPoint        = "main";
+            shaderFormat.FileNameExtension = ".dxil";
         }
     }
 }    // namespace InnoEngine
