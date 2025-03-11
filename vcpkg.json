@@ -1,0 +1,24 @@
+{
+  "dependencies": [
+    {
+      "name": "sdl3"
+    },
+    {
+      "name": "sdl3-image"
+    },
+    {
+      "name": "imgui",
+      "features": [
+        "sdlgpu3-binding",
+        "docking-experimental"
+      ]
+    },
+    {
+      "name": "directxtk"
+    },
+    {
+      "name": "freetype"
+    }
+  ],
+  "builtin-baseline": "300239058e33420acd153135b3f6e6b187828992"
+}

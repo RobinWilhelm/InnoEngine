@@ -4,7 +4,6 @@
 AlwaysBreakTemplateDeclarations: true 
 AccessModifierOffset: -4
 AlignAfterOpenBracket: Align
-AlignArrayOfStructures: Right
 AlignConsecutiveAssignments: AcrossComments
 AlignConsecutiveBitFields: AcrossEmptyLinesAndComments
 AlignConsecutiveDeclarations: AcrossComments
@@ -15,7 +14,7 @@ AlignTrailingComments: true
 AllowAllArgumentsOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: true
 AllowShortBlocksOnASingleLine: Empty
-AllowShortCaseLabelsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: true
 AllowShortEnumsOnASingleLine: false
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
@@ -48,7 +47,7 @@ BreakConstructorInitializers : AfterColon
 ##BreakFunctionDefinitionParameters : false
 BreakInheritanceList : AfterColon
 BreakStringLiterals : true
-ColumnLimit: 0
+ColumnLimit: 200
 ContinuationIndentWidth: 4
 Cpp11BracedListStyle : false
 EmptyLineAfterAccessModifier : Never
@@ -69,7 +68,7 @@ IndentWidth: 4
 LambdaBodyIndentation : Signature   
 Language : Cpp
 MaxEmptyLinesToKeep : 1
-NamespaceIndentation : All
+NamespaceIndentation : None
 PackConstructorInitializers : NextLineOnly
 PointerAlignment : Left
 QualifierAlignment : Left
@@ -114,7 +113,7 @@ SpacesInParensOptions :
   InCStyleCasts : false 
   InEmptyParentheses : false
   Other : true  
-SpacesInSquareBrackets : true
+SpacesInSquareBrackets : false
 Standard : c++20
 TabWidth: 4
 ##WrapNamespaceBodyWithEmptyLines : Leave
