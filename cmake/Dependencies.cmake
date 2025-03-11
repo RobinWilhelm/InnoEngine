@@ -20,3 +20,8 @@ set(MSDF_ATLAS_USE_VCPKG ON)
 set(MSDF_ATLAS_USE_SKIA OFF)
 set(MSDF_ATLAS_NO_ARTERY_FONT ON)
 FetchContent_MakeAvailable(msdf-atlas-gen)
+
+
+
+
+set(CMAKE_FOLDER "")

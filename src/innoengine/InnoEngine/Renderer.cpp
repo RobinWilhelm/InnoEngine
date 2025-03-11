@@ -95,7 +95,7 @@ private:
 GPURenderer::~GPURenderer()
 {
     if ( m_sdlGPUDevice ) {
-        SDL_WaitForGPUIdle( m_sdlGPUDevice );
+        wait_for_gpu_idle();
 
         m_pipelineProcessor.reset();
 
@@ -200,6 +200,11 @@ bool GPURenderer::vsync_enabled() const
 const char* GPURenderer::get_devicedriver() const
 {
     return SDL_GetGPUDeviceDriver( m_sdlGPUDevice );
+}
+
+void GPURenderer::wait_for_gpu_idle()
+{
+    SDL_WaitForGPUIdle(m_sdlGPUDevice);
 }
 
 void GPURenderer::on_synchronize()

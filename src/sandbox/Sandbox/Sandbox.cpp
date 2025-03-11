@@ -8,8 +8,8 @@
 
 void Sandbox::on_init_assets( IE::AssetManager* assetmanager )
 {
-    assetmanager->add_repository<IE::Texture2D>( "Images" );
-    assetmanager->add_repository<IE::Shader>( "Shaders" );
+    assetmanager->add_repository<IE::Texture2D>( "images" );
+    assetmanager->add_repository<IE::Shader>( "shaders" );
 }
 
 IE::Result Sandbox::on_init()

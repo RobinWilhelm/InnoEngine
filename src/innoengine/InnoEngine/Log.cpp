@@ -9,6 +9,6 @@ void InnoEngine::Logger::printLog( const LogEntry& log )
 #endif
 
     std::cout << "\033[" << static_cast<int>( get_category_color( log.Category ) ) << ";1m";
-    std::cout << std::format( "{:%H:%M:%S} {} {} {}", std::chrono::time_point_cast<std::chrono::seconds>( log.Timestamp ), log.Location.file_name(), log.Location.function_name(), log.Message );
+    std::cout << std::format( "{:%H:%M:%S} {}", std::chrono::time_point_cast<std::chrono::seconds>( log.Timestamp ), log.Message );
     std::cout << "\033[" << static_cast<int>( AnsiForegroundColor::SystemDefault ) << ";1m" << "\n";
 }

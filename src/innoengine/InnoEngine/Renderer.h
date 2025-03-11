@@ -147,6 +147,7 @@ namespace InnoEngine
 
         const char* get_devicedriver() const;
 
+        void wait_for_gpu_idle();
         void on_synchronize();
         void render();    // process all available rendercommands and send them to the gpu
 

@@ -7,7 +7,7 @@ namespace InnoEngine
     {
         Own<Profiler> profiler = Own<Profiler>( new Profiler() );
         for ( size_t i = 0; i < profiler->m_timings.size(); i++ ) {
-            profiler->m_timings[ i ].AverageCalc.init( 10, 3 );
+            profiler->m_timings[ i ].AverageCalc.init( 3, 3, 0);
         }
 
         return profiler;

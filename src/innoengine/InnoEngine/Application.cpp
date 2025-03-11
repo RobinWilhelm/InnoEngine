@@ -15,12 +15,11 @@
 
 namespace InnoEngine
 {
-    Application::Application()
-    {
-    }
+    Application::Application() { }
 
     Application::~Application()
     {
+        m_renderer->wait_for_gpu_idle();
         m_debugLayer.reset();
         m_assetManager.reset();
         m_camera.reset();
@@ -76,11 +75,10 @@ namespace InnoEngine
 
     Result Application::init( const CreationParams& appParams )
     {
-        if ( appParams.Headless != false ||
-            appParams.WindowParams.height == 0 || appParams.WindowParams.width == 0) {
+        if ( appParams.Headless != false || appParams.WindowParams.height == 0 || appParams.WindowParams.width == 0 ) {
             IE_LOG_CRITICAL( "Headless mode not fully supported yet" );
             return Result::InvalidParameters;
-        }                        
+        }
 
         IE_LOG_INFO( "Starting application at: \"{}\"", std::filesystem::current_path().string() );
         if ( !SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS ) ) {
@@ -104,7 +102,7 @@ namespace InnoEngine
             on_init_assets( m_assetManager.get() );
 
             m_renderer->initialize( m_window.get(), m_assetManager.get() );
-            //m_renderer->enable_vsync( appParams.EnableVSync );
+            // m_renderer->enable_vsync( appParams.EnableVSync );
 
             auto profilerOpt = Profiler::create();
             m_profiler       = std::move( profilerOpt.value() );
@@ -239,14 +237,12 @@ namespace InnoEngine
         return m_profileData[ static_cast<uint32_t>( element ) ];
     }
 
-    void Application::push_layer(Layer* layer)
+    void Application::push_layer( Layer* layer )
     {
-        m_layerStack.push_back(layer);
+        m_layerStack.push_back( layer );
     }
 
-    void Application::on_synchronize()
-    {
-    }
+    void Application::on_synchronize() { }
 
     void Application::synchronize()
     {
@@ -276,10 +272,7 @@ namespace InnoEngine
             }
 
             // always handle quit events
-            if ( event.type == SDL_EVENT_QUIT ||
-                 ( m_window != nullptr &&
-                   event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED &&
-                   event.window.windowID == SDL_GetWindowID( m_window->get_sdlwindow() ) ) ) {
+            if ( event.type == SDL_EVENT_QUIT || ( m_window != nullptr && event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID( m_window->get_sdlwindow() ) ) ) {
                 IE_LOG_DEBUG( "Shutdown requested" );
                 m_mustQuit = true;
                 break;
@@ -295,7 +288,7 @@ namespace InnoEngine
             handled = m_debugLayer->handle_event( event );
 
         auto revIt = m_layerStack.rbegin();
-        while ( revIt != m_layerStack.rend() && handled == false )  {
+        while ( revIt != m_layerStack.rend() && handled == false ) {
             handled = ( *revIt )->handle_event( event );
             ++revIt;
         }
@@ -351,7 +344,7 @@ namespace InnoEngine
     {
         IE_ASSERT( m_profiler != nullptr );
         for ( size_t i = 0; i < static_cast<uint32_t>( ProfilePoint::Count ); ++i ) {
-            m_profileData[ i ] = static_cast<float>(m_profiler->get_average( static_cast<ProfilePoint>( i ) ) ) / TicksPerSecond;
+            m_profileData[ i ] = static_cast<float>( m_profiler->get_average( static_cast<ProfilePoint>( i ) ) ) / TicksPerSecond;
         }
     }
 }    // namespace InnoEngine
