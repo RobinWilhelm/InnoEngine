@@ -1,12 +1,13 @@
 TODO List:
 
-- output shaderbuffer info with shadercross
-- add runtime shader compiling and loading
+- add runtime shader compiling and loading /w shadercross
 
 - figure out how to properly handle the case when runnging in headless mode
 - SDF font loading and rendering https://github.com/Chlumsky/msdfgen8
+- arena allocation for renderer string buffer
 - use layers as depth values (probably 24bit depth 8bit stencil)
 - refactor AssetManager
+- AssetView::get() is currently unsafe because it might not have been created by the assetmanager
 
 Texture2D:
 - should represent a single image file in memory

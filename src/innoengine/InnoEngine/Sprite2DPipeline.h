@@ -1,27 +1,27 @@
 #pragma once
 #include "SDL3/SDL_gpu.h"
 
-#include "BaseTypes.h"
-#include "Renderer.h"
+#include "InnoEngine/BaseTypes.h"
+#include "InnoEngine/GPUDeviceRef.h"
 
-#include "Sprite.h"
-#include "Asset.h"
-#include "AssetView.h"
-#include "AssetRepository.h"
+#include "InnoEngine/Texture2D.h"
 
 #include <string>
 #include <memory>
 
 namespace InnoEngine
 {
+    class AssetManager;
+    class GPURenderer;
+
     class Sprite2DPipeline
     {
     public:
         struct BatchData
         {
-            AssetUID<Texture2D> texture;
-            uint16_t            bufferIdx = 0;
-            uint16_t            count     = 0;
+            FrameBufferIndex texture_index = -1;
+            uint32_t         buffer_index  = 0;
+            uint32_t         count         = 0;
         };
 
         struct Command
@@ -30,18 +30,17 @@ namespace InnoEngine
 
             Command( Command&& other )
             {
-                texture = other.texture;
-                info    = other.info;
+                texture_index = other.texture_index;
+                info          = other.info;
             }
-
-            AssetUID<Texture2D> texture;
-
+            FrameBufferIndex texture_index;
             struct VertexUniform
             {
-                float         x, y;
-                uint32_t      z;
-                float         rotation;
-                float         scale_w, scale_h, padding_a, padding_b;
+                float    x, y;
+                uint32_t z;
+                float    rotation; // radians
+                float    origin_offset_x, origin_offset_y;    // for rotation
+                float    width, height;
                 DXSM::Vector4 source;
                 DXSM::Color   color;
             } info;
@@ -54,8 +53,12 @@ namespace InnoEngine
         ~Sprite2DPipeline();
 
         Result initialize( GPURenderer* renderer, AssetManager* assetmanager );
-        void   prepare_render( const CommandList& command_list, SDL_GPUDevice* gpudevice );
-        void   swapchain_render( const DXSM::Matrix& view_projection, const CommandList& command_list, SDL_GPUCommandBuffer* cmdbuf, SDL_GPURenderPass* renderPass );
+        void   prepare_render( const CommandList& command_list );
+        void   swapchain_render( const DXSM::Matrix&   view_projection,
+                                 const CommandList&    command_list,
+                                 const TextureList&    texture_list,
+                                 SDL_GPUCommandBuffer* cmdbuf,
+                                 SDL_GPURenderPass*    renderPass );
 
     private:
         BatchData* add_batch();
@@ -72,15 +75,14 @@ namespace InnoEngine
         SDL_GPUGraphicsPipeline* m_pipeline       = nullptr;
         SDL_GPUSampler*          m_defaultSampler = nullptr;
 
-        Ref<AssetRepository<Texture2D>> m_textureAssets;
-
         std::vector<const Command*> m_sortedCommands;    // objects owned by the RenderCommandBuffer
 
         SDL_GPUTransferBuffer* m_spriteTransferBuffer = nullptr;
 
-        std::vector<SDL_GPUBuffer*>              m_gpuBuffer;
-        uint16_t                                 m_gpuBuffer_used = 0;
-        std::vector<Sprite2DPipeline::BatchData> m_batches;
+        std::vector<SDL_GPUBuffer*> m_gpuBuffer;
+        uint32_t                    m_gpuBuffer_used = 0;
+        std::vector<BatchData>      m_batches;
     };
 
+    using SpriteCommandBuffer = Sprite2DPipeline::CommandList;
 }    // namespace InnoEngine

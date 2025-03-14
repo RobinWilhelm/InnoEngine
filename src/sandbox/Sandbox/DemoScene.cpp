@@ -1,19 +1,66 @@
 #include "DemoScene.h"
 #include "InnoEngine/Renderer.h"
 
-void DemoLayer::update(double delta_time)
+#include "InnoEngine/CoreAPI.h"
+#include "InnoEngine/OrthographicCamera.h"
+
+#include "InnoEngine/AssetManager.h"
+
+#include <chrono>
+#include <thread>
+#include <optional>
+
+DemoLayer::DemoLayer()
 {
-    (void)delta_time;
+    // auto fontOpt = IE::CoreAPI::get_assetmanager()->require_asset<IE::Font>( "Calibri.ttf", true );
+    // m_testFont   = fontOpt.value().get();
+
+    auto textureOpt = IE::CoreAPI::get_assetmanager()->require_asset<IE::Texture2D>( "tile.png", true );
+    m_testTexture   = textureOpt.value().get();
+    m_testSprite.set_texture( m_testTexture );
+
+    m_positions.resize(sprite_count);
+    m_rotations.resize(sprite_count);
+    m_colors.resize(sprite_count);
+    m_rotationSpeeds.resize(sprite_count);
+    m_scales.resize(sprite_count);
+
+    for ( int i = 0; i < sprite_count; ++i ) {
+        m_positions[ i ]      = DXSM::Vector2( SDL_randf() * 1920, SDL_randf() * 1080 );
+        m_rotationSpeeds[ i ] = SDL_randf();
+        m_colors[ i ]         = DXSM::Color( SDL_randf(), SDL_randf(), SDL_randf(), SDL_randf() );
+        m_scales[ i ]         = SDL_randf() * 2;
+    }
 }
 
-void DemoLayer::render(float interp_factor, IE::GPURenderer* renderer)
+void DemoLayer::update( double delta_time )
+{
+    //
+    for ( int i = 0; i < sprite_count; ++i ) {
+        m_rotations[ i ] += m_rotationSpeeds[ i ] * 360.0f * delta_time;
+        if ( m_rotations[ i ] >= 360.0f )
+            m_rotations[ i ] = 0.0f;
+    }
+}
+
+void DemoLayer::render( float interp_factor, IE::GPURenderer* renderer )
 {
     (void)interp_factor;
-    (void)renderer;
-    renderer->add_clear({0.0f, 0.5f,0.0f, 1.0f});
+    renderer->set_view_projection( IE::CoreAPI::get_camera()->get_viewprojectionmatrix() );
+    renderer->set_clear_color( { 0.0f, 0.0f, 0.0f, 1.0f } );
+
+    renderer->register_sprite( m_testSprite );
+
+    for ( int i = 0; i < sprite_count; ++i ) {
+        m_testSprite.set_position( m_positions[ i ], IE::Sprite::Origin::Middle );
+        m_testSprite.set_scale( { m_scales[ i ], m_scales[ i ] } );
+        m_testSprite.set_rotation( m_rotations[ i ] );
+        m_testSprite.set_color( m_colors[ i ] );
+        renderer->add_sprite( m_testSprite );
+    }
 }
 
-bool DemoLayer::handle_event(const SDL_Event& event)
+bool DemoLayer::handle_event( const SDL_Event& event )
 {
     (void)event;
     return false;

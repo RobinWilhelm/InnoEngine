@@ -1,4 +1,5 @@
 #pragma once
+#include "InnoEngine/IE_Assert.h"
 
 namespace InnoEngine
 {
@@ -27,21 +28,25 @@ namespace InnoEngine
 
         static Application* get_application()
         {
+            IE_ASSERT( get_instance().m_app != nullptr );
             return get_instance().m_app;
         }
 
         static AssetManager* get_assetmanager()
         {
+            IE_ASSERT( get_instance().m_assetManager != nullptr );
             return get_instance().m_assetManager;
         }
 
         static GPURenderer* get_gpurenderer()
         {
+            IE_ASSERT( get_instance().m_renderer != nullptr );
             return get_instance().m_renderer;
         }
 
         static OrthographicCamera* get_camera()
         {
+            IE_ASSERT( get_instance().m_camera != nullptr );
             return get_instance().m_camera;
         }
 

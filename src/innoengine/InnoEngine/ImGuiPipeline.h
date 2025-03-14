@@ -1,10 +1,15 @@
 #pragma once
 #include "SDL3/SDL_gpu.h"
 
-#include "BaseTypes.h"
+#include "InnoEngine/BaseTypes.h"
+#include "InnoEngine/GPUDeviceRef.h"
+
+#include "imgui.h"
 
 namespace InnoEngine
 {
+    class GPURenderer;
+
     class ImGuiPipeline
     {
     public:
@@ -26,20 +31,20 @@ namespace InnoEngine
             std::vector<RenderCommandList> RenderCommandLists;
         };
 
-
     public:
         ImGuiPipeline() = default;
         virtual ~ImGuiPipeline();
 
         // Inherited via GPUPipeline
         Result initialize( GPURenderer* renderer );
-        void   prepare_render( const CommandData& command_data, SDL_GPUDevice* gpudevice );
+        void   prepare_render( const CommandData& command_data );
         void   swapchain_render( const CommandData& command_data, SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass );
 
     private:
         void create_or_resize_buffer( SDL_GPUBuffer** buffer, uint32_t* old_size, uint32_t new_size, SDL_GPUBufferUsageFlags usage );
 
     private:
-        bool m_initialized = false;
+        GPUDeviceRef m_device      = nullptr;
+        bool         m_initialized = false;
     };
 }    // namespace InnoEngine

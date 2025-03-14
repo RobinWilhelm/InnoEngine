@@ -1,5 +1,5 @@
 #pragma once
-#include "Asset.h"
+#include "InnoEngine/Asset.h"
 
 #include <filesystem>
 #include <memory>
@@ -65,7 +65,7 @@ namespace InnoEngine
     };
 
     template <typename T>
-    class AssetView : public AssetHandle
+    class AssetView final : public AssetHandle
     {
         friend class AssetRepository<T>;
 

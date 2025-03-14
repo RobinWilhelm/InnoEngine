@@ -1,9 +1,9 @@
 #pragma once
 #include "SDL3/SDL_log.h"
 
-#include "IE_Assert.h"
-#include "Asset.h"
-#include "AssetView.h"
+#include "InnoEngine/IE_Assert.h"
+#include "InnoEngine/Asset.h"
+#include "InnoEngine/AssetView.h"
 
 #include <filesystem>
 #include <map>
@@ -91,8 +91,8 @@ namespace InnoEngine
             if ( is_available( name ) || static_cast<InternalAssetUID>( m_nextFree ) == ( std::numeric_limits<InternalAssetUID>::max )() )
                 return std::nullopt;
 
-            std::shared_ptr<T> asset = std::make_shared<T>();
-            asset->m_fullPath        = asset->build_path( m_directory, name );
+            std::shared_ptr<T> asset = std::shared_ptr<T>(new T());
+            asset->m_fullPath        = std::static_pointer_cast<Asset<T>>( asset )->build_path( m_directory, name );
 
             if ( std::filesystem::exists( asset->m_fullPath ) && std::filesystem::is_regular_file( asset->m_fullPath ) ) {
                 std::shared_ptr<AssetView<T>> view = std::make_shared<AssetView<T>>();
@@ -114,9 +114,11 @@ namespace InnoEngine
 
         bool load( AssetHandle* handle, std::string_view name ) override
         {
-            AssetView<T>*              view  = static_cast<AssetView<T>*>( handle );
+            (void)name;
+            AssetView<T>*             view  = static_cast<AssetView<T>*>( handle );
             std::shared_ptr<Asset<T>> asset = get_asset( view->getUID() );
-            if ( asset && asset->load_from_file( asset->m_fullPath, name ) ) {
+
+            if ( asset && IE_SUCCESS( std::static_pointer_cast<Asset<T>>( asset )->load_asset( asset->m_fullPath ) ) ) {
                 std::atomic_thread_fence( std::memory_order_release );
                 view->m_loadStatus.store( AssetLoadStatus::Finished, std::memory_order_relaxed );
                 return true;

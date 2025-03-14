@@ -4,6 +4,8 @@
 #include "CoreAPI.h"
 #include "Renderer.h"
 
+#include "nlohmann/json.hpp"
+
 namespace InnoEngine
 {
     ShaderFormatInfo Shader::ms_shaderFormat;
@@ -21,9 +23,12 @@ namespace InnoEngine
         return m_sdlShader;
     }
 
-    bool Shader::load_from_file( const std::filesystem::path& full_path, std::string_view file_name )
+    Result Shader::load_asset( const std::filesystem::path& full_path )
     {
+        IE_ASSERT( m_sdlShader == nullptr );
+
         // Auto-detect the shader stage from the file name for convenience
+        const std::string file_name = full_path.filename().string();
         if ( file_name.find( ".vert" ) != std::string::npos ) {
             m_stage = SDL_GPU_SHADERSTAGE_VERTEX;
         }
@@ -31,60 +36,54 @@ namespace InnoEngine
             m_stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
         }
         else {
-            IE_LOG_ERROR( "Invalid shader stage!" );
-            return false;
+            IE_LOG_ERROR( "Loading shader \"{}\" failed: {}", full_path.string(), "Invalid shader stage" );
+            return Result::Fail;
         }
 
-        m_data = SDL_LoadFile( full_path.string().c_str(), &m_dataSize );
-        if ( m_data == nullptr ) {
-            IE_LOG_ERROR( "Failed to load shader from disk! %s", full_path.string() );
-            return false;
+        size_t data_size   = 0;
+        void*  shader_data = SDL_LoadFile( full_path.string().c_str(), &data_size );
+        if ( shader_data == nullptr ) {
+            IE_LOG_ERROR("Loading shader \"{}\" failed at SDL_LoadFile: {}", full_path.string(), SDL_GetError());
+            return Result::Fail;
         }
 
-        return true;
-    }
+        std::filesystem::path metadata_full_path = full_path.parent_path().parent_path().concat( "/meta/" );
+        metadata_full_path.concat(full_path.filename().replace_extension(".json").string() );
 
-    std::filesystem::path Shader::build_path(const std::filesystem::path& folder, std::string_view file_name)
-    {
-        IE_ASSERT(ms_shaderFormat.Format != SDL_GPU_SHADERFORMAT_INVALID);
-        return (folder / ms_shaderFormat.SubDirectory).append(file_name).concat(ms_shaderFormat.FileNameExtension);
-    }
-
-    bool Shader::create_device_ressources( GPUDeviceRef device, const ShaderCreateInfo& create_info )
-    {
-        IE_ASSERT( device != nullptr );
-        IE_ASSERT( ms_shaderFormat.Format != SDL_GPU_SHADERFORMAT_INVALID );
-
-        // check if already created
-        if ( m_sdlShader != nullptr )
-            return true;
-
-        IE_ASSERT( m_dataSize != 0 );
-        IE_ASSERT( m_data != nullptr );
-
-        m_device = device;
+        if ( std::filesystem::exists( metadata_full_path ) == false ) {
+            IE_LOG_ERROR("Loading shader \"{}\" failed: {}", full_path.string(), "Couldn't find meta data");
+            return Result::Fail;
+        }
 
         SDL_GPUShaderCreateInfo sdl_shadercreateinfo = {};
-        sdl_shadercreateinfo.code_size               = m_dataSize;
-        sdl_shadercreateinfo.code                    = static_cast<Uint8*>( m_data );
-        sdl_shadercreateinfo.entrypoint              = ms_shaderFormat.EntryPoint.data();
-        sdl_shadercreateinfo.format                  = ms_shaderFormat.Format;
-        sdl_shadercreateinfo.stage                   = m_stage;
-        sdl_shadercreateinfo.num_samplers            = create_info.SamplerCount;
-        sdl_shadercreateinfo.num_storage_textures    = create_info.StorageTextureCount;
-        sdl_shadercreateinfo.num_storage_buffers     = create_info.StorageBufferCount;
-        sdl_shadercreateinfo.num_uniform_buffers     = create_info.UniformBufferCount;
+        try {
+            std::ifstream  ifs( metadata_full_path.string().c_str() );
+            nlohmann::json meta_data_json = nlohmann::json::parse( ifs );
 
-        m_sdlShader = SDL_CreateGPUShader( m_device, &sdl_shadercreateinfo );
-        if ( m_sdlShader == nullptr ) {
-            IE_LOG_ERROR( "Failed to create shader!" );
-            SDL_free( m_data );
-            m_data = nullptr;
-            return false;
+            sdl_shadercreateinfo.code_size            = data_size;
+            sdl_shadercreateinfo.code                 = static_cast<Uint8*>( shader_data );
+            sdl_shadercreateinfo.entrypoint           = ms_shaderFormat.EntryPoint.data();
+            sdl_shadercreateinfo.format               = ms_shaderFormat.Format;
+            sdl_shadercreateinfo.stage                = m_stage;
+            sdl_shadercreateinfo.num_samplers         = meta_data_json.at( "samplers" );
+            sdl_shadercreateinfo.num_storage_textures = meta_data_json.at( "storage_textures" );
+            sdl_shadercreateinfo.num_storage_buffers  = meta_data_json.at( "storage_buffers" );
+            sdl_shadercreateinfo.num_uniform_buffers  = meta_data_json.at( "uniform_buffers" );
+        } catch ( std::exception e ) {
+            IE_LOG_ERROR("Loading shader \"{}\" failed: {}", full_path.string(), "Invalid meta data");
+            return Result::Fail;
         }
 
-        SDL_free( m_data );
-        m_data = nullptr;
-        return true;
+        m_sdlShader = SDL_CreateGPUShader( m_device, &sdl_shadercreateinfo );
+        SDL_free( shader_data );
+
+        IE_LOG_DEBUG("Loaded shader \"{}\"", full_path.string());
+        return Result::Success;
+    }
+
+    std::filesystem::path Shader::build_path( const std::filesystem::path& folder, std::string_view file_name )
+    {
+        IE_ASSERT( ms_shaderFormat.Format != SDL_GPU_SHADERFORMAT_INVALID );
+        return ( folder / ms_shaderFormat.SubDirectory ).append( file_name ).concat( ms_shaderFormat.FileNameExtension );
     }
 }    // namespace InnoEngine

@@ -2,9 +2,11 @@
 
 struct SpriteData
 {
-    float X, Y, Z, Rotation;
-    float2 Scale;
-    float2 Padding;
+    float X, Y;
+    uint Z;
+    float Rotation;
+    float2 OriginOffset;
+    float2 Size;
     float4 SourceRect;
     float4 Color;
 };
@@ -29,15 +31,16 @@ Output main(uint id : SV_VertexID)
     uint vert = QuadIndices[id % 6];
     SpriteData sprite = DataBuffer[spriteIndex];
     float2 coord = QuadVertices[vert];
+    coord *= sprite.Size;
+    coord -= sprite.OriginOffset;
     
     if (sprite.Rotation != 0.0f)
     {
         float c = cos(sprite.Rotation);
-        float s = sin(sprite.Rotation);
-    
-        coord *= sprite.Scale;
+        float s = sin(sprite.Rotation);    
+        
         float2x2 rotation = { c, s, -s, c };
-        coord = mul(coord, rotation);
+        coord = mul(coord , rotation) ;
     }
     
     float4 coordWithDepth = float4(coord.x + sprite.X, coord.y + sprite.Y, sprite.Z, 1.0f);

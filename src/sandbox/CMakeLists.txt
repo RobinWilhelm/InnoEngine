@@ -16,3 +16,15 @@ endif()
 target_include_directories(${NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(${NAME} PRIVATE InnoEngine)
 
+
+set_target_properties( ${NAME}
+    PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/sandbox_environment"
+)
+
+if(MSVC)
+set_target_properties( ${NAME}
+    PROPERTIES    
+        VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/sandbox_environment/Debug"
+)
+endif()

@@ -80,7 +80,8 @@ namespace InnoEngine
             }      
         }
 
-        m_averageProbe = sum / probe_count;
+        if(probe_count > 0)
+            m_averageProbe = sum / probe_count;
 
         m_lastUpdateTimestamp = get_tick_count();
         return true;

@@ -15,11 +15,13 @@
 #include <algorithm>
 #include <cstdint>
 #include <chrono>
+#include <iostream>
+#include <fstream>
 
 #include "SDL3/SDL.h"
-#include "IE_Assert.h"
-#include "Log.h"
-#include "CoreAPI.h"
+#include "InnoEngine/IE_Assert.h"
+#include "InnoEngine/Log.h"
+#include "InnoEngine/CoreAPI.h"
 
 #include "imgui.h"
 

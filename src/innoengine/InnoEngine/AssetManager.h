@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Log.h"
+#include "InnoEngine/Log.h"
 
-#include "Asset.h"
-#include "AssetRepository.h"
+#include "InnoEngine/Asset.h"
+#include "InnoEngine/AssetRepository.h"
 
 #include <filesystem>
 #include <map>

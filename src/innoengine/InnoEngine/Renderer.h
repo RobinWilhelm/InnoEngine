@@ -6,6 +6,7 @@
 
 #include "IE_Assert.h"
 #include "BaseTypes.h"
+#include "GPUDeviceRef.h"
 
 #include <string>
 #include <atomic>
@@ -17,118 +18,12 @@ namespace InnoEngine
     class OrthographicCamera;
     class Sprite;
     class AssetManager;
-
-    // have reference counting only in debug mode so we can check if we forgot do release stuff
-    // no idea if this is a good way to do it
-#ifdef _DEBUG
-    class GPUDeviceRef
-    {
-        friend class GPURenderer;
-
-        static GPUDeviceRef create( SDL_GPUDevice* device )
-        {
-            GPUDeviceRef deviceref;
-            deviceref.m_device   = device;
-            deviceref.m_useCount = new std::atomic_uint32_t( 1 );
-            return deviceref;
-        }
-
-    public:
-        GPUDeviceRef() = default;
-
-        GPUDeviceRef( SDL_GPUDevice* device ) :
-            m_device( device )
-        {
-            // it should be allowed to initialize it with nullptr so this class is easily replacable by a raw pointer
-            IE_ASSERT( device == nullptr );
-        };
-
-        GPUDeviceRef( const GPUDeviceRef& other )
-        {
-            m_device   = other.m_device;
-            m_useCount = other.m_useCount;
-            addref();
-        }
-
-        GPUDeviceRef( GPUDeviceRef&& other )
-        {
-            m_device         = other.m_device;
-            m_useCount       = other.m_useCount;
-            other.m_device   = nullptr;
-            other.m_useCount = nullptr;
-        }
-
-        GPUDeviceRef& operator=( const GPUDeviceRef& other )
-        {
-            if ( this == &other )
-                return *this;
-
-            m_device   = other.m_device;
-            m_useCount = other.m_useCount;
-            addref();
-            return *this;
-        }
-
-        GPUDeviceRef& operator=( GPUDeviceRef&& other )
-        {
-            if ( this == &other )
-                return *this;
-
-            if ( other.m_useCount == nullptr ) {
-                deref();
-                return *this;
-            }
-
-            m_device         = other.m_device;
-            m_useCount       = other.m_useCount;
-            other.m_device   = nullptr;
-            other.m_useCount = nullptr;
-            return *this;
-        }
-
-        ~GPUDeviceRef()
-        {
-            // could already be empty because we moved a nullptr into it
-            if ( m_useCount == nullptr )
-                return;
-
-            if ( deref() == 1 /* was it the last reference? */ ) {
-                delete m_useCount;
-                m_device = nullptr;
-            }
-        }
-
-        operator SDL_GPUDevice*() const
-        {
-            return m_device;
-        }
-
-        int use_count()
-        {
-            return m_useCount->load( std::memory_order_relaxed );
-        }
-
-    private:
-        uint32_t addref()
-        {
-            return m_useCount->fetch_add( 1 );
-        }
-
-        uint32_t deref()
-        {
-            return m_useCount->fetch_sub( 1 );
-        }
-
-    private:
-        SDL_GPUDevice*        m_device   = nullptr;
-        std::atomic_uint32_t* m_useCount = nullptr;
-    };
-#else
-    using GPUDeviceRef = SDL_GPUDevice*;
-#endif
+    class Font;
+    struct RenderCommandBuffer;
 
     class GPURenderer
     {
+        friend class DebugUI;
         GPURenderer() = default;
 
     public:
@@ -142,8 +37,10 @@ namespace InnoEngine
         GPUDeviceRef get_gpudevice() const;
         bool         has_window();
 
+        void log_available_drivers() const;
+
         Result enable_vsync( bool enabled );
-        bool vsync_enabled() const;
+        bool   vsync_enabled() const;
 
         const char* get_devicedriver() const;
 
@@ -152,23 +49,30 @@ namespace InnoEngine
         void render();    // process all available rendercommands and send them to the gpu
 
         // Important: needs to be externally synchronized when adding rendercommands from multiple threads
-        // currently the commands are only synchronized update and main thread once per frame
-        void add_clear( DXSM::Color color );    // the color the swapchain texture should be cleared to at the begin of the frame
-        void add_view_projection( const DXSM::Matrix view_projection );
-        void add_sprite( const Sprite* sprite );
+        // currently the commands are only synchronized between update and main thread once per frame
+        void register_sprite( Sprite& sprite );
+        void register_font( Ref<Font> font );
+
+        void set_clear_color( DXSM::Color color );    // the color the swapchain texture should be cleared to at the begin of the frame
+        void set_view_projection( const DXSM::Matrix view_projection );
+        void add_sprite( const Sprite& sprite );
+        void add_text( const Font* font, float x, float y, std::string_view text, DXSM::Color color = { 1.0f, 1.0f, 1.0f, 1.0f }, uint16_t layer = 0, float scale = 1.0f );
         void add_imgui_draw_data( ImDrawData* draw_data );
 
     private:
         void retrieve_shaderformatinfo();
 
+        // debug only
+        const RenderCommandBuffer* get_render_command_buffer() const;
+
     private:
-        bool m_initialized = false;
+        bool m_initialized  = false;
         bool m_vsyncEnabled = true;
 
         class PipelineProcessor;
         Own<PipelineProcessor> m_pipelineProcessor = nullptr;
 
         GPUDeviceRef m_sdlGPUDevice = nullptr;
-        Window*      m_window = nullptr;
+        Window*      m_window       = nullptr;
     };
 }    // namespace InnoEngine

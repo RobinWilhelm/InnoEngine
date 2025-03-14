@@ -4,9 +4,6 @@
 #include "BaseTypes.h"
 #include "Window.h"
 #include "Profiler.h"
-#include "RenderCommandBuffer.h"
-
-
 
 #include <memory>
 #include <string>
@@ -52,12 +49,14 @@ namespace InnoEngine
         Result run();
 
         void set_simulation_target_frequency( int updatesPerSecond );
+        const FrameTimingInfo& get_frame_timings() const;
 
         Window*       get_window() const;
         GPURenderer*  get_renderer() const;
         AssetManager* get_assetmanager() const;
 
         void enable_debugui( bool enable );
+        bool running_mulithreaded() const;
 
         void raise_critical_error( std::string msg );
 
