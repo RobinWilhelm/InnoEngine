@@ -15,7 +15,7 @@
 
 namespace InnoEngine
 {
-    static constexpr uint32_t SpriteBatchSizeMax = 20000;
+    static constexpr uint32_t SpriteBatchSizeMax = 1000000;
 
     Sprite2DPipeline::~Sprite2DPipeline()
     {

@@ -7,28 +7,11 @@
 
 #include "InnoEngine/Texture2D.h"
 
-#undef min
-#undef max
 
-#pragma warning( disable :4458; disable :4505 )
-#include "msdf-atlas-gen/msdf-atlas-gen.h"
-using namespace msdf_atlas;
-#pragma warning( default :4458; default :4505 )
-
-#define DEBUG_MSDF_FONT 0
+#include "InnoEngine/MSDFData.h"
 
 namespace InnoEngine
 {
-    struct MSDFData
-    {
-        // Storage for glyph geometry and their coordinates in the atlas
-        std::vector<GlyphGeometry> GlyphGeo;
-
-        // FontGeometry is a helper class that loads a set of glyphs from a single font.
-        // It can also be used to get additional font metrics, kerning information, etc.
-        FontGeometry FontGeo;
-    };
-
     Font::Font()
     {
         m_msdfData = std::make_shared<MSDFData>();

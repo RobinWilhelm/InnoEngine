@@ -60,7 +60,7 @@ namespace InnoEngine
 
     constexpr int TicksPerSecond = 1'000'000'000;
 
-    using FrameBufferIndex = int32_t;
+    using FrameBufferIndex = int16_t;
 
     template <typename T>
     class RenderCommandQueue

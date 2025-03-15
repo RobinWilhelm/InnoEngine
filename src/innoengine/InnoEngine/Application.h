@@ -56,7 +56,7 @@ namespace InnoEngine
         AssetManager* get_assetmanager() const;
 
         void enable_debugui( bool enable );
-        bool running_mulithreaded() const;
+        bool running_mutithreaded() const;
 
         void raise_critical_error( std::string msg );
 
@@ -92,8 +92,6 @@ namespace InnoEngine
         Own<AssetManager>       m_assetManager;
         Own<OrthographicCamera> m_camera;
         Own<Profiler>           m_profiler;
-
-        std::condition_variable m_updateCV;
 
         bool             m_initializationSucceded = false;
         std::atomic_bool m_mustQuit               = false;

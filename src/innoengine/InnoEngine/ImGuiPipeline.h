@@ -29,6 +29,28 @@ namespace InnoEngine
             ImVec2                         DisplaySize      = { 0, 0 };
             ImVec2                         FrameBufferScale = { 0, 0 };
             std::vector<RenderCommandList> RenderCommandLists;
+
+            CommandData& operator=( CommandData& other )
+            {
+                if ( this == &other )
+                    return *this;
+
+                TotalVertexCount   = other.TotalVertexCount;
+                TotalIndexCount    = other.TotalIndexCount;
+                DisplayPos         = other.DisplayPos;
+                DisplaySize        = other.DisplaySize;
+                FrameBufferScale   = other.FrameBufferScale;
+
+                RenderCommandLists.reserve( other.RenderCommandLists.size() );
+                for ( const auto& rcl : other.RenderCommandLists ) {
+                    auto& new_rcl         = RenderCommandLists.emplace_back();
+                    new_rcl.CommandBuffer = rcl.CommandBuffer;
+                    new_rcl.IndexBuffer   = rcl.IndexBuffer;
+                    new_rcl.VertexBuffer  = rcl.VertexBuffer;
+                }
+
+                return *this;
+            }
         };
 
     public:

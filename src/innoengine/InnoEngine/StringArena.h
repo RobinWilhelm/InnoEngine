@@ -13,10 +13,13 @@ namespace InnoEngine
     public:
         StringArena( uint32_t initial_size = 10000, float grow_factor = 2.0f );
 
+
+        StringArena& operator=(StringArena& other);
+
         StringArenaIndex insert( std::string_view string );
         void             clear();
         void             grow( uint32_t new_size );
-
+        const char*      get_string(StringArenaIndex index) const ;
         size_t size() const;
 
     private:

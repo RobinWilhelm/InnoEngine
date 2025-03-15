@@ -24,9 +24,11 @@ namespace InnoEngine
     class GPURenderer::PipelineProcessor
     {
     public:
-        void initialize( GPURenderer* renderer, AssetManager* assetmanager )
+        void initialize( GPURenderer* renderer, AssetManager* assetmanager, bool doublebuffered = false )
         {
             IE_ASSERT( renderer != nullptr && assetmanager != nullptr );
+
+            m_doubleBuffered = doublebuffered;
 
             m_sprite2DPipeline = std::make_unique<Sprite2DPipeline>();
             RETURN_IF_FAILED( m_sprite2DPipeline->initialize( renderer, assetmanager ) );
@@ -68,13 +70,23 @@ namespace InnoEngine
 
         RenderCommandBuffer& get_command_buffer_for_rendering()
         {
-            return m_renderCommandBuffer.get_second();
+            if ( m_doubleBuffered )
+                return m_renderCommandBuffer.get_second();
+            else
+                return m_renderCommandBuffer.get_first();
         }
 
         void on_synchronize()
         {
-            m_renderCommandBuffer.swap();
-            get_command_buffer_for_collecting().clear();
+            if ( m_doubleBuffered ) {
+                /*
+                m_renderCommandBuffer.swap();
+                get_command_buffer_for_collecting().clear();
+                */
+                get_command_buffer_for_rendering().clear();
+                get_command_buffer_for_rendering() = get_command_buffer_for_collecting();
+                get_command_buffer_for_collecting().clear();
+            }
         }
 
     private:
@@ -82,7 +94,8 @@ namespace InnoEngine
         Own<Sprite2DPipeline>               m_sprite2DPipeline;
         Own<Font2DPipeline>                 m_font2DPipeline;
         Own<ImGuiPipeline>                  m_imguiPipeline;
-        bool                                m_initialized = false;
+        bool                                m_initialized    = false;
+        bool                                m_doubleBuffered = false;
     };
 
     GPURenderer::~GPURenderer()
@@ -138,7 +151,7 @@ namespace InnoEngine
         return renderer;
     }
 
-    Result GPURenderer::initialize( Window* window, AssetManager* assetmanager )
+    Result GPURenderer::initialize( Window* window, AssetManager* assetmanager, bool doublebuffered )
     {
         if ( m_initialized ) {
             IE_LOG_WARNING( "GPURenderer: Trying to initialize more than once!" );
@@ -153,7 +166,7 @@ namespace InnoEngine
             }
         }
 
-        m_pipelineProcessor->initialize( this, assetmanager );
+        m_pipelineProcessor->initialize( this, assetmanager, doublebuffered );
         m_initialized = true;
         return Result::Success;
     }
@@ -234,9 +247,11 @@ namespace InnoEngine
     void GPURenderer::render()
     {
         IE_ASSERT( m_initialized );
-
-        // dont render when minimized
+        // std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        //  dont render when minimized
         if ( m_window && SDL_GetWindowFlags( m_window->get_sdlwindow() ) & SDL_WINDOW_MINIMIZED ) {
+            if ( m_doubleBuffered == false )
+                m_pipelineProcessor->get_command_buffer_for_rendering().clear();
             return;
         }
 
@@ -279,6 +294,18 @@ namespace InnoEngine
             IE_LOG_ERROR( "SDL_SubmitGPUCommandBuffer failed : %s", SDL_GetError() );
             return;
         }
+
+        if ( m_doubleBuffered == false )
+            m_pipelineProcessor->get_command_buffer_for_rendering().clear();
+    }
+
+    void GPURenderer::register_texture( Ref<Texture2D> texture )
+    {
+        IE_ASSERT( texture != nullptr );
+
+        auto& render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
+        render_cmd_buf.TextureRegister.push_back( texture );
+        texture->m_frameBufferIndex = static_cast<FrameBufferIndex>( render_cmd_buf.TextureRegister.size() - 1 );
     }
 
     void GPURenderer::register_sprite( Sprite& sprite )
@@ -332,6 +359,27 @@ namespace InnoEngine
         cmd.info.color           = sprite.m_color;
     }
 
+    void GPURenderer::add_texture( Ref<Texture2D> texture, float x, float y, uint32_t layer, float rotation, DXSM::Color color, float scale )
+    {
+        (void)color;
+        IE_ASSERT( texture != nullptr && texture->m_frameBufferIndex >= 0 );
+
+        RenderCommandBuffer&       render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
+        Sprite2DPipeline::Command& cmd            = render_cmd_buf.SpriteRenderCommands.emplace_back();
+
+        cmd.texture_index        = texture->m_frameBufferIndex;
+        cmd.info.x               = x;
+        cmd.info.y               = y;
+        cmd.info.z               = layer;
+        cmd.info.rotation        = DirectX::XMConvertToRadians( rotation );
+        cmd.info.width           = scale * texture->m_width;
+        cmd.info.height          = scale * texture->m_height;
+        cmd.info.origin_offset_x = 0.5f * cmd.info.width;
+        cmd.info.origin_offset_y = 0.5f * cmd.info.height;
+        cmd.info.source          = DXSM::Vector4( 0.0f, 0.0f, 1.0f, 1.0f );
+        cmd.info.color           = color;
+    }
+
     void GPURenderer::add_imgui_draw_data( ImDrawData* draw_data )
     {
         IE_ASSERT( draw_data != nullptr );
@@ -369,6 +417,7 @@ namespace InnoEngine
 
         cmd.font_fbidx         = font->m_frameBufferIndex;
         cmd.string_arena_index = render_cmd_buf.StringBuffer.insert( text );
+        cmd.string_size        = static_cast<uint32_t>( text.size() );
         cmd.info.x             = x;
         cmd.info.y             = y;
         cmd.info.z             = layer;

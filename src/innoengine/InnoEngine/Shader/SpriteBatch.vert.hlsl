@@ -45,6 +45,7 @@ Output main(uint id : SV_VertexID)
     
     float4 coordWithDepth = float4(coord.x + sprite.X, coord.y + sprite.Y, sprite.Z, 1.0f);
     
+    
     float2 texcoord[4] =
     {
         { sprite.SourceRect.x, sprite.SourceRect.y },
@@ -52,7 +53,7 @@ Output main(uint id : SV_VertexID)
         { sprite.SourceRect.x, sprite.SourceRect.y + sprite.SourceRect.z },
         { sprite.SourceRect.x + sprite.SourceRect.w, sprite.SourceRect.y + sprite.SourceRect.z }
     };
-        
+            
     Output output;
     output.Position = mul(ViewProjectionMatrix, coordWithDepth);
     output.TexCoord = texcoord[vert];

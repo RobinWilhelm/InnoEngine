@@ -13,3 +13,7 @@ CMakeUserPresets.json
 bin
 build
 vendor
+sandbox_environment/Debug/
+sandbox_environment/Release/
+sandbox_environment/RelWithDebInfo/
+sandbox_environment/MinSizeRel/

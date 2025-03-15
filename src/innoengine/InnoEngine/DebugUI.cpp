@@ -50,7 +50,7 @@ namespace InnoEngine
             ImGui::Text( "Main Thread Total: %.2f ms", app->get_timing( ProfilePoint::MainThreadTotal ) * 1000 );
 
             ImGui::Text( "\tRenderer: %.2f ms", app->get_timing( ProfilePoint::ProcessRenderCommands ) * 1000 );
-            if ( app->running_mulithreaded() == false ) {
+            if ( app->running_mutithreaded() == false ) {
 
                 ImGui::Text( "\tLayer Update: %.2f ms", app->get_timing( ProfilePoint::LayerUpdate ) * 1000 );
                 ImGui::Text( "\tLayer Render: %.2f ms", app->get_timing( ProfilePoint::LayerRender ) * 1000 );
@@ -66,7 +66,7 @@ namespace InnoEngine
 
             ImGui::Spacing();
             ImGui::Text("Total rendercommands : %u", renderer->get_render_command_buffer()->get_stats().TotalCommands);
-            ImGui::Text("Command buffer size : %u MB", renderer->get_render_command_buffer()->get_stats().TotalBufferSize / 1024 / 1024);
+            ImGui::Text("Command buffer size : %.2f MB", static_cast<float>(renderer->get_render_command_buffer()->get_stats().TotalBufferSize) / 1024 / 1024);
 
         }
         ImGui::End();

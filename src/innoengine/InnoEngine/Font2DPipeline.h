@@ -34,14 +34,15 @@ namespace InnoEngine
 
             FrameBufferIndex font_fbidx;
             StringArenaIndex string_arena_index;
+            uint32_t         string_size;
 
             struct VertexUniform
             {
-                float    x, y;
-                uint32_t z;
-                float    rotation; // radians
-                float    origin_offset_x, origin_offset_y;    // for rotation
-                float    width, height;
+                float         x, y;
+                uint32_t      z;
+                float         rotation;                            // radians
+                float         origin_offset_x, origin_offset_y;    // for rotation
+                float         width, height;
                 DXSM::Vector4 source;
                 DXSM::Color   color;
             } info;
@@ -54,7 +55,7 @@ namespace InnoEngine
         ~Font2DPipeline();
 
         Result initialize( GPURenderer* renderer, AssetManager* assetmanager );
-        void   prepare_render( const CommandList& command_list, const FontList& texture_list );
+        void   prepare_render( const CommandList& command_list, const FontList& texture_list, const StringArena& string_buffer );
         void   swapchain_render( const DXSM::Matrix&   view_projection,
                                  const CommandList&    command_list,
                                  const FontList&       texture_list,

@@ -19,6 +19,7 @@ namespace InnoEngine
     class Sprite;
     class AssetManager;
     class Font;
+    class Texture2D;
     struct RenderCommandBuffer;
 
     class GPURenderer
@@ -31,7 +32,7 @@ namespace InnoEngine
 
         [[nodiscard]]
         static auto create() -> std::optional<Own<GPURenderer>>;
-        Result      initialize( Window* window, AssetManager* assetmanager );
+        Result      initialize( Window* window, AssetManager* assetmanager, bool doublebuffered = false );
 
         Window*      get_window() const;
         GPUDeviceRef get_gpudevice() const;
@@ -50,12 +51,14 @@ namespace InnoEngine
 
         // Important: needs to be externally synchronized when adding rendercommands from multiple threads
         // currently the commands are only synchronized between update and main thread once per frame
+        void register_texture( Ref<Texture2D> texture );
         void register_sprite( Sprite& sprite );
         void register_font( Ref<Font> font );
 
         void set_clear_color( DXSM::Color color );    // the color the swapchain texture should be cleared to at the begin of the frame
         void set_view_projection( const DXSM::Matrix view_projection );
         void add_sprite( const Sprite& sprite );
+        void add_texture( Ref<Texture2D> texture, float x, float y, uint32_t layer = 0,float rotation = 0.0f, DXSM::Color color = {1.0f, 1.0f, 1.0f, 1.0f}, float scale = 1.0f);
         void add_text( const Font* font, float x, float y, std::string_view text, DXSM::Color color = { 1.0f, 1.0f, 1.0f, 1.0f }, uint16_t layer = 0, float scale = 1.0f );
         void add_imgui_draw_data( ImDrawData* draw_data );
 
@@ -74,5 +77,7 @@ namespace InnoEngine
 
         GPUDeviceRef m_sdlGPUDevice = nullptr;
         Window*      m_window       = nullptr;
+
+        bool m_doubleBuffered = false;
     };
 }    // namespace InnoEngine

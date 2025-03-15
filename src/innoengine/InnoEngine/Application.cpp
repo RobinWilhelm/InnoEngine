@@ -102,7 +102,7 @@ namespace InnoEngine
             on_init_assets( m_assetManager.get() );
             publish_coreapi();
 
-            m_renderer->initialize( m_window.get(), m_assetManager.get() );
+            m_renderer->initialize( m_window.get(), m_assetManager.get(), appParams.RunAsync);
             m_renderer->enable_vsync( appParams.EnableVSync );
 
             auto profilerOpt = Profiler::create();
@@ -219,7 +219,7 @@ namespace InnoEngine
         m_debugui_active = enabled;
     }
 
-    bool Application::running_mulithreaded() const
+    bool Application::running_mutithreaded() const
     {
         return m_multiThreaded;
     }
