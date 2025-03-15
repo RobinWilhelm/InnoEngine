@@ -42,6 +42,7 @@ void DemoLayer::update( double delta_time )
         if ( m_rotations[ i ] >= 360.0f )
             m_rotations[ i ] -= 360.0f;
 
+        /*
         m_colors[ i ].x += delta_time * 0.01f;
         if ( m_colors[ i ].x > 1 )
             m_colors[ i ].x -= 1;
@@ -54,6 +55,7 @@ void DemoLayer::update( double delta_time )
         // m_colors[i].w += delta_time * 0.1f;
         // if (m_colors[i].w > 1)
         // m_colors[i].w -= 1;
+        */
     }
 }
 

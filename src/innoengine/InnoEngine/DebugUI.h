@@ -29,5 +29,8 @@ namespace InnoEngine
 
         void imgui_begin_frame();
         void imgui_end_frame( GPURenderer* pRenderer );
+
+    private:
+        bool m_open = false;
     };
 }    // namespace InnoEngine

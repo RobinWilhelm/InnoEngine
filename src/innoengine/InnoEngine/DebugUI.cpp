@@ -15,6 +15,7 @@ namespace InnoEngine
         (void)renderer;
         IE_ASSERT( renderer != nullptr );
         Own<DebugUI> debugui = Own<DebugUI>( new DebugUI );
+        // debugui->set_style();
         return debugui;
     }
 
@@ -29,131 +30,141 @@ namespace InnoEngine
         imgui_begin_frame();
 
         set_style();
-        if ( ImGui::Begin( "Debug" ) ) {
 
-            auto app = CoreAPI::get_application();
+        ImGui::SetNextWindowSize({300, 300}, ImGuiCond_Always);
+        if (ImGui::Begin("InnoEngine Debug Info", &m_open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings)) {
 
-            ImGui::Text( "Driver: %s FPS: %.0f", renderer->get_devicedriver(), app->get_fps() );
-            ImGui::Text( "VSync: %s", renderer->vsync_enabled() ? "Enabled" : "Disabled" );
-            ImGui::Spacing();
+            auto                   app = CoreAPI::get_application();
+            const FrameTimingInfo& fti = app->get_frame_timings();
 
-            FrameTimingInfo fti = app->get_frame_timings();
-            if ( fti.FixedSimulationFrequency != 0 ) {
-                ImGui::Text( "Simulation frequency: %i", fti.FixedSimulationFrequency );
-                ImGui::Text( "Frame Time: %.2f ms", app->get_timing( ProfilePoint::MainThreadTotal ) * 1000 );
-            }
-            else {
-                ImGui::Text( "Simulation frequency: Unlimited" );
-                ImGui::Text( "Frame Time: %.2f ms", app->get_timing( ProfilePoint::MainThreadTotal ) * 1000 );
-            }
-            ImGui::Spacing();
+            const RenderCommandBuffer::Stats& render_stats = renderer->get_render_command_buffer()->get_stats();
 
-            if ( ImGui::BeginTable( "DebugTimingsTable", 2, ImGuiTabBarFlags_None ) ) {
-                ImGui::TableSetupColumn( "#Description", ImGuiTableColumnFlags_WidthStretch );
-                ImGui::TableSetupColumn( "#Timing", ImGuiTableColumnFlags_WidthStretch );
-                ImGui::TableNextColumn();
+            if ( ImGui::BeginTabBar( "IEDebugMenuTabBar" ) ) {
 
-                if ( app->running_mutithreaded() == false ) {
-                    ImGui::Text( "Main Thread:" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::MainThreadTotal ) * 1000 );
-                    ImGui::TableNextColumn();
+                if ( ImGui::BeginTabItem( "Overview" ) ) {
+                    ImGui::Text( "Driver: %s", renderer->get_devicedriver(), app->get_fps() );
+                    ImGui::Text( "VSync: %s", renderer->vsync_enabled() ? "Enabled" : "Disabled" );
 
-                    ImGui::Indent();
-                    ImGui::Text( "Renderer:" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::ProcessRenderCommands ) * 1000 );
-                    ImGui::TableNextColumn();
+                    ImGui::Text( "FPS: %.0f", app->get_fps() );
+                    ImGui::Text( "Frame Time: %.2f ms", app->get_timing( ProfilePoint::MainThreadTotal ) * 1000 );
 
-                    ImGui::Indent();
-                    ImGui::Text( "Wait for GPU:" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::GPUSwapChainWait ) * 1000 );
-                    ImGui::TableNextColumn();
+                    if ( fti.FixedSimulationFrequency != 0 ) {
+                        ImGui::Text( "Simulation frequency: %i", fti.FixedSimulationFrequency );
+                    }
+                    else {
+                        ImGui::Text( "Simulation frequency: Unlimited" );
+                    }
 
-                    ImGui::Unindent();
-                    ImGui::Text( "Layers:" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%.2f ms", ( app->get_timing( ProfilePoint::LayerUpdate ) + app->get_timing( ProfilePoint::LayerRender ) ) * 1000 );
-                    ImGui::TableNextColumn();
-
-                    ImGui::Indent();
-                    ImGui::Text( "Event:" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::LayerEvent ) * 1000 );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "Update:" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::LayerUpdate ) * 1000 );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "Render:" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::LayerRender ) * 1000 );
-                    ImGui::TableNextColumn();
+                    ImGui::NewLine();
+                    ImGui::Text( "Pipeline commands: %u", render_stats.TotalCommands );
+                    ImGui::Text( "Command buffer size : %.2f MB", static_cast<float>( render_stats.TotalBufferSize ) / 1024 / 1024 );
+                    ImGui::Text( "SDL draw calls : %u", render_stats.TotalDrawCalls );
+                    ImGui::EndTabItem();
                 }
-                else {
-                    ImGui::Text( "Main Thread:" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::MainThreadTotal ) * 1000 );
-                    ImGui::TableNextColumn();
 
-                    ImGui::Indent();
-                    ImGui::Text( "Renderer:" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::ProcessRenderCommands ) * 1000 );
-                    ImGui::TableNextColumn();
+                if ( ImGui::BeginTabItem( "Frame Timings" ) ) {
+                    if ( ImGui::BeginTable( "DebugTimingsTable", 2, ImGuiTabBarFlags_None ) ) {
+                        ImGui::TableSetupColumn( "#Description", ImGuiTableColumnFlags_WidthFixed, 150);
+                        ImGui::TableSetupColumn( "#Timing", ImGuiTableColumnFlags_WidthFixed, 50 );
+                        ImGui::TableNextColumn();
 
-                    ImGui::Indent();
-                    ImGui::Text( "Wait for GPU:" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::GPUSwapChainWait ) * 1000 );
-                    ImGui::TableNextColumn();
+                        if ( app->running_mutithreaded() == false ) {
+                            ImGui::Text( "Main Thread:" );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::MainThreadTotal ) * 1000 );
+                            ImGui::TableNextColumn();
 
-                    ImGui::Unindent();
-                    ImGui::Text( "Wait and Sync:" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::WaitAndSynchronize ) * 1000 );
-                    ImGui::TableNextColumn();
+                            ImGui::Indent();
+                            ImGui::Text( "Renderer:" );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::ProcessRenderCommands ) * 1000 );
+                            ImGui::TableNextColumn();
 
-                    ImGui::Separator();
+                            ImGui::Indent();
+                            ImGui::Text( "Wait for GPU:" );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::GPUSwapChainWait ) * 1000 );
+                            ImGui::TableNextColumn();
 
-                    ImGui::Unindent();
-                    ImGui::Text( "Update Thread:" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::UpdateThreadTotal ) * 1000 );
-                    ImGui::TableNextColumn();
+                            ImGui::Unindent();
+                            ImGui::Text( "Layers:" );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "%.2f ms", ( app->get_timing( ProfilePoint::LayerUpdate ) + app->get_timing( ProfilePoint::LayerRender ) ) * 1000 );
+                            ImGui::TableNextColumn();
 
-                    ImGui::Indent();
-                    ImGui::Text( "Layers:" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%.2f ms", ( app->get_timing( ProfilePoint::LayerUpdate ) + app->get_timing( ProfilePoint::LayerRender ) ) * 1000 );
-                    ImGui::TableNextColumn();
+                            ImGui::Indent();
+                            ImGui::Text( "Event:" );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::LayerEvent ) * 1000 );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "Update:" );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::LayerUpdate ) * 1000 );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "Render:" );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::LayerRender ) * 1000 );
+                            ImGui::TableNextColumn();
+                        }
+                        else {
+                            ImGui::Text( "Main Thread:" );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::MainThreadTotal ) * 1000 );
+                            ImGui::TableNextColumn();
 
-                    ImGui::Indent();
-                    ImGui::Text( "Event:" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::LayerEvent ) * 1000 );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "Update:" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::LayerUpdate ) * 1000 );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "Render:" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::LayerRender ) * 1000 );
-                    ImGui::TableNextColumn();
+                            ImGui::Indent();
+                            ImGui::Text( "Renderer:" );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::ProcessRenderCommands ) * 1000 );
+                            ImGui::TableNextColumn();
+
+                            ImGui::Indent();
+                            ImGui::Text( "Wait for GPU:" );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::GPUSwapChainWait ) * 1000 );
+                            ImGui::TableNextColumn();
+
+                            ImGui::Unindent();
+                            ImGui::Text( "Wait and Sync:" );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::WaitAndSynchronize ) * 1000 );
+                            ImGui::TableNextColumn();
+
+                            ImGui::Separator();
+
+                            ImGui::Unindent();
+                            ImGui::Text( "Update Thread:" );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::UpdateThreadTotal ) * 1000 );
+                            ImGui::TableNextColumn();
+
+                            ImGui::Indent();
+                            ImGui::Text( "Layers:" );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "%.2f ms", ( app->get_timing( ProfilePoint::LayerUpdate ) + app->get_timing( ProfilePoint::LayerRender ) ) * 1000 );
+                            ImGui::TableNextColumn();
+
+                            ImGui::Indent();
+                            ImGui::Text( "Event:" );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::LayerEvent ) * 1000 );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "Update:" );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::LayerUpdate ) * 1000 );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "Render:" );
+                            ImGui::TableNextColumn();
+                            ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::LayerRender ) * 1000 );
+                            ImGui::TableNextColumn();
+                        }
+                        ImGui::EndTable();
+                    }
+                    ImGui::EndTabItem();
                 }
-                ImGui::EndTable();
+
+                ImGui::EndTabBar();
             }
-
-            ImGui::Unindent();
-            ImGui::Unindent();
-            ImGui::Spacing();
-
-            RenderCommandBuffer::Stats render_stats = renderer->get_render_command_buffer()->get_stats();
-            ImGui::Text( "Total rendercommands : %u", render_stats.TotalCommands );
-            ImGui::Text( "Command buffer size : %.2f MB", static_cast<float>( render_stats.TotalBufferSize ) / 1024 / 1024 );
-            ImGui::Text( "Total draw calls : %u", render_stats.TotalDrawCalls );
         }
         ImGui::End();
         imgui_end_frame( renderer );
@@ -161,6 +172,11 @@ namespace InnoEngine
 
     bool DebugUI::handle_event( const SDL_Event& event )
     {
+        if ( event.type == SDL_EVENT_KEY_DOWN ) {
+            if ( event.key.scancode == SDL_SCANCODE_GRAVE )
+                m_open = !m_open;
+        }
+
         return ImGui_ImplSDL3_ProcessEvent( &event );
     }
 
@@ -277,12 +293,13 @@ namespace InnoEngine
         style.ItemSpacing      = ImVec2( 6.0f, 4.0f );
         style.ItemInnerSpacing = ImVec2( 4.0f, 4.0f );
 
+        /*
         // Font Scaling
         ImGuiIO& io        = ImGui::GetIO();
         io.FontGlobalScale = 1.00f;
 
         io.Fonts->AddFontDefault();
-        /*
+
         float baseFontSize = 18.0f;
         float iconFontSize = baseFontSize * 2.0f / 3.0f;
 
