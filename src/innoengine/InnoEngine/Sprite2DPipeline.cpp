@@ -196,7 +196,7 @@ namespace InnoEngine
         }
     }
 
-    void Sprite2DPipeline::swapchain_render( const DXSM::Matrix&   view_projection,
+    uint32_t Sprite2DPipeline::swapchain_render( const DXSM::Matrix&   view_projection,
                                              const CommandList&    command_list,
                                              const TextureList&    texture_list,
                                              SDL_GPUCommandBuffer* gpu_cmd_buf,
@@ -206,6 +206,8 @@ namespace InnoEngine
 
         IE_ASSERT( m_device != nullptr );
         IE_ASSERT( gpu_cmd_buf != nullptr && render_pass != nullptr );
+
+        uint32_t draw_calls = 0;
 
         SDL_BindGPUGraphicsPipeline( render_pass, m_pipeline );
         SDL_PushGPUVertexUniformData( gpu_cmd_buf, 0, &view_projection, sizeof( DXSM::Matrix ) );
@@ -226,7 +228,9 @@ namespace InnoEngine
             SDL_BindGPUFragmentSamplers( render_pass, 0, &texture_sampler_binding, 1 );
 
             SDL_DrawGPUPrimitives( render_pass, current_batch.count * 6, 1, 0, 0 );
+            ++draw_calls;
         }
+        return draw_calls;
     }
 
     void Sprite2DPipeline::sort_commands( const CommandList& command_list )

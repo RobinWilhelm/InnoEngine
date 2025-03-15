@@ -25,6 +25,8 @@ namespace InnoEngine
         bool handle_event( const SDL_Event& pEvent ) override;
 
     private:
+        void set_style();
+
         void imgui_begin_frame();
         void imgui_end_frame( GPURenderer* pRenderer );
     };

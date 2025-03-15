@@ -54,11 +54,11 @@ namespace InnoEngine
 
         Result initialize( GPURenderer* renderer, AssetManager* assetmanager );
         void   prepare_render( const CommandList& command_list );
-        void   swapchain_render( const DXSM::Matrix&   view_projection,
-                                 const CommandList&    command_list,
-                                 const TextureList&    texture_list,
-                                 SDL_GPUCommandBuffer* cmdbuf,
-                                 SDL_GPURenderPass*    renderPass );
+        uint32_t swapchain_render( const DXSM::Matrix&   view_projection,
+                                   const CommandList&    command_list,
+                                   const TextureList&    texture_list,
+                                   SDL_GPUCommandBuffer* cmdbuf,
+                                   SDL_GPURenderPass*    renderPass );
 
     private:
         BatchData* add_batch();

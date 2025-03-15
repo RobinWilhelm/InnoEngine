@@ -14,8 +14,10 @@ namespace InnoEngine
 
         LayerUpdate,
         LayerRender,
+        LayerEvent,
 
         ProcessRenderCommands,
+        GPUSwapChainWait,
 
         // keep as last
         Count
@@ -32,8 +34,12 @@ namespace InnoEngine
             return "Layer Update";
         case ProfilePoint::LayerRender:
             return "Layer Render";
+        case ProfilePoint::LayerEvent:
+            return "Layer Event";
         case ProfilePoint::ProcessRenderCommands:
             return "Process Render Commands";
+        case ProfilePoint::GPUSwapChainWait:
+            return "Wait for GPUSwapchain";
         case ProfilePoint::Count:
             return "Invalid Profileelement";
         }

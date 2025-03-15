@@ -290,13 +290,14 @@ namespace InnoEngine
         }
     }
 
-    void Font2DPipeline::swapchain_render( const DXSM::Matrix& view_projection, const CommandList& command_list, const FontList& font_list, SDL_GPUCommandBuffer* cmdbuf, SDL_GPURenderPass* renderPass )
+    uint32_t Font2DPipeline::swapchain_render( const DXSM::Matrix& view_projection, const CommandList& command_list, const FontList& font_list, SDL_GPUCommandBuffer* cmdbuf, SDL_GPURenderPass* renderPass )
     {
         (void)view_projection;
         (void)command_list;
         (void)font_list;
         (void)cmdbuf;
         (void)renderPass;
+        return 0;
     }
 
     Font2DPipeline::BatchData* Font2DPipeline::add_batch()

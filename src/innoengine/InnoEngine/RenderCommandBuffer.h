@@ -21,6 +21,7 @@ namespace InnoEngine
         struct Stats
         {
             size_t TotalCommands   = 0;
+            size_t TotalDrawCalls  = 0;
             size_t TotalBufferSize = 0;
         };
 
@@ -39,6 +40,10 @@ namespace InnoEngine
         FontCommandBuffer FontRenderCommands;
 
         ImGuiPipeline::CommandData ImGuiCommandBuffer;
+
+        size_t SpriteDrawCalls;
+        size_t FontDrawCalls;
+        size_t ImGuiDrawCalls;
 
         RenderCommandBuffer()
         {
@@ -98,6 +103,8 @@ namespace InnoEngine
                 m_lastFrameStats.TotalBufferSize += rcmd.VertexBuffer.size() * sizeof( ImDrawVert );
             }
 
+            m_lastFrameStats.TotalDrawCalls = SpriteDrawCalls + FontDrawCalls + ImGuiDrawCalls;
+
             Clear      = false;
             ClearColor = DXSM::Color( 0.0f, 0.0f, 0.0f, 0.0f );
             SpriteRenderCommands.clear();
@@ -108,6 +115,10 @@ namespace InnoEngine
 
             FontRegister.clear();
             TextureRegister.clear();
+
+            SpriteDrawCalls = 0;
+            FontDrawCalls   = 0;
+            ImGuiDrawCalls  = 0;
         }
 
         const Stats& get_stats() const

@@ -158,16 +158,18 @@ namespace InnoEngine
         }
     }
 
-    void ImGuiPipeline::swapchain_render( const CommandData& command_data, SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass )
+    uint32_t ImGuiPipeline::swapchain_render( const CommandData& command_data, SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass )
     {
         // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
         int fb_width  = (int)( command_data.DisplaySize.x * command_data.FrameBufferScale.x );
         int fb_height = (int)( command_data.DisplaySize.y * command_data.FrameBufferScale.y );
         if ( fb_width <= 0 || fb_height <= 0 )
-            return;
+            return 0;
 
         if ( ImGui::GetCurrentContext() == nullptr )
-            return;
+            return 0;
+
+        uint32_t draw_calls = 0;
 
         ImGui_ImplSDLGPU3_Data*      bd = (ImGui_ImplSDLGPU3_Data*)ImGui::GetIO().BackendRendererUserData;
         ImGui_ImplSDLGPU3_FrameData* fd = &bd->MainWindowFrameData;
@@ -263,6 +265,7 @@ namespace InnoEngine
 
                     // Draw
                     SDL_DrawGPUIndexedPrimitives( render_pass, renderCmd.ElemCount, 1, renderCmd.IdxOffset + global_idx_offset, renderCmd.VtxOffset + global_vtx_offset, 0 );
+                    ++draw_calls;
                 }
             }
             global_idx_offset += cmdList.IndexBuffer.Size;
@@ -276,6 +279,8 @@ namespace InnoEngine
         // #4644)
         SDL_Rect scissor_rect { 0, 0, fb_width, fb_height };
         SDL_SetGPUScissor( render_pass, &scissor_rect );
+
+        return draw_calls;
     }
 
     void ImGuiPipeline::create_or_resize_buffer( SDL_GPUBuffer** buffer, uint32_t* old_size, uint32_t new_size, SDL_GPUBufferUsageFlags usage )

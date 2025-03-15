@@ -4,6 +4,7 @@
 #include "InnoEngine/CoreAPI.h"
 #include "InnoEngine/Application.h"
 #include "InnoEngine/Window.h"
+#include "InnoEngine/Profiler.h"
 
 #include "InnoEngine/AssetManager.h"
 #include "InnoEngine/AssetRepository.h"
@@ -58,9 +59,9 @@ namespace InnoEngine
             (void)render_pass;
 
             RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
-            m_sprite2DPipeline->swapchain_render( render_cmd_buf.CameraMatrix, render_cmd_buf.SpriteRenderCommands, render_cmd_buf.TextureRegister, gpu_cmd_buf, render_pass );
-            // m_font2DPipeline->swapchain_render( render_cmd_buf.CameraMatrix, render_cmd_buf.FontRenderCommands, render_cmd_buf.FontRegister, gpu_cmd_buf, render_pass );
-            m_imguiPipeline->swapchain_render( render_cmd_buf.ImGuiCommandBuffer, gpu_cmd_buf, render_pass );
+            render_cmd_buf.SpriteDrawCalls      = m_sprite2DPipeline->swapchain_render( render_cmd_buf.CameraMatrix, render_cmd_buf.SpriteRenderCommands, render_cmd_buf.TextureRegister, gpu_cmd_buf, render_pass );
+            // render_cmd_buf.FontDrawCalls = m_font2DPipeline->swapchain_render( render_cmd_buf.CameraMatrix, render_cmd_buf.FontRenderCommands, render_cmd_buf.FontRegister, gpu_cmd_buf, render_pass );
+            render_cmd_buf.ImGuiDrawCalls       = m_imguiPipeline->swapchain_render( render_cmd_buf.ImGuiCommandBuffer, gpu_cmd_buf, render_pass );
         }
 
         RenderCommandBuffer& get_command_buffer_for_collecting()
@@ -70,23 +71,24 @@ namespace InnoEngine
 
         RenderCommandBuffer& get_command_buffer_for_rendering()
         {
-            if ( m_doubleBuffered )
-                return m_renderCommandBuffer.get_second();
-            else
-                return m_renderCommandBuffer.get_first();
+            // if ( m_doubleBuffered )
+            return m_renderCommandBuffer.get_second();
+            // else
+            // return m_renderCommandBuffer.get_first();
         }
 
         void on_synchronize()
         {
-            if ( m_doubleBuffered ) {
-                /*
-                m_renderCommandBuffer.swap();
-                get_command_buffer_for_collecting().clear();
-                */
-                get_command_buffer_for_rendering().clear();
-                get_command_buffer_for_rendering() = get_command_buffer_for_collecting();
-                get_command_buffer_for_collecting().clear();
-            }
+            // if ( m_doubleBuffered ) {
+
+            m_renderCommandBuffer.swap();
+            get_command_buffer_for_collecting().clear();
+            /*
+            get_command_buffer_for_rendering().clear();
+            get_command_buffer_for_rendering() = get_command_buffer_for_collecting();
+            get_command_buffer_for_collecting().clear();
+             */
+            //}
         }
 
     private:
@@ -250,8 +252,8 @@ namespace InnoEngine
         // std::this_thread::sleep_for(std::chrono::milliseconds(10));
         //  dont render when minimized
         if ( m_window && SDL_GetWindowFlags( m_window->get_sdlwindow() ) & SDL_WINDOW_MINIMIZED ) {
-            if ( m_doubleBuffered == false )
-                m_pipelineProcessor->get_command_buffer_for_rendering().clear();
+            // if ( m_doubleBuffered == false )
+            // m_pipelineProcessor->get_command_buffer_for_rendering().clear();
             return;
         }
 
@@ -271,11 +273,18 @@ namespace InnoEngine
         // only works when a window is associated
         if ( has_window() ) {
             SDL_GPUTexture* swapchainTexture;
+
+            static Profiler* profiler = CoreAPI::get_profiler();
+
+            profiler->start( ProfilePoint::GPUSwapChainWait );
+
             if ( !SDL_WaitAndAcquireGPUSwapchainTexture( gpu_cmd_buf, m_window->get_sdlwindow(), &swapchainTexture, nullptr, nullptr ) ) {
+                profiler->stop( ProfilePoint::GPUSwapChainWait );
                 SDL_CancelGPUCommandBuffer( gpu_cmd_buf );
                 IE_LOG_WARNING( "WaitAndAcquireGPUSwapchainTexture failed : %s", SDL_GetError() );
                 return;
             }
+            profiler->stop( ProfilePoint::GPUSwapChainWait );
 
             if ( swapchainTexture != nullptr ) {
                 SDL_GPUColorTargetInfo color_target_info = {};
@@ -295,8 +304,8 @@ namespace InnoEngine
             return;
         }
 
-        if ( m_doubleBuffered == false )
-            m_pipelineProcessor->get_command_buffer_for_rendering().clear();
+        // if ( m_doubleBuffered == false )
+        // m_pipelineProcessor->get_command_buffer_for_rendering().clear();
     }
 
     void GPURenderer::register_texture( Ref<Texture2D> texture )

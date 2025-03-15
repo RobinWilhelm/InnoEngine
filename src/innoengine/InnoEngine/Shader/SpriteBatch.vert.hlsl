@@ -43,7 +43,7 @@ Output main(uint id : SV_VertexID)
         coord = mul(coord , rotation) ;
     }
     
-    float4 coordWithDepth = float4(coord.x + sprite.X, coord.y + sprite.Y, sprite.Z, 1.0f);
+    float4 coordWithDepth = float4(coord.x + sprite.X, coord.y + sprite.Y, float(sprite.Z), 1.0f);
     
     
     float2 texcoord[4] =

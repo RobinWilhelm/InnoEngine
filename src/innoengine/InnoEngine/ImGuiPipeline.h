@@ -35,11 +35,11 @@ namespace InnoEngine
                 if ( this == &other )
                     return *this;
 
-                TotalVertexCount   = other.TotalVertexCount;
-                TotalIndexCount    = other.TotalIndexCount;
-                DisplayPos         = other.DisplayPos;
-                DisplaySize        = other.DisplaySize;
-                FrameBufferScale   = other.FrameBufferScale;
+                TotalVertexCount = other.TotalVertexCount;
+                TotalIndexCount  = other.TotalIndexCount;
+                DisplayPos       = other.DisplayPos;
+                DisplaySize      = other.DisplaySize;
+                FrameBufferScale = other.FrameBufferScale;
 
                 RenderCommandLists.reserve( other.RenderCommandLists.size() );
                 for ( const auto& rcl : other.RenderCommandLists ) {
@@ -58,9 +58,9 @@ namespace InnoEngine
         virtual ~ImGuiPipeline();
 
         // Inherited via GPUPipeline
-        Result initialize( GPURenderer* renderer );
-        void   prepare_render( const CommandData& command_data );
-        void   swapchain_render( const CommandData& command_data, SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass );
+        Result   initialize( GPURenderer* renderer );
+        void     prepare_render( const CommandData& command_data );
+        uint32_t swapchain_render( const CommandData& command_data, SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass );
 
     private:
         void create_or_resize_buffer( SDL_GPUBuffer** buffer, uint32_t* old_size, uint32_t new_size, SDL_GPUBufferUsageFlags usage );

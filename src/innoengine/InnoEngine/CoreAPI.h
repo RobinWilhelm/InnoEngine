@@ -7,6 +7,7 @@ namespace InnoEngine
     class AssetManager;
     class GPURenderer;
     class OrthographicCamera;
+    class Profiler;
 
     class CoreAPI
     {
@@ -50,11 +51,18 @@ namespace InnoEngine
             return get_instance().m_camera;
         }
 
+        static Profiler* get_profiler()
+        {
+            IE_ASSERT(get_instance().m_profiler != nullptr);
+            return get_instance().m_profiler;
+        }
+
     private:
         Application*        m_app          = nullptr;
         AssetManager*       m_assetManager = nullptr;
         GPURenderer*        m_renderer     = nullptr;
         OrthographicCamera* m_camera       = nullptr;
+        Profiler*           m_profiler     = nullptr;
     };
 
 }    // namespace InnoEngine

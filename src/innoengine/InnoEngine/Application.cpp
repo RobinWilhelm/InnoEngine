@@ -32,14 +32,14 @@ namespace InnoEngine
 
     void Application::render_layers()
     {
-        m_profiler->start(ProfilePoint::LayerRender);
+        m_profiler->start( ProfilePoint::LayerRender );
         for ( auto layer : m_layerStack )
             layer->render( m_frameTimingInfo.InterpolationFactor, m_renderer.get() );
 
         // always last and top most
         if ( m_debugui_active )
             m_debugLayer->render( m_frameTimingInfo.InterpolationFactor, m_renderer.get() );
-        m_profiler->stop(ProfilePoint::LayerRender);
+        m_profiler->stop( ProfilePoint::LayerRender );
     }
 
     void Application::run_async()
@@ -50,7 +50,7 @@ namespace InnoEngine
                 std::unique_lock<std::mutex> ulock( m_asyncMutex );
                 m_asyncThreadWaiting.wait( ulock, [ this ]() { return m_syncComplete; } );
 
-                m_profiler->start(ProfilePoint::UpdateThreadTotal);
+                m_profiler->start( ProfilePoint::UpdateThreadTotal );
 
                 for ( const auto& event : m_eventBuffer.get_second() )
                     handle_event( event );
@@ -99,14 +99,14 @@ namespace InnoEngine
             auto renderOpt = GPURenderer::create();
             m_renderer     = std::move( renderOpt.value() );
 
+            auto profilerOpt = Profiler::create();
+            m_profiler       = std::move(profilerOpt.value());
+
             on_init_assets( m_assetManager.get() );
             publish_coreapi();
 
-            m_renderer->initialize( m_window.get(), m_assetManager.get(), appParams.RunAsync);
-            m_renderer->enable_vsync( appParams.EnableVSync );
-
-            auto profilerOpt = Profiler::create();
-            m_profiler       = std::move( profilerOpt.value() );
+            m_renderer->initialize( m_window.get(), m_assetManager.get(), appParams.RunAsync );
+            m_renderer->enable_vsync( appParams.EnableVSync );          
 
             set_simulation_target_frequency( appParams.SimulationFrequency );
             m_multiThreaded = appParams.RunAsync;
@@ -142,17 +142,17 @@ namespace InnoEngine
                 update_profiledata();
 
                 update_layers();
-                m_camera->update();                
+                m_camera->update();
 
                 render_layers();
 
-                m_profiler->start(ProfilePoint::ProcessRenderCommands);
+                m_profiler->start( ProfilePoint::ProcessRenderCommands );
                 m_renderer->on_synchronize();
                 m_renderer->render();
-                m_profiler->stop(ProfilePoint::ProcessRenderCommands);
+                m_profiler->stop( ProfilePoint::ProcessRenderCommands );
             }
             else {
-                m_profiler->start(ProfilePoint::WaitAndSynchronize);
+                m_profiler->start( ProfilePoint::WaitAndSynchronize );
                 {    // hold mutex while we are synchronising data with the async thread
                     std::unique_lock<std::mutex> ulock( m_asyncMutex );
                     m_mainThreadWaiting.wait( ulock, [ this ]() { return m_asyncThreadFinished; } );
@@ -160,11 +160,11 @@ namespace InnoEngine
                     synchronize();
                 }
                 m_asyncThreadWaiting.notify_one();
-                m_profiler->stop(ProfilePoint::WaitAndSynchronize);
+                m_profiler->stop( ProfilePoint::WaitAndSynchronize );
 
-                m_profiler->start(ProfilePoint::ProcessRenderCommands);
+                m_profiler->start( ProfilePoint::ProcessRenderCommands );
                 m_renderer->render();
-                m_profiler->stop(ProfilePoint::ProcessRenderCommands);
+                m_profiler->stop( ProfilePoint::ProcessRenderCommands );
             }
 
             m_profiler->stop( ProfilePoint::MainThreadTotal );
@@ -269,8 +269,8 @@ namespace InnoEngine
             if ( m_multiThreaded ) {
                 m_eventBuffer.get_first().emplace_back( event );
             }
-            else {
-                handle_event( event );
+            else {                   
+                handle_event(event);
             }
 
             // always handle quit events
@@ -284,6 +284,7 @@ namespace InnoEngine
 
     void Application::handle_event( const SDL_Event& event )
     {
+        m_profiler->start(ProfilePoint::LayerEvent);
         // pass events through in reverse order
         bool handled = false;
         if ( m_debugui_active )
@@ -294,6 +295,7 @@ namespace InnoEngine
             handled = ( *revIt )->handle_event( event );
             ++revIt;
         }
+        m_profiler->stop(ProfilePoint::LayerEvent);
     }
 
     void Application::update_layers()
@@ -306,8 +308,7 @@ namespace InnoEngine
             m_frameTimingInfo.DeltaTime    = static_cast<double>( newTime - m_frameTimingInfo.CurrentTicks ) / TicksPerSecond;
             m_frameTimingInfo.CurrentTicks = newTime;
 
-
-            m_profiler->start(ProfilePoint::LayerUpdate);
+            m_profiler->start( ProfilePoint::LayerUpdate );
             for ( auto layer : m_layerStack ) {
                 layer->update( m_frameTimingInfo.DeltaTime );
             }
@@ -317,13 +318,13 @@ namespace InnoEngine
                 m_debugLayer->update( m_frameTimingInfo.DeltaTime );
 
             m_frameTimingInfo.InterpolationFactor = 0.0f;
-            m_profiler->stop(ProfilePoint::LayerUpdate);
+            m_profiler->stop( ProfilePoint::LayerUpdate );
         }
         else {
             m_frameTimingInfo.CurrentTicks = newTime;
             while ( m_frameTimingInfo.AccumulatedTicks >= m_frameTimingInfo.DeltaTicks ) {
-                
-                m_profiler->start(ProfilePoint::LayerUpdate);
+
+                m_profiler->start( ProfilePoint::LayerUpdate );
                 for ( auto layer : m_layerStack ) {
                     layer->update( m_frameTimingInfo.DeltaTime );
                 }
@@ -333,7 +334,7 @@ namespace InnoEngine
                     m_debugLayer->update( m_frameTimingInfo.DeltaTime );
 
                 m_frameTimingInfo.AccumulatedTicks -= m_frameTimingInfo.DeltaTicks;
-                m_profiler->stop(ProfilePoint::LayerUpdate);
+                m_profiler->stop( ProfilePoint::LayerUpdate );
             }
             m_frameTimingInfo.InterpolationFactor = static_cast<float>( m_frameTimingInfo.AccumulatedTicks ) / m_frameTimingInfo.DeltaTicks;
         }
@@ -346,6 +347,7 @@ namespace InnoEngine
         coreapi.m_assetManager = m_assetManager.get();
         coreapi.m_renderer     = m_renderer.get();
         coreapi.m_camera       = m_camera.get();
+        coreapi.m_profiler   = m_profiler.get();
     }
 
     void Application::update_profiledata()
