@@ -21,7 +21,7 @@ namespace InnoEngine
         {
             FrameBufferIndex texture_index = -1;
             uint32_t         buffer_index  = 0;
-            uint32_t         count         = 0;
+            uint32_t         command_count         = 0;
         };
 
         struct Command

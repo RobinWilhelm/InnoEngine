@@ -15,8 +15,6 @@
 
 namespace InnoEngine
 {
-    static constexpr uint32_t FontBatchSizeMax = 10000;
-
     Font2DPipeline::~Font2DPipeline()
     {
         if ( m_device != nullptr ) {
@@ -59,13 +57,13 @@ namespace InnoEngine
         IE_ASSERT( shaderRepo != nullptr );
 
         // load shaders
-        auto vertexShaderAsset = shaderRepo->require_asset( "SpriteBatch.vert" );
+        auto vertexShaderAsset = shaderRepo->require_asset( "MSDFText2DBatch.vert" );
         if ( vertexShaderAsset.has_value() == false ) {
             IE_LOG_ERROR( "Vertex Shader not found!" );
             return Result::InitializationError;
         }
 
-        auto fragmentShaderAsset = shaderRepo->require_asset( "MSDFFont.frag" );
+        auto fragmentShaderAsset = shaderRepo->require_asset( "MSDFText2D.frag" );
         if ( fragmentShaderAsset.has_value() == false ) {
             IE_LOG_ERROR( "Fragment Shader not found!" );
             return Result::InitializationError;
@@ -100,7 +98,7 @@ namespace InnoEngine
 
         SDL_GPUTransferBufferCreateInfo tbufferCreateInfo = {};
         tbufferCreateInfo.usage                           = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-        tbufferCreateInfo.size                            = MaxBatchSize * sizeof( Command::VertexUniform );
+        tbufferCreateInfo.size                            = MaxBatchSize * sizeof( StructuredBufferLayout );
 
         m_transferBuffer = SDL_CreateGPUTransferBuffer( m_device, &tbufferCreateInfo );
         if ( m_transferBuffer == nullptr ) {
@@ -109,8 +107,8 @@ namespace InnoEngine
         }
 
         SDL_GPUSamplerCreateInfo sampler_create_info = {};
-        sampler_create_info.min_filter               = SDL_GPU_FILTER_NEAREST;
-        sampler_create_info.mag_filter               = SDL_GPU_FILTER_NEAREST;
+        sampler_create_info.min_filter               = SDL_GPU_FILTER_LINEAR;
+        sampler_create_info.mag_filter               = SDL_GPU_FILTER_LINEAR;
         sampler_create_info.mipmap_mode              = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
         sampler_create_info.address_mode_u           = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
         sampler_create_info.address_mode_v           = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
@@ -131,6 +129,7 @@ namespace InnoEngine
     {
         IE_ASSERT( m_device != nullptr );
         sort_commands( command_list );
+        clear_batches();
 
         SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_device );
         if ( gpu_copy_cmd_buf == nullptr ) {
@@ -142,7 +141,7 @@ namespace InnoEngine
 
         SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass( gpu_copy_cmd_buf );
 
-        Command::VertexUniform* uniform_data    = nullptr;
+        StructuredBufferLayout* buffer_data     = nullptr;
         FrameBufferIndex        current_texture = -1;
 
         BatchData* current_batch = nullptr;
@@ -156,24 +155,24 @@ namespace InnoEngine
         double spaceGlyphAdvance = 0.0f;
         double fsScale           = 0.0f;
 
+        const msdf_atlas::FontGeometry* fontGeometry = nullptr;
+        const msdfgen::FontMetrics*     metrics      = nullptr;
+
         // each command represents one string
         for ( const Command* command : m_sortedCommands ) {
 
-            const auto& fontGeometry = msdf_data->FontGeo;
-            const auto& metrics      = fontGeometry.getMetrics();
-
             // check if have to switch to a new batch
             // reasons might be: change in texture, batch is full
-            if ( current_batch == nullptr || current_texture != command->font_fbidx || current_batch->count >= FontBatchSizeMax ) {
+            if ( current_batch == nullptr || current_texture != command->font_fbidx || current_batch->command_count + command->string_size > MaxBatchSize ) {
                 // upload the last batches data only when its not the first batch
                 if ( current_batch != nullptr ) {
                     SDL_UnmapGPUTransferBuffer( m_device, m_transferBuffer );
                     SDL_GPUTransferBufferLocation tranferBufferLocation { .transfer_buffer = m_transferBuffer, .offset = 0 };
                     SDL_GPUBufferRegion           bufferRegion { .buffer = get_gpubuffer_by_index( current_batch->buffer_index ),
                                                                  .offset = 0,
-                                                                 .size   = static_cast<uint32_t>( current_batch->count * sizeof( Command::VertexUniform ) ) };
+                                                                 .size   = static_cast<uint32_t>( current_batch->command_count * sizeof( StructuredBufferLayout ) ) };
                     SDL_UploadToGPUBuffer( copy_pass, &tranferBufferLocation, &bufferRegion, true );
-                    uniform_data = nullptr;
+                    buffer_data = nullptr;
                 }
 
                 current_batch             = add_batch();
@@ -181,26 +180,30 @@ namespace InnoEngine
 
                 // font change?
                 if ( current_texture != command->font_fbidx ) {
-                    font      = font_list[ command->font_fbidx ];
-                    msdf_data = font->get_msdf_data();
+                    font         = font_list[ command->font_fbidx ];
+                    msdf_data    = font->get_msdf_data();
+                    fontGeometry = &msdf_data->FontGeo;
+                    metrics      = &fontGeometry->getMetrics();
 
                     texel_width  = 1.0f / font->get_atlas_texture()->width();
                     texel_height = 1.0f / font->get_atlas_texture()->height();
 
-                    spaceGlyphAdvance = fontGeometry.getGlyph( ' ' )->getAdvance();
-                    fsScale           = 1.0 / ( metrics.ascenderY - metrics.descenderY );
+                    spaceGlyphAdvance = msdf_data->get_glyph( ' ' )->getAdvance();
+                    fsScale           = 1.0 / ( metrics->ascenderY - metrics->descenderY ) * command->font_size;
 
                     current_texture = command->font_fbidx;
                 }
 
-                uniform_data = static_cast<Command::VertexUniform*>( SDL_MapGPUTransferBuffer( m_device, m_transferBuffer, true ) );
+                buffer_data = static_cast<StructuredBufferLayout*>( SDL_MapGPUTransferBuffer( m_device, m_transferBuffer, true ) );
             }
 
-            double x = 0.0;
-            double y = 0.0;
+            double x = static_cast<double>( command->x );
+            double y = static_cast<double>( command->y );
+
+            float screen_pix_width = font->calculate_screen_pix_range( static_cast<float>( command->font_size ) );
 
             // now retrieve the string back and iterate it
-            const char* text = string_buffer.get_string( command->string_arena_index );
+            const char* text = string_buffer.get_string( command->string_index );
 
             for ( uint32_t i = 0; i < command->string_size; ++i ) {
                 char character = text[ i ];
@@ -208,8 +211,8 @@ namespace InnoEngine
                 IE_ASSERT( character != '\0' );
 
                 if ( character == '\n' ) {
-                    x = 0.0;
-                    y -= fsScale * metrics.lineHeight;
+                    x = command->x;
+                    y += fsScale * metrics->lineHeight;
                     continue;
                 }
 
@@ -217,7 +220,7 @@ namespace InnoEngine
                     double advance = spaceGlyphAdvance;
                     if ( i < command->string_size - 1 ) {
                         char nextCharacter = text[ i + 1 ];
-                        fontGeometry.getAdvance( advance, character, nextCharacter );
+                        msdf_data->get_advance( advance, character, nextCharacter );
                     }
 
                     x += fsScale * advance;
@@ -229,56 +232,50 @@ namespace InnoEngine
                     continue;
                 }
 
-                const msdf_atlas::GlyphGeometry* glyph = fontGeometry.getGlyph( character );
+                const msdf_atlas::GlyphGeometry* glyph = msdf_data->get_glyph( character );
                 if ( !glyph )
-                    glyph = fontGeometry.getGlyph( '?' );
+                    glyph = msdf_data->get_glyph( '?' );
                 if ( !glyph )
                     return;
 
-                Font2DPipeline::Command::VertexUniform& glyph_uniform = uniform_data[ current_batch->count ];
-
-                double al, ab, ar, at;
+                StructuredBufferLayout& glyph_buffer = buffer_data[ current_batch->command_count ];
+                // remember that the atlas y grows in bottom-up and our renderer expects it to grow top-down
+                double                  al, ab, ar, at;
                 glyph->getQuadAtlasBounds( al, ab, ar, at );
-
-                glyph_uniform.source.x = static_cast<float>( al * texel_width );
-                glyph_uniform.source.y = static_cast<float>( at * texel_height );
-                glyph_uniform.source.z = static_cast<float>( ar * texel_width );
-                glyph_uniform.source.w = static_cast<float>( ab * texel_height );
+                glyph_buffer.source.x = static_cast<float>( al * texel_width );
+                glyph_buffer.source.y = static_cast<float>( ab * texel_height );
+                glyph_buffer.source.z = static_cast<float>( ar * texel_width );
+                glyph_buffer.source.w = static_cast<float>( at * texel_height );
 
                 double pl, pb, pr, pt;
                 glyph->getQuadPlaneBounds( pl, pb, pr, pt );
+                glyph_buffer.destination.x = static_cast<float>( x + pl * fsScale );
+                glyph_buffer.destination.y = static_cast<float>( y + ( pb * fsScale ) * -1 );
+                glyph_buffer.destination.z = static_cast<float>( x + pr * fsScale );
+                glyph_buffer.destination.w = static_cast<float>( y + ( pt * fsScale ) * -1 );
 
-                glyph_uniform.x = static_cast<float>( pl * fsScale );
-                glyph_uniform.y = static_cast<float>( pt * fsScale );
-
-                glyph_uniform.width  = static_cast<float>( pr * fsScale ) - glyph_uniform.x;
-                glyph_uniform.height = static_cast<float>( pb * fsScale ) - glyph_uniform.y;
-
-                glyph_uniform.x += static_cast<float>( x );
-                glyph_uniform.y += static_cast<float>( y );
-
-                glyph_uniform.color = command->info.color;
-                glyph_uniform.z     = command->info.z;
+                glyph_buffer.color            = command->color;
+                glyph_buffer.depth            = command->depth;
+                glyph_buffer.screen_pix_width = screen_pix_width;
 
                 if ( i < command->string_size - 1 ) {
                     double advance       = glyph->getAdvance();
                     char   nextCharacter = text[ i + 1 ];
-                    fontGeometry.getAdvance( advance, character, nextCharacter );
-
+                    msdf_data->get_advance( advance, character, nextCharacter );
+                    // fontGeometry->getAdvance(advance, character, nextCharacter);
                     x += fsScale * advance;
                 }
-
-                current_batch->count++;
+                ++current_batch->command_count;
             }
         }
 
         // unmap and upload last batch data
-        if ( current_batch && current_batch->count > 0 ) {
+        if ( current_batch && current_batch->command_count > 0 ) {
             SDL_UnmapGPUTransferBuffer( m_device, m_transferBuffer );
             SDL_GPUTransferBufferLocation tranferBufferLocation { .transfer_buffer = m_transferBuffer, .offset = 0 };
             SDL_GPUBufferRegion           bufferRegion { .buffer = get_gpubuffer_by_index( current_batch->buffer_index ),
                                                          .offset = 0,
-                                                         .size   = static_cast<uint32_t>( current_batch->count * sizeof( Command::VertexUniform ) ) };
+                                                         .size   = static_cast<uint32_t>( current_batch->command_count * sizeof( StructuredBufferLayout ) ) };
             SDL_UploadToGPUBuffer( copy_pass, &tranferBufferLocation, &bufferRegion, true );
         }
 
@@ -290,21 +287,44 @@ namespace InnoEngine
         }
     }
 
-    uint32_t Font2DPipeline::swapchain_render( const DXSM::Matrix& view_projection, const CommandList& command_list, const FontList& font_list, SDL_GPUCommandBuffer* cmdbuf, SDL_GPURenderPass* renderPass )
+    uint32_t Font2DPipeline::swapchain_render( const DXSM::Matrix& view_projection, const CommandList& command_list, const FontList& font_list, SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass )
     {
-        (void)view_projection;
         (void)command_list;
-        (void)font_list;
-        (void)cmdbuf;
-        (void)renderPass;
-        return 0;
+
+        IE_ASSERT( m_device != nullptr );
+        IE_ASSERT( gpu_cmd_buf != nullptr && render_pass != nullptr );
+
+        uint32_t draw_calls = 0;
+
+        SDL_BindGPUGraphicsPipeline( render_pass, m_pipeline );
+        SDL_PushGPUVertexUniformData( gpu_cmd_buf, 0, &view_projection, sizeof( DXSM::Matrix ) );
+
+        SDL_BindGPUVertexBuffers( render_pass, 0, nullptr, 0 );
+
+        for ( size_t i = 0; i < m_batches.size(); ++i ) {
+
+            const BatchData& current_batch = m_batches[ i ];
+
+            auto gpuBuffer = get_gpubuffer_by_index( current_batch.buffer_index );
+            SDL_BindGPUVertexStorageBuffers( render_pass, 0, &gpuBuffer, 1 );
+
+            SDL_GPUTextureSamplerBinding texture_sampler_binding = {};
+            texture_sampler_binding.sampler                      = m_fontSampler;
+            texture_sampler_binding.texture                      = font_list[ current_batch.font_fbidx ]->get_atlas_texture()->get_sdltexture();
+
+            SDL_BindGPUFragmentSamplers( render_pass, 0, &texture_sampler_binding, 1 );
+
+            SDL_DrawGPUPrimitives( render_pass, current_batch.command_count * 6, 1, 0, 0 );
+            ++draw_calls;
+        }
+        return draw_calls;
     }
 
     Font2DPipeline::BatchData* Font2DPipeline::add_batch()
     {
-        BatchData& newbatch   = m_batches.emplace_back();
-        newbatch.buffer_index = static_cast<uint16_t>( find_free_gpubuffer() );
-        newbatch.count        = 0;
+        BatchData& newbatch    = m_batches.emplace_back();
+        newbatch.buffer_index  = static_cast<uint16_t>( find_free_gpubuffer() );
+        newbatch.command_count = 0;
         return &newbatch;
     }
 
@@ -322,7 +342,7 @@ namespace InnoEngine
         auto&                   buffer     = m_gpuBuffer.emplace_back();
         SDL_GPUBufferCreateInfo createInfo = {};
         createInfo.usage                   = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ;
-        createInfo.size                    = MaxBatchSize * sizeof( Command::VertexUniform );
+        createInfo.size                    = MaxBatchSize * sizeof( StructuredBufferLayout );
 
         buffer = SDL_CreateGPUBuffer( m_device, &createInfo );
         if ( buffer == nullptr ) {
@@ -354,7 +374,7 @@ namespace InnoEngine
             if ( a->font_fbidx < b->font_fbidx )
                 return true;
 
-            if ( a->info.z > b->info.z )
+            if ( a->depth > b->depth )
                 return true;
 
             return false;

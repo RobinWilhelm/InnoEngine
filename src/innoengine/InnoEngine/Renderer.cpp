@@ -20,48 +20,80 @@
 
 #include "SDL3/SDL_vulkan.h"
 
+#ifdef _DEBUG
+    #define DEBUG_FRAMEBUFFERINDICES
+#endif
+
 namespace InnoEngine
 {
     class GPURenderer::PipelineProcessor
     {
     public:
-        void initialize( GPURenderer* renderer, AssetManager* assetmanager, bool doublebuffered = false )
+        Result initialize( GPURenderer* renderer, AssetManager* assetmanager )
         {
             IE_ASSERT( renderer != nullptr && assetmanager != nullptr );
 
-            m_doubleBuffered = doublebuffered;
+            Result result = Result::Fail;
 
             m_sprite2DPipeline = std::make_unique<Sprite2DPipeline>();
-            RETURN_IF_FAILED( m_sprite2DPipeline->initialize( renderer, assetmanager ) );
+            result             = m_sprite2DPipeline->initialize( renderer, assetmanager );
+            if ( IE_FAILED( result ) ) {
+                IE_LOG_CRITICAL( "Failed to initialze Sprite pipeline! Errorcode: {}", static_cast<uint32_t>( result ) );
+                return result;
+            }
 
-            // m_font2DPipeline = std::make_unique<Font2DPipeline>();
-            // RETURN_IF_FAILED( m_font2DPipeline->initialize( renderer, assetmanager ) );
+            m_font2DPipeline = std::make_unique<Font2DPipeline>();
+            result           = m_font2DPipeline->initialize( renderer, assetmanager );
+            if ( IE_FAILED( result ) ) {
+                IE_LOG_CRITICAL( "Failed to initialze Font pipeline! Errorcode: {}", static_cast<uint32_t>( result ) );
+                return result;
+            }
 
             m_imguiPipeline = std::make_unique<ImGuiPipeline>();
-            RETURN_IF_FAILED( m_imguiPipeline->initialize( renderer ) );
+            result          = m_imguiPipeline->initialize( renderer );
+            if ( IE_FAILED( result ) ) {
+                IE_LOG_CRITICAL( "Failed to initialze ImGui pipeline! Errorcode: {}", static_cast<uint32_t>( result ) );
+                return result;
+            }
+
             m_initialized = true;
+            return Result::Success;
         }
 
-        void prepare( SDL_GPUDevice* device )
+        void prepare()
         {
-            (void)device;
             IE_ASSERT( m_initialized );
             RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
+
             m_sprite2DPipeline->prepare_render( render_cmd_buf.SpriteRenderCommands );
-            // m_font2DPipeline->prepare_render( render_cmd_buf.FontRenderCommands, render_cmd_buf.FontRegister );
+
+            m_font2DPipeline->prepare_render( render_cmd_buf.FontRenderCommands,
+                                              render_cmd_buf.FontRegister,
+                                              render_cmd_buf.StringBuffer );
+
             m_imguiPipeline->prepare_render( render_cmd_buf.ImGuiCommandBuffer );
         }
 
         void render( SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass )
         {
             IE_ASSERT( m_initialized );
-            (void)gpu_cmd_buf;
-            (void)render_pass;
-
             RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
-            render_cmd_buf.SpriteDrawCalls      = m_sprite2DPipeline->swapchain_render( render_cmd_buf.CameraMatrix, render_cmd_buf.SpriteRenderCommands, render_cmd_buf.TextureRegister, gpu_cmd_buf, render_pass );
-            // render_cmd_buf.FontDrawCalls = m_font2DPipeline->swapchain_render( render_cmd_buf.CameraMatrix, render_cmd_buf.FontRenderCommands, render_cmd_buf.FontRegister, gpu_cmd_buf, render_pass );
-            render_cmd_buf.ImGuiDrawCalls       = m_imguiPipeline->swapchain_render( render_cmd_buf.ImGuiCommandBuffer, gpu_cmd_buf, render_pass );
+
+            render_cmd_buf.SpriteDrawCalls = m_sprite2DPipeline->swapchain_render( render_cmd_buf.CameraMatrix,
+                                                                                   render_cmd_buf.SpriteRenderCommands,
+                                                                                   render_cmd_buf.TextureRegister,
+                                                                                   gpu_cmd_buf,
+                                                                                   render_pass );
+
+            render_cmd_buf.FontDrawCalls = m_font2DPipeline->swapchain_render( render_cmd_buf.CameraMatrix,
+                                                                               render_cmd_buf.FontRenderCommands,
+                                                                               render_cmd_buf.FontRegister,
+                                                                               gpu_cmd_buf,
+                                                                               render_pass );
+
+            render_cmd_buf.ImGuiDrawCalls = m_imguiPipeline->swapchain_render( render_cmd_buf.ImGuiCommandBuffer,
+                                                                               gpu_cmd_buf,
+                                                                               render_pass );
         }
 
         RenderCommandBuffer& get_command_buffer_for_collecting()
@@ -71,24 +103,13 @@ namespace InnoEngine
 
         RenderCommandBuffer& get_command_buffer_for_rendering()
         {
-            // if ( m_doubleBuffered )
             return m_renderCommandBuffer.get_second();
-            // else
-            // return m_renderCommandBuffer.get_first();
         }
 
         void on_synchronize()
         {
-            // if ( m_doubleBuffered ) {
-
             m_renderCommandBuffer.swap();
             get_command_buffer_for_collecting().clear();
-            /*
-            get_command_buffer_for_rendering().clear();
-            get_command_buffer_for_rendering() = get_command_buffer_for_collecting();
-            get_command_buffer_for_collecting().clear();
-             */
-            //}
         }
 
     private:
@@ -96,8 +117,7 @@ namespace InnoEngine
         Own<Sprite2DPipeline>               m_sprite2DPipeline;
         Own<Font2DPipeline>                 m_font2DPipeline;
         Own<ImGuiPipeline>                  m_imguiPipeline;
-        bool                                m_initialized    = false;
-        bool                                m_doubleBuffered = false;
+        bool                                m_initialized = false;
     };
 
     GPURenderer::~GPURenderer()
@@ -112,7 +132,7 @@ namespace InnoEngine
                 m_window = nullptr;
             }
 
-#ifdef _DEBUG
+#ifdef DEBUG_DEVICE_REF
             if ( m_sdlGPUDevice.use_count() != 1 ) {
                 IE_LOG_ERROR( "Not all Deviceobjects are released!" );
             }
@@ -129,15 +149,21 @@ namespace InnoEngine
         bool res = SDL_Vulkan_LoadLibrary( nullptr );
         (void)res;
 
-        const char* driver = nullptr;
+        const char* driver       = nullptr;
+        bool        debug_device = false;
+
 #ifdef _DEBUG
-        renderer->m_sdlGPUDevice = GPUDeviceRef::create( SDL_CreateGPUDevice( SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, true, driver ) );
+        debug_device = true;
+#endif
+
+#ifdef DEBUG_DEVICE_REF
+        renderer->m_sdlGPUDevice = GPUDeviceRef::create( SDL_CreateGPUDevice( SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, debug_device, driver ) );
 #else
-        renderer->m_sdlGPUDevice = SDL_CreateGPUDevice( SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, false, driver );
+        renderer->m_sdlGPUDevice = SDL_CreateGPUDevice( SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, debug_device, driver );
 #endif
 
         if ( renderer->m_sdlGPUDevice == nullptr ) {
-            IE_LOG_CRITICAL( " SDL_CreateGPUDevice failed! {}", SDL_GetError() );
+            IE_LOG_CRITICAL( " SDL_CreateGPUDevice failed! Errorcode: {}", SDL_GetError() );
             return std::nullopt;
         }
 
@@ -153,7 +179,7 @@ namespace InnoEngine
         return renderer;
     }
 
-    Result GPURenderer::initialize( Window* window, AssetManager* assetmanager, bool doublebuffered )
+    Result GPURenderer::initialize( Window* window, AssetManager* assetmanager )
     {
         if ( m_initialized ) {
             IE_LOG_WARNING( "GPURenderer: Trying to initialize more than once!" );
@@ -163,12 +189,12 @@ namespace InnoEngine
         m_window = window;
         if ( m_window ) {
             if ( !SDL_ClaimWindowForGPUDevice( m_sdlGPUDevice, m_window->get_sdlwindow() ) ) {
-                IE_LOG_CRITICAL( "GPUClaimWindow failed" );
+                IE_LOG_CRITICAL( "GPUClaimWindow failed! Errorcode: {}", SDL_GetError() );
                 return Result::InitializationError;
             }
         }
 
-        m_pipelineProcessor->initialize( this, assetmanager, doublebuffered );
+        RETURN_RESULT_IF_FAILED( m_pipelineProcessor->initialize( this, assetmanager ) );
         m_initialized = true;
         return Result::Success;
     }
@@ -234,7 +260,7 @@ namespace InnoEngine
 
     void GPURenderer::on_synchronize()
     {
-#ifdef _DEBUG
+#ifdef DEBUG_FRAMEBUFFERINDICES
         // reset the frame indices so they can be checked to catch errors
         auto& render_commands = m_pipelineProcessor->get_command_buffer_for_rendering();
         for ( auto& texture : render_commands.TextureRegister )
@@ -258,7 +284,7 @@ namespace InnoEngine
         }
 
         const auto& render_commands = m_pipelineProcessor->get_command_buffer_for_rendering();
-        m_pipelineProcessor->prepare( get_gpudevice() );
+        m_pipelineProcessor->prepare();
 
         SDL_GPUCommandBuffer* gpu_cmd_buf = SDL_AcquireGPUCommandBuffer( m_sdlGPUDevice );
         if ( gpu_cmd_buf == nullptr ) {
@@ -417,23 +443,21 @@ namespace InnoEngine
         return &m_pipelineProcessor->get_command_buffer_for_collecting();
     }
 
-    void GPURenderer::add_text( const Font* font, float x, float y, std::string_view text, DXSM::Color color, uint16_t layer, float scale )
+    void GPURenderer::add_text( const Font* font, float x, float y, uint32_t size, std::string_view text, DXSM::Color color, uint16_t layer )
     {
         IE_ASSERT( font != nullptr && font->m_frameBufferIndex >= 0 );
 
         RenderCommandBuffer&     render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
         Font2DPipeline::Command& cmd            = render_cmd_buf.FontRenderCommands.emplace_back();
 
-        cmd.font_fbidx         = font->m_frameBufferIndex;
-        cmd.string_arena_index = render_cmd_buf.StringBuffer.insert( text );
-        cmd.string_size        = static_cast<uint32_t>( text.size() );
-        cmd.info.x             = x;
-        cmd.info.y             = y;
-        cmd.info.z             = layer;
-        cmd.info.color         = color;
-        cmd.info.width         = scale;
-        cmd.info.height        = scale;
-        cmd.info.rotation      = 0.0f;
+        cmd.font_fbidx   = font->m_frameBufferIndex;
+        cmd.string_index = render_cmd_buf.StringBuffer.insert( text );
+        cmd.string_size  = static_cast<uint32_t>( text.size() );
+        cmd.x            = x;
+        cmd.y            = y;
+        cmd.font_size    = size;
+        cmd.color        = color;
+        cmd.depth        = static_cast<float>( layer );
     }
 
     void GPURenderer::retrieve_shaderformatinfo()

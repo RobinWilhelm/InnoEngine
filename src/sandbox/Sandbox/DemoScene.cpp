@@ -12,8 +12,8 @@
 
 DemoLayer::DemoLayer()
 {
-    // auto fontOpt = IE::CoreAPI::get_assetmanager()->require_asset<IE::Font>( "Calibri.ttf", true );
-    // m_testFont   = fontOpt.value().get();
+    auto fontOpt = IE::CoreAPI::get_assetmanager()->require_asset<IE::Font>( "Calibri.ttf", true );
+    m_testFont   = fontOpt.value().get();
 
     auto textureOpt = IE::CoreAPI::get_assetmanager()->require_asset<IE::Texture2D>( "tile.png", true );
     m_testTexture   = textureOpt.value().get();
@@ -73,8 +73,13 @@ void DemoLayer::render( float interp_factor, IE::GPURenderer* renderer )
         // m_testSprite.set_rotation( m_rotations[ i ] );
         // m_testSprite.set_color( m_colors[ i ] );
         // renderer->add_sprite( m_testSprite );
-        renderer->add_texture( m_testTexture, m_positions[ i ].x, m_positions[ i ].y, 0, m_rotations[ i ], m_colors[ i ], m_scales[ i ] );
+        // renderer->add_texture( m_testTexture, m_positions[ i ].x, m_positions[ i ].y, 0, m_rotations[ i ], m_colors[ i ], m_scales[ i ] );
     }
+
+    renderer->register_font( m_testFont );
+    for ( int i = 0; i < 10000; ++i )
+        m_testFont->render( 400, 100, 100, "MSDF Text Rendering!", DXSM::Color( 1.0f, 1.0f, 1.0f, 1.0f ) );
+
 }
 
 bool DemoLayer::handle_event( const SDL_Event& event )

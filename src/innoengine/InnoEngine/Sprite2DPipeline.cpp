@@ -154,14 +154,14 @@ namespace InnoEngine
 
         for ( const Command* command : m_sortedCommands ) {
             // start new batch when changing texture or max batch size is reached (should be sorted by texture at this point)
-            if ( current_batch == nullptr || current_texture != command->texture_index || current_batch->count >= SpriteBatchSizeMax ) {
+            if ( current_batch == nullptr || current_texture != command->texture_index || current_batch->command_count >= SpriteBatchSizeMax ) {
                 // unmap and upload previous batch data before changeing to new batch
                 if ( first_batch == false ) {
                     SDL_UnmapGPUTransferBuffer( m_device, m_spriteTransferBuffer );
                     SDL_GPUTransferBufferLocation tranferBufferLocation { .transfer_buffer = m_spriteTransferBuffer, .offset = 0 };
                     SDL_GPUBufferRegion           bufferRegion { .buffer = get_gpubuffer_by_index( current_batch->buffer_index ),
                                                                  .offset = 0,
-                                                                 .size   = static_cast<uint32_t>( current_batch->count * sizeof( Command::VertexUniform ) ) };
+                                                                 .size   = static_cast<uint32_t>( current_batch->command_count * sizeof( Command::VertexUniform ) ) };
                     SDL_UploadToGPUBuffer( copy_pass, &tranferBufferLocation, &bufferRegion, true );
                     uniform_data = nullptr;
                 }
@@ -175,16 +175,16 @@ namespace InnoEngine
             }
 
             // add to batch
-            uniform_data[ current_batch->count++ ] = command->info;
+            uniform_data[ current_batch->command_count++ ] = command->info;
         }
 
         // unmap and upload last batch data
-        if ( current_batch && current_batch->count > 0 ) {
+        if ( current_batch && current_batch->command_count > 0 ) {
             SDL_UnmapGPUTransferBuffer( m_device, m_spriteTransferBuffer );
             SDL_GPUTransferBufferLocation tranferBufferLocation { .transfer_buffer = m_spriteTransferBuffer, .offset = 0 };
             SDL_GPUBufferRegion           bufferRegion { .buffer = get_gpubuffer_by_index( current_batch->buffer_index ),
                                                          .offset = 0,
-                                                         .size   = static_cast<uint32_t>( current_batch->count * sizeof( Command::VertexUniform ) ) };
+                                                         .size   = static_cast<uint32_t>( current_batch->command_count * sizeof( Command::VertexUniform ) ) };
             SDL_UploadToGPUBuffer( copy_pass, &tranferBufferLocation, &bufferRegion, true );
         }
 
@@ -227,7 +227,7 @@ namespace InnoEngine
 
             SDL_BindGPUFragmentSamplers( render_pass, 0, &texture_sampler_binding, 1 );
 
-            SDL_DrawGPUPrimitives( render_pass, current_batch.count * 6, 1, 0, 0 );
+            SDL_DrawGPUPrimitives( render_pass, current_batch.command_count * 6, 1, 0, 0 );
             ++draw_calls;
         }
         return draw_calls;
@@ -259,7 +259,7 @@ namespace InnoEngine
     {
         Sprite2DPipeline::BatchData& newbatch = m_batches.emplace_back();
         newbatch.buffer_index                 = find_free_gpubuffer();
-        newbatch.count                        = 0;
+        newbatch.command_count                        = 0;
         return &newbatch;
     }
 

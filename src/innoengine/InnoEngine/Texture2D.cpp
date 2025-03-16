@@ -120,9 +120,9 @@ namespace InnoEngine
             switch ( target_format ) {
             case SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM:
                 for ( size_t i = 0; i < pixel_count; ++i ) {
-                    texture_bytes[ i * 4 ]     = surface_bytes[ i * 4 ];
-                    texture_bytes[ i * 4 + 1 ] = surface_bytes[ i * 4 + 1 ];
-                    texture_bytes[ i * 4 + 2 ] = surface_bytes[ i * 4 + 2 ];
+                    texture_bytes[ i * 4 ]     = surface_bytes[ i * 3 ];
+                    texture_bytes[ i * 4 + 1 ] = surface_bytes[ i * 3 + 1 ];
+                    texture_bytes[ i * 4 + 2 ] = surface_bytes[ i * 3 + 2 ];
                     texture_bytes[ i * 4 + 3 ] = static_cast<std::byte>( 255 );
                 }
                 break;
@@ -131,7 +131,7 @@ namespace InnoEngine
         case SDL_PIXELFORMAT_RGBA32:
             switch ( target_format ) {
             case SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM:
-                SDL_memcpy( texture, surface, pixel_count * 4 );
+                SDL_memcpy( texture, surface_bytes, pixel_count * 4 );
                 break;
             }
             break;
@@ -244,12 +244,12 @@ namespace InnoEngine
 
     int Texture2D::width() const
     {
-        return 0;
+        return m_width;
     }
 
     int Texture2D::height() const
     {
-        return 0;
+        return m_height;
     }
 
     SDL_GPUTexture* Texture2D::get_sdltexture() const

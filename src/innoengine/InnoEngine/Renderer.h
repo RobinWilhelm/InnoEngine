@@ -32,7 +32,7 @@ namespace InnoEngine
 
         [[nodiscard]]
         static auto create() -> std::optional<Own<GPURenderer>>;
-        Result      initialize( Window* window, AssetManager* assetmanager, bool doublebuffered = false );
+        Result      initialize( Window* window, AssetManager* assetmanager );
 
         Window*      get_window() const;
         GPUDeviceRef get_gpudevice() const;
@@ -58,8 +58,8 @@ namespace InnoEngine
         void set_clear_color( DXSM::Color color );    // the color the swapchain texture should be cleared to at the begin of the frame
         void set_view_projection( const DXSM::Matrix view_projection );
         void add_sprite( const Sprite& sprite );
-        void add_texture( Ref<Texture2D> texture, float x, float y, uint32_t layer = 0,float rotation = 0.0f, DXSM::Color color = {1.0f, 1.0f, 1.0f, 1.0f}, float scale = 1.0f);
-        void add_text( const Font* font, float x, float y, std::string_view text, DXSM::Color color = { 1.0f, 1.0f, 1.0f, 1.0f }, uint16_t layer = 0, float scale = 1.0f );
+        void add_texture( Ref<Texture2D> texture, float x, float y, uint32_t layer = 0, float rotation = 0.0f, DXSM::Color color = { 1.0f, 1.0f, 1.0f, 1.0f }, float scale = 1.0f );
+        void add_text( const Font* font, float x, float y, uint32_t size, std::string_view text, DXSM::Color color = { 1.0f, 1.0f, 1.0f, 1.0f }, uint16_t layer = 0 );
         void add_imgui_draw_data( ImDrawData* draw_data );
 
     private:

@@ -93,10 +93,8 @@ vertex main0_out main0(constant type_FrameMatrices& FrameMatrices [[buffer(0)]],
     {
         _84 = _73;
     }
-    float _94 = DataBuffer._m0[_56].SourceRect.x + DataBuffer._m0[_56].SourceRect.w;
-    float _96 = DataBuffer._m0[_56].SourceRect.y + DataBuffer._m0[_56].SourceRect.z;
-    spvUnsafeArray<float2, 4> _101 = spvUnsafeArray<float2, 4>({ float2(DataBuffer._m0[_56].SourceRect.xy), float2(_94, DataBuffer._m0[_56].SourceRect.y), float2(DataBuffer._m0[_56].SourceRect.x, _96), float2(_94, _96) });
-    spvUnsafeArray<float2, 4> _54 = _101;
+    spvUnsafeArray<float2, 4> _99 = spvUnsafeArray<float2, 4>({ float2(DataBuffer._m0[_56].SourceRect.xy), float2(DataBuffer._m0[_56].SourceRect.zy), float2(DataBuffer._m0[_56].SourceRect.xw), float2(DataBuffer._m0[_56].SourceRect.zw) });
+    spvUnsafeArray<float2, 4> _54 = _99;
     out.out_var_TEXCOORD0 = _54[_47[_57]];
     out.out_var_TEXCOORD1 = DataBuffer._m0[_56].Color;
     out.gl_Position = FrameMatrices.ViewProjectionMatrix * float4(_84.x + DataBuffer._m0[_56].X, _84.y + DataBuffer._m0[_56].Y, float(DataBuffer._m0[_56].Z), 1.0);

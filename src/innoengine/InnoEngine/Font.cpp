@@ -7,7 +7,6 @@
 
 #include "InnoEngine/Texture2D.h"
 
-
 #include "InnoEngine/MSDFData.h"
 
 namespace InnoEngine
@@ -19,7 +18,7 @@ namespace InnoEngine
 
     auto Font::create() -> std::optional<Ref<Font>>
     {
-        Ref<Font> font   = Ref<Font>( new Font );
+        Ref<Font> font = Ref<Font>( new Font );
         return Ref<Font>();
     }
 
@@ -33,12 +32,17 @@ namespace InnoEngine
         return m_msdfData;
     }
 
-    void Font::render( float x, float y, std::string_view text, DXSM::Color color, uint16_t layer, float scale )
+    float Font::calculate_screen_pix_range( float font_size ) const
+    {
+        return font_size / m_scale * m_range;
+    }
+
+    void Font::render( float x, float y, uint32_t size, std::string_view text, DXSM::Color color, uint16_t layer )
     {
         IE_ASSERT( m_atlasTexture != nullptr && m_frameBufferIndex >= 0 );
         static GPURenderer* renderer = CoreAPI::get_gpurenderer();
         IE_ASSERT( renderer != nullptr );
-        renderer->add_text( this, x, y, text, color, layer, scale );
+        renderer->add_text( this, x, y, size, text, color, layer );
     }
 
     Result Font::load_asset( const std::filesystem::path& full_path )
@@ -59,25 +63,28 @@ namespace InnoEngine
         // The second argument can be ignored unless you mix different font sizes in one atlas.
         // In the last argument, you can specify a charset other than ASCII.
         // To load specific glyph indices, use loadGlyphs instead.
-            // From imgui_draw.cpp
+        // From imgui_draw.cpp
         struct CharsetRange
         {
             uint32_t Begin, End;
         };
 
-        static const CharsetRange charsetRanges[] =
-        {
+        static const CharsetRange charsetRanges[] = {
             { 0x0020, 0x00FF }
         };
 
         msdf_atlas::Charset charset;
-        for (CharsetRange range : charsetRanges)
-        {
-            for (uint32_t c = range.Begin; c <= range.End; c++)
-                charset.add(c);
+        for ( CharsetRange range : charsetRanges ) {
+            for ( uint32_t c = range.Begin; c <= range.End; c++ )
+                charset.add( c );
         }
 
-        m_msdfData->FontGeo.loadCharset( font, 1.0, charset);
+        /*
+        msdf_atlas::Charset charset;
+       charset.add('3');
+       charset.add(' ');
+        */
+        m_msdfData->FontGeo.loadCharset( font, 1.0, charset );
 
         // Apply MSDF edge coloring. See edge-coloring.h for other coloring strategies.
         const double maxCornerAngle = 3.0;
@@ -95,9 +102,9 @@ namespace InnoEngine
         packer.setMinimumScale( 24.0 );
 
         // setPixelRange or setUnitRange
-        packer.setPixelRange( 2.0 );
+        packer.setPixelRange( m_range );
         packer.setMiterLimit( 1.0 );
-        packer.setScale(40);
+        packer.setScale( m_scale );
 
         // Compute atlas layout - pack glyphs
         packer.pack( m_msdfData->GlyphGeo.data(), static_cast<int>( m_msdfData->GlyphGeo.size() ) );
@@ -124,11 +131,10 @@ namespace InnoEngine
         // Generate atlas bitmap
         generator.generate( m_msdfData->GlyphGeo.data(), static_cast<int>( m_msdfData->GlyphGeo.size() ) );
 
-
         // The atlas bitmap can now be retrieved via atlasStorage as a BitmapConstRef.
         // The glyphs array (or fontGeometry) contains positioning data for typesetting text.
         auto bmp       = static_cast<msdfgen::BitmapConstRef<byte, 3>>( generator.atlasStorage() );
-        m_atlasTexture = Texture2D::create( width, height, TextureFormat::RGBX, SDL_GPU_TEXTUREUSAGE_SAMPLER | SDL_GPU_TEXTUREUSAGE_COLOR_TARGET, false).value();
+        m_atlasTexture = Texture2D::create( width, height, TextureFormat::RGBX, SDL_GPU_TEXTUREUSAGE_SAMPLER | SDL_GPU_TEXTUREUSAGE_COLOR_TARGET, false ).value();
         Result res     = m_atlasTexture->load_data( bmp.pixels, bmp.width * bmp.height, SDL_PIXELFORMAT_RGB24 );
 
         // Cleanup
@@ -137,13 +143,12 @@ namespace InnoEngine
 
         if ( IE_SUCCESS( res ) ) {
             IE_LOG_DEBUG( "Loaded font {}", full_path.string() );
+            m_initialized = true;
 
-/*
             // testing
             SDL_Surface* surface = SDL_CreateSurfaceFrom( width, height, SDL_PixelFormat::SDL_PIXELFORMAT_RGB24, const_cast<void*>( static_cast<const void*>( bmp.pixels ) ), width * 3 );
             SDL_SaveBMP( surface, std::format( "{}.bmp", full_path.filename().string() ).c_str() );
             SDL_DestroySurface( surface );
-*/
         }
         return res;
     }

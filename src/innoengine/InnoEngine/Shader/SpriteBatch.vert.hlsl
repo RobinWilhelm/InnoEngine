@@ -14,10 +14,6 @@ struct SpriteData
 StructuredBuffer<SpriteData> DataBuffer : register(t0, space0);
 
 
-static const uint QuadIndices[6] = { 0, 1, 2, 3, 2, 1 };
-static const float2 QuadVertices[4] = { { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f } };
-
-
 struct Output
 {
     float2 TexCoord : TEXCOORD0;
@@ -49,9 +45,9 @@ Output main(uint id : SV_VertexID)
     float2 texcoord[4] =
     {
         { sprite.SourceRect.x, sprite.SourceRect.y },
-        { sprite.SourceRect.x + sprite.SourceRect.w, sprite.SourceRect.y },
-        { sprite.SourceRect.x, sprite.SourceRect.y + sprite.SourceRect.z },
-        { sprite.SourceRect.x + sprite.SourceRect.w, sprite.SourceRect.y + sprite.SourceRect.z }
+        {  sprite.SourceRect.z, sprite.SourceRect.y },
+        { sprite.SourceRect.x,  sprite.SourceRect.w },
+        {  sprite.SourceRect.z,  sprite.SourceRect.w }
     };
             
     Output output;

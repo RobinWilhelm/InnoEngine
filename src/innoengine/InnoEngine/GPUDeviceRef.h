@@ -4,11 +4,14 @@
 
 #include <atomic>
 
+#ifdef _DEBUG
+    #define DEBUG_DEVICE_REF
+#endif
 namespace InnoEngine
 {
-// have reference counting only in debug mode so we can check if we forgot do release stuff
+// have reference counting only in debug mode so we can get hints if we forgot do release stuff
 // no idea if this is a good way to do it
-#ifdef _DEBUG
+#ifdef DEBUG_DEVICE_REF
     class GPUDeviceRef
     {
         friend class GPURenderer;

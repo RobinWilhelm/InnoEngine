@@ -17,35 +17,31 @@ namespace InnoEngine
     public:
         struct BatchData
         {
-            FrameBufferIndex font_fbidx   = -1;
-            uint32_t         buffer_index = 0;
-            uint32_t         count        = 0;
+            FrameBufferIndex font_fbidx    = -1;
+            uint32_t         buffer_index  = 0;
+            uint32_t         command_count = 0;
         };
 
         struct Command
         {
-            Command() = default;
+            FrameBufferIndex font_fbidx   = -1;
+            StringArenaIndex string_index = 0;
+            uint32_t         string_size  = 0;
+            uint32_t         font_size    = 0;
+            float            x            = 0;
+            float            y            = 0;
+            DXSM::Color      color        = {};
+            float            depth        = 0.0f;
+        };
 
-            Command( Command&& other )
-            {
-                font_fbidx = other.font_fbidx;
-                info       = other.info;
-            }
-
-            FrameBufferIndex font_fbidx;
-            StringArenaIndex string_arena_index;
-            uint32_t         string_size;
-
-            struct VertexUniform
-            {
-                float         x, y;
-                uint32_t      z;
-                float         rotation;                            // radians
-                float         origin_offset_x, origin_offset_y;    // for rotation
-                float         width, height;
-                DXSM::Vector4 source;
-                DXSM::Color   color;
-            } info;
+        struct StructuredBufferLayout
+        {
+            DXSM::Vector4 destination      = {};
+            DXSM::Vector4 source           = {};
+            DXSM::Color   color            = {};
+            float         depth            = 0.0f;
+            float         screen_pix_width = 0.0f;
+            float         pad[ 2 ]         = {};
         };
 
         using CommandList = std::vector<Command>;
@@ -54,13 +50,13 @@ namespace InnoEngine
         Font2DPipeline() = default;
         ~Font2DPipeline();
 
-        Result initialize( GPURenderer* renderer, AssetManager* assetmanager );
-        void   prepare_render( const CommandList& command_list, const FontList& texture_list, const StringArena& string_buffer );
-        uint32_t   swapchain_render( const DXSM::Matrix&   view_projection,
-                                 const CommandList&    command_list,
-                                 const FontList&       texture_list,
-                                 SDL_GPUCommandBuffer* cmdbuf,
-                                 SDL_GPURenderPass*    renderPass );
+        Result   initialize( GPURenderer* renderer, AssetManager* assetmanager );
+        void     prepare_render( const CommandList& command_list, const FontList& texture_list, const StringArena& string_buffer );
+        uint32_t swapchain_render( const DXSM::Matrix&   view_projection,
+                                   const CommandList&    command_list,
+                                   const FontList&       texture_list,
+                                   SDL_GPUCommandBuffer* gpu_cmd_buf,
+                                   SDL_GPURenderPass*    render_pass );
 
     private:
         BatchData* add_batch();
@@ -80,7 +76,7 @@ namespace InnoEngine
         std::vector<const Command*> m_sortedCommands;    // objects owned by the RenderCommandBuffer
         SDL_GPUTransferBuffer*      m_transferBuffer = nullptr;
 
-        static constexpr uint32_t MaxBatchSize = 20000;
+        static constexpr uint32_t MaxBatchSize = 200000;
 
         std::vector<SDL_GPUBuffer*> m_gpuBuffer;
         uint32_t                    m_gpuBuffer_used = 0;

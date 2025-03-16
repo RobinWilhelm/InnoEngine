@@ -297,7 +297,7 @@ namespace InnoEngine
 
             Iterator& operator+=( const SizeType& counter )
             {
-                for ( SizeType count = 0; count < counter; count++ ) {
+                for ( SizeType command_count = 0; command_count < counter; command_count++ ) {
                     m_ptr = reinterpret_cast<T*>( m_pool->find_next( reinterpret_cast<Element*>( m_ptr ), m_index ) );
                     m_index++;
                     if ( m_ptr == m_pool->end().m_ptr )
@@ -306,9 +306,9 @@ namespace InnoEngine
                 return *this;
             }
 
-            friend Iterator operator+( Iterator iter, const SizeType& count )
+            friend Iterator operator+( Iterator iter, const SizeType& command_count )
             {
-                iter += count;
+                iter += command_count;
                 return iter;
             }
 

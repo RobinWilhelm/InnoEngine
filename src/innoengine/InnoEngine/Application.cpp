@@ -100,25 +100,39 @@ namespace InnoEngine
             m_renderer     = std::move( renderOpt.value() );
 
             auto profilerOpt = Profiler::create();
-            m_profiler       = std::move(profilerOpt.value());
+            m_profiler       = std::move( profilerOpt.value() );
 
             on_init_assets( m_assetManager.get() );
             publish_coreapi();
 
-            m_renderer->initialize( m_window.get(), m_assetManager.get(), appParams.RunAsync );
-            m_renderer->enable_vsync( appParams.EnableVSync );          
+            result = m_renderer->initialize( m_window.get(), m_assetManager.get() );
+            if ( IE_FAILED( result ) ) {
+                IE_LOG_CRITICAL( "Renderer initialization failed: {}", static_cast<uint32_t>( result ) );
+                return result;
+            }
+
+            result = m_renderer->enable_vsync( appParams.EnableVSync );
+            if ( IE_FAILED( result ) ) {
+                IE_LOG_ERROR( "Failed to set vsync option: {}", static_cast<uint32_t>( result ) );
+            }
 
             set_simulation_target_frequency( appParams.SimulationFrequency );
             m_multiThreaded = appParams.RunAsync;
 
             result = on_init();
+
         } catch ( std::exception e ) {
             IE_LOG_CRITICAL( "Application initialization failed: \"{}\"", e.what() );
             return Result::InitializationError;
         }
 
-        IE_LOG_INFO( "Application initialization complete" );
-        m_initializationSucceded = true;
+        if ( IE_SUCCESS( result ) ) {
+            IE_LOG_INFO( "Application initialization succeded" );
+            m_initializationSucceded = true;
+        }
+        else {
+            IE_LOG_INFO( "Application initialization failed" );
+        }
         return result;
     }
 
@@ -269,8 +283,8 @@ namespace InnoEngine
             if ( m_multiThreaded ) {
                 m_eventBuffer.get_first().emplace_back( event );
             }
-            else {                   
-                handle_event(event);
+            else {
+                handle_event( event );
             }
 
             // always handle quit events
@@ -284,7 +298,7 @@ namespace InnoEngine
 
     void Application::handle_event( const SDL_Event& event )
     {
-        m_profiler->start(ProfilePoint::LayerEvent);
+        m_profiler->start( ProfilePoint::LayerEvent );
         // pass events through in reverse order
         bool handled = false;
         if ( m_debugui_active )
@@ -295,7 +309,7 @@ namespace InnoEngine
             handled = ( *revIt )->handle_event( event );
             ++revIt;
         }
-        m_profiler->stop(ProfilePoint::LayerEvent);
+        m_profiler->stop( ProfilePoint::LayerEvent );
     }
 
     void Application::update_layers()
@@ -347,7 +361,7 @@ namespace InnoEngine
         coreapi.m_assetManager = m_assetManager.get();
         coreapi.m_renderer     = m_renderer.get();
         coreapi.m_camera       = m_camera.get();
-        coreapi.m_profiler   = m_profiler.get();
+        coreapi.m_profiler     = m_profiler.get();
     }
 
     void Application::update_profiledata()
