@@ -1,3 +1,3 @@
 # InnoEngine
-Personal education project\n
+Personal education project  
 Not intended for any productional use

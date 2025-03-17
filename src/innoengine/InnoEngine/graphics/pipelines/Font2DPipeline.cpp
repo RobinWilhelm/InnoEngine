@@ -199,7 +199,7 @@ namespace InnoEngine
                 if ( !glyph )
                     glyph = msdf_data->get_glyph( '?' );
                 if ( !glyph )
-                    return;
+                    continue;
 
                 StructuredBufferLayout* buffer_data = m_GPUBatch->next_data();
                 // remember that the atlas y grows in bottom-up and our renderer expects it to grow top-down
