@@ -20,7 +20,7 @@
 
 #include "SDL3/SDL.h"
 #include "InnoEngine/IE_Assert.h"
-#include "InnoEngine/Log.h"
+#include "InnoEngine/utility/Log.h"
 #include "InnoEngine/CoreAPI.h"
 
 #include "imgui.h"

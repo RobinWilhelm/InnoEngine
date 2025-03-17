@@ -1,8 +1,8 @@
 #include "Sandbox.h"
 
-#include "InnoEngine/Renderer.h"
-#include "InnoEngine/Texture2D.h"
-#include "InnoEngine/Shader.h"
+#include "InnoEngine/graphics/Renderer.h"
+#include "InnoEngine/graphics/Texture2D.h"
+#include "InnoEngine/graphics/Shader.h"
 
 #include "InnoEngine/AssetManager.h"
 

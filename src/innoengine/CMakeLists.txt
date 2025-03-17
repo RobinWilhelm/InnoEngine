@@ -9,12 +9,12 @@ set(INNOENGINE_PCH_SOURCE "InnoEngine/iepch.cpp")
 file(GLOB_RECURSE INNOENGINE_HEADERS RELATIVE ${CMAKE_CURRENT_LIST_DIR} "InnoEngine/*.h" "InnoEngine/*.hpp")
 file(GLOB_RECURSE INNOENGINE_SOURCES RELATIVE ${CMAKE_CURRENT_LIST_DIR} "InnoEngine/*.cpp")
 file(GLOB_RECURSE INNOENGINE_SHADERS RELATIVE ${CMAKE_CURRENT_LIST_DIR} 
-        "InnoEngine/Shader/*.frag.hlsl"  
-        "InnoEngine/Shader/*.vert.hlsl"  
-        "InnoEngine/Shader/*.verti.hlsl"  
-        "InnoEngine/Shader/*.fragi.hlsl" 
-        "InnoEngine/Shader/*.comp.hlsl" 
-        "InnoEngine/Shader/*.compi.hlsl")
+        "InnoEngine/graphics/shader/*.frag.hlsl"  
+        "InnoEngine/graphics/shader/*.vert.hlsl"  
+        "InnoEngine/graphics/shader/*.verti.hlsl"  
+        "InnoEngine/graphics/shader/*.fragi.hlsl" 
+        "InnoEngine/graphics/shader/*.comp.hlsl" 
+        "InnoEngine/graphics/shader/*.compi.hlsl")
  
 # just show them in the project for easier editing 
 set(INNOENGINE_OTHER_SOURCES ${PROJECT_SOURCE_DIR}/README.md ${PROJECT_SOURCE_DIR}/Todo.txt)

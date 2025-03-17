@@ -4,7 +4,7 @@
 #include "Directxtk/SimpleMath.h"
 namespace DXSM = DirectX::SimpleMath;
 
-#include "InnoEngine/Log.h"
+#include "InnoEngine/utility/Log.h"
 
 #include <cstdint>
 #include <memory>
@@ -58,7 +58,7 @@ namespace InnoEngine
         return SDL_GetTicksNS();
     };
 
-    constexpr int TicksPerSecond = 1'000'000'000;
+    constexpr uint64_t TicksPerSecond = 1'000'000'000;
 
     using FrameBufferIndex = int32_t;
 

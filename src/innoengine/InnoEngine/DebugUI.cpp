@@ -5,8 +5,8 @@
 #include "imgui_impl_sdl3.h"
 
 #include "InnoEngine/Application.h"
-#include "InnoEngine/Renderer.h"
-#include "InnoEngine/RenderCommandBuffer.h"
+#include "InnoEngine/graphics/Renderer.h"
+#include "InnoEngine/graphics/RenderCommandBuffer.h"
 
 namespace InnoEngine
 {

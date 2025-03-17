@@ -1,13 +1,13 @@
 #include "InnoEngine/Layer.h"
-#include "InnoEngine/Renderer.h"
+#include "InnoEngine/graphics/Renderer.h"
 
-#include "InnoEngine/Font.h"
-#include "InnoEngine/Texture2D.h"
-#include "InnoEngine/Sprite.h"
+#include "InnoEngine/graphics/Font.h"
+#include "InnoEngine/graphics/Texture2D.h"
+#include "InnoEngine/graphics/Sprite.h"
 
 namespace IE = InnoEngine;
 
-constexpr int sprite_count = 100000;
+constexpr int sprite_count = 15000;
 
 class DemoLayer : public IE::Layer
 {
@@ -29,4 +29,10 @@ private:
     std::vector<DXSM::Color>   m_colors;
     std::vector<float>         m_rotationSpeeds;
     std::vector<float>         m_scales;
+
+    uint64_t    m_colorAnimStart = 0;
+    DXSM::Color m_textColor { 0.0f, 1.0f, 0.0f, 1.0f };
+    float       m_color_h = 0;
+    float       m_color_s = 1.0;
+    float       m_color_v = 1.0;
 };

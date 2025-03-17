@@ -1,6 +1,6 @@
 #pragma once
 
-#include "InnoEngine/Log.h"
+#include "InnoEngine/utility/Log.h"
 
 #include "InnoEngine/Asset.h"
 #include "InnoEngine/AssetRepository.h"

@@ -1,17 +1,17 @@
-#include "iepch.h"
-#include "Application.h"
+#include "InnoEngine/iepch.h"
+#include "InnoEngine/Application.h"
 
-#include "CoreAPI.h"
+#include "InnoEngine/CoreAPI.h"
 
-#include "AssetManager.h"
-#include "DebugUI.h"
-#include "Layer.h"
-#include "OrthographicCamera.h"
-#include "Profiler.h"
-#include "RenderCommandBuffer.h"
-#include "Renderer.h"
-#include "Shader.h"
-#include "Window.h"
+#include "InnoEngine/AssetManager.h"
+#include "InnoEngine/DebugUI.h"
+#include "InnoEngine/Layer.h"
+#include "InnoEngine/graphics/OrthographicCamera.h"
+#include "InnoEngine/utility/Profiler.h"
+#include "InnoEngine/graphics/RenderCommandBuffer.h"
+#include "InnoEngine/graphics/Renderer.h"
+#include "InnoEngine/graphics/Shader.h"
+#include "InnoEngine/graphics/Window.h"
 
 namespace InnoEngine
 {

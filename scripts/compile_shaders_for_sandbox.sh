@@ -1,5 +1,5 @@
 # Requires shadercross CLI installed from SDL_shadercross
-sourcedir="../src/innoengine/InnoEngine/Shader"
+sourcedir="../src/innoengine/InnoEngine/graphics/shader"
 assetdir="../sandbox_environment/assets"
 
 for filepath in "${sourcedir}"/*.vert.hlsl; do

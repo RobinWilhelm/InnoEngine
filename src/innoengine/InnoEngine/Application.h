@@ -2,8 +2,8 @@
 #include "SDL3/SDL_events.h"
 
 #include "BaseTypes.h"
-#include "Window.h"
-#include "Profiler.h"
+#include "InnoEngine/graphics/Window.h"
+#include "InnoEngine/utility/Profiler.h"
 
 #include <memory>
 #include <string>
