@@ -48,7 +48,7 @@ namespace InnoEngine
 
     Result Font::load_asset( const std::filesystem::path& full_path )
     {
-        if ( m_initialized == true ) {
+        if ( m_Initialized == true ) {
             return Result::AlreadyInitialized;
         }
 
@@ -129,7 +129,7 @@ namespace InnoEngine
 
         if ( IE_SUCCESS( res ) ) {
             IE_LOG_DEBUG( "Loaded font {}", full_path.string() );
-            m_initialized = true;
+            m_Initialized = true;
 
             if ( m_msdfData->IsASCII ) {
                 preload_msdf_ascii_data();

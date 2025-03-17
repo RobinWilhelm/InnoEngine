@@ -69,7 +69,7 @@ namespace InnoEngine
         const RenderCommandBuffer* get_render_command_buffer() const;
 
     private:
-        bool m_initialized  = false;
+        bool m_Initialized  = false;
         bool m_vsyncEnabled = true;
 
         class PipelineProcessor;

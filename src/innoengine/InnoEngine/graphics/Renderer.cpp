@@ -56,13 +56,13 @@ namespace InnoEngine
                 return result;
             }
 
-            m_initialized = true;
+            m_Initialized = true;
             return Result::Success;
         }
 
         void prepare()
         {
-            IE_ASSERT( m_initialized );
+            IE_ASSERT( m_Initialized );
             RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
 
             m_sprite2DPipeline->prepare_render( render_cmd_buf.SpriteRenderCommands );
@@ -76,17 +76,15 @@ namespace InnoEngine
 
         void render( SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass )
         {
-            IE_ASSERT( m_initialized );
+            IE_ASSERT( m_Initialized );
             RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
 
             render_cmd_buf.SpriteDrawCalls = m_sprite2DPipeline->swapchain_render( render_cmd_buf.CameraMatrix,
-                                                                                   render_cmd_buf.SpriteRenderCommands,
                                                                                    render_cmd_buf.TextureRegister,
                                                                                    gpu_cmd_buf,
                                                                                    render_pass );
 
             render_cmd_buf.FontDrawCalls = m_font2DPipeline->swapchain_render( render_cmd_buf.CameraMatrix,
-                                                                               render_cmd_buf.FontRenderCommands,
                                                                                render_cmd_buf.FontRegister,
                                                                                gpu_cmd_buf,
                                                                                render_pass );
@@ -117,7 +115,7 @@ namespace InnoEngine
         Own<Sprite2DPipeline>               m_sprite2DPipeline;
         Own<Font2DPipeline>                 m_font2DPipeline;
         Own<ImGuiPipeline>                  m_imguiPipeline;
-        bool                                m_initialized = false;
+        bool                                m_Initialized = false;
     };
 
     GPURenderer::~GPURenderer()
@@ -181,7 +179,7 @@ namespace InnoEngine
 
     Result GPURenderer::initialize( Window* window, AssetManager* assetmanager )
     {
-        if ( m_initialized ) {
+        if ( m_Initialized ) {
             IE_LOG_WARNING( "GPURenderer: Trying to initialize more than once!" );
             return Result::AlreadyInitialized;
         }
@@ -195,7 +193,7 @@ namespace InnoEngine
         }
 
         RETURN_RESULT_IF_FAILED( m_pipelineProcessor->initialize( this, assetmanager ) );
-        m_initialized = true;
+        m_Initialized = true;
         return Result::Success;
     }
 
@@ -274,7 +272,7 @@ namespace InnoEngine
 
     void GPURenderer::render()
     {
-        IE_ASSERT( m_initialized );
+        IE_ASSERT( m_Initialized );
         // std::this_thread::sleep_for(std::chrono::milliseconds(10));
         //  dont render when minimized
         if ( m_window && SDL_GetWindowFlags( m_window->get_sdlwindow() ) & SDL_WINDOW_MINIMIZED ) {
@@ -354,7 +352,7 @@ namespace InnoEngine
 
     void GPURenderer::register_font( Ref<Font> font )
     {
-        IE_ASSERT( font != nullptr && font->m_initialized );
+        IE_ASSERT( font != nullptr && font->m_Initialized );
 
         auto& render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
         render_cmd_buf.FontRegister.push_back( font );

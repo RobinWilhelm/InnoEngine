@@ -23,7 +23,7 @@ namespace InnoEngine
         friend class AssetRepository<Texture2D>;
         friend class GPURenderer;
         Texture2D() :
-            m_device( CoreAPI::get_gpurenderer()->get_gpudevice() ) { };
+            m_Device( CoreAPI::get_gpurenderer()->get_gpudevice() ) { };
 
     public:
         virtual ~Texture2D();
@@ -61,7 +61,7 @@ namespace InnoEngine
         static TextureFormat        sdl_pixelformat_to_textureformat( SDL_PixelFormat format );
 
     private:
-        GPUDeviceRef    m_device  = nullptr;
+        GPUDeviceRef    m_Device  = nullptr;
         SDL_GPUTexture* m_texture = nullptr;
 
         int           m_width     = 0;

@@ -7,7 +7,7 @@
 
 namespace IE = InnoEngine;
 
-constexpr int sprite_count = 15000;
+constexpr int sprite_count = 100000;
 
 class DemoLayer : public IE::Layer
 {

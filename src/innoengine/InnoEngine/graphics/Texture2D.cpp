@@ -10,7 +10,7 @@ namespace InnoEngine
     Texture2D::~Texture2D()
     {
         if ( m_texture ) {
-            SDL_ReleaseGPUTexture( m_device, m_texture );
+            SDL_ReleaseGPUTexture( m_Device, m_texture );
             m_texture = nullptr;
         }
     }
@@ -41,7 +41,7 @@ namespace InnoEngine
 
     Result Texture2D::load_from_file( const std::filesystem::path& full_path )
     {
-        IE_ASSERT( m_device != nullptr );
+        IE_ASSERT( m_Device != nullptr );
         IE_ASSERT( m_texture == nullptr );
 
         SDL_Surface* surface = IMG_Load( full_path.string().c_str() );
@@ -71,11 +71,11 @@ namespace InnoEngine
 
     Result Texture2D::create_gpu_texture( uint32_t width, uint32_t height, TextureFormat format, SDL_GPUTextureUsageFlags usage, bool enable_mipmap )
     {
-        IE_ASSERT( m_device != nullptr );
+        IE_ASSERT( m_Device != nullptr );
 
         SDL_GPUTextureFormat gpu_texture_format = textureformat_to_sdl_gpu_textureformat( format );
 
-        bool supported = SDL_GPUTextureSupportsFormat( m_device, gpu_texture_format, SDL_GPU_TEXTURETYPE_2D, usage );
+        bool supported = SDL_GPUTextureSupportsFormat( m_Device, gpu_texture_format, SDL_GPU_TEXTURETYPE_2D, usage );
         if ( supported == false ) {
             return Result::InvalidParameters;
         }
@@ -99,7 +99,7 @@ namespace InnoEngine
         textureCreateInfo.layer_count_or_depth     = 1;
         textureCreateInfo.num_levels               = m_miplevels;
 
-        m_texture = SDL_CreateGPUTexture( m_device, &textureCreateInfo );
+        m_texture = SDL_CreateGPUTexture( m_Device, &textureCreateInfo );
         if ( m_texture == nullptr ) {
             IE_LOG_ERROR( "Loading texture \"{}\" failed at SDL_CreateGPUTexture: {}", get_path().filename().string(), SDL_GetError() );
             return Result::Fail;
@@ -165,7 +165,7 @@ namespace InnoEngine
     Result Texture2D::load_data( const void* pixels, uint32_t pixel_count, SDL_PixelFormat pixel_format )
     {
         IE_ASSERT( pixels != nullptr );
-        IE_ASSERT( m_device != nullptr );
+        IE_ASSERT( m_Device != nullptr );
         IE_ASSERT( m_texture != nullptr );
 
         if ( pixelformat_supported( pixel_format ) == false ) {
@@ -188,19 +188,19 @@ namespace InnoEngine
             SDL_GPUTransferBufferCreateInfo transferBufferCreateInfo = {};
             transferBufferCreateInfo.usage                           = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
             transferBufferCreateInfo.size                            = size;
-            textureTransferBuffer                                    = SDL_CreateGPUTransferBuffer( m_device, &transferBufferCreateInfo );
+            textureTransferBuffer                                    = SDL_CreateGPUTransferBuffer( m_Device, &transferBufferCreateInfo );
 
             if ( textureTransferBuffer ) {
-                Uint8* textureTransferPtr = static_cast<Uint8*>( SDL_MapGPUTransferBuffer( m_device, textureTransferBuffer, false ) );
+                Uint8* textureTransferPtr = static_cast<Uint8*>( SDL_MapGPUTransferBuffer( m_Device, textureTransferBuffer, false ) );
 
                 if ( textureTransferPtr ) {
 
                     (void)pixels;
                     map_pixels( textureTransferPtr, pixels, pixel_count, pixel_format );
 
-                    SDL_UnmapGPUTransferBuffer( m_device, textureTransferBuffer );
+                    SDL_UnmapGPUTransferBuffer( m_Device, textureTransferBuffer );
                     // Upload the transfer data to the GPU resources
-                    SDL_GPUCommandBuffer* uploadCmdBuf = SDL_AcquireGPUCommandBuffer( m_device );
+                    SDL_GPUCommandBuffer* uploadCmdBuf = SDL_AcquireGPUCommandBuffer( m_Device );
 
                     if ( uploadCmdBuf ) {
                         SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass( uploadCmdBuf );
@@ -231,7 +231,7 @@ namespace InnoEngine
             }
         }
         if ( textureTransferBuffer ) {
-            SDL_ReleaseGPUTransferBuffer( m_device, textureTransferBuffer );
+            SDL_ReleaseGPUTransferBuffer( m_Device, textureTransferBuffer );
         }
 
         return success ? Result::Success : Result::InitializationError;

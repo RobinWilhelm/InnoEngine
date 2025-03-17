@@ -19,7 +19,7 @@ namespace InnoEngine
         static GPUDeviceRef create( SDL_GPUDevice* device )
         {
             GPUDeviceRef deviceref;
-            deviceref.m_device   = device;
+            deviceref.m_Device   = device;
             deviceref.m_useCount = new std::atomic_uint32_t( 1 );
             return deviceref;
         }
@@ -28,7 +28,7 @@ namespace InnoEngine
         GPUDeviceRef() = default;
 
         GPUDeviceRef( SDL_GPUDevice* device ) :
-            m_device( device )
+            m_Device( device )
         {
             // it should be allowed to initialize it with nullptr so this class is easily replacable by a raw pointer
             IE_ASSERT( device == nullptr );
@@ -36,16 +36,16 @@ namespace InnoEngine
 
         GPUDeviceRef( const GPUDeviceRef& other )
         {
-            m_device   = other.m_device;
+            m_Device   = other.m_Device;
             m_useCount = other.m_useCount;
             addref();
         }
 
         GPUDeviceRef( GPUDeviceRef&& other )
         {
-            m_device         = other.m_device;
+            m_Device         = other.m_Device;
             m_useCount       = other.m_useCount;
-            other.m_device   = nullptr;
+            other.m_Device   = nullptr;
             other.m_useCount = nullptr;
         }
 
@@ -54,7 +54,7 @@ namespace InnoEngine
             if ( this == &other )
                 return *this;
 
-            m_device   = other.m_device;
+            m_Device   = other.m_Device;
             m_useCount = other.m_useCount;
             addref();
             return *this;
@@ -67,12 +67,14 @@ namespace InnoEngine
 
             if ( other.m_useCount == nullptr ) {
                 deref();
+                m_Device = nullptr;
+                m_useCount = nullptr;
                 return *this;
             }
 
-            m_device         = other.m_device;
+            m_Device         = other.m_Device;
             m_useCount       = other.m_useCount;
-            other.m_device   = nullptr;
+            other.m_Device   = nullptr;
             other.m_useCount = nullptr;
             return *this;
         }
@@ -85,13 +87,13 @@ namespace InnoEngine
 
             if ( deref() == 1 /* was it the last reference? */ ) {
                 delete m_useCount;
-                m_device = nullptr;
+                m_Device = nullptr;
             }
         }
 
         operator SDL_GPUDevice*() const
         {
-            return m_device;
+            return m_Device;
         }
 
         int use_count()
@@ -111,7 +113,7 @@ namespace InnoEngine
         }
 
     private:
-        SDL_GPUDevice*        m_device   = nullptr;
+        SDL_GPUDevice*        m_Device   = nullptr;
         std::atomic_uint32_t* m_useCount = nullptr;
     };
 #else

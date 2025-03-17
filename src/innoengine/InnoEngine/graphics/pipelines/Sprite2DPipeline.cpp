@@ -15,29 +15,16 @@
 
 namespace InnoEngine
 {
-    static constexpr uint32_t SpriteBatchSizeMax = 1000000;
-
     Sprite2DPipeline::~Sprite2DPipeline()
     {
-        if ( m_device != nullptr ) {
-            if ( m_spriteTransferBuffer ) {
-                SDL_ReleaseGPUTransferBuffer( m_device, m_spriteTransferBuffer );
-                m_spriteTransferBuffer = nullptr;
-            }
-
-            for ( auto gpubuffer : m_gpuBuffer ) {
-                SDL_ReleaseGPUBuffer( m_device, gpubuffer );
-            }
-            m_gpuBuffer.clear();
-            m_batches.clear();
-
+        if ( m_Device != nullptr ) {
             if ( m_defaultSampler ) {
-                SDL_ReleaseGPUSampler( m_device, m_defaultSampler );
+                SDL_ReleaseGPUSampler( m_Device, m_defaultSampler );
                 m_defaultSampler = nullptr;
             }
 
             if ( m_pipeline ) {
-                SDL_ReleaseGPUGraphicsPipeline( m_device, m_pipeline );
+                SDL_ReleaseGPUGraphicsPipeline( m_Device, m_pipeline );
                 m_pipeline = nullptr;
             }
         }
@@ -47,12 +34,12 @@ namespace InnoEngine
     {
         IE_ASSERT( renderer != nullptr && renderer->has_window() && assetmanager != nullptr );
 
-        if ( m_initialized ) {
+        if ( m_Initialized ) {
             IE_LOG_WARNING( "Pipeline already initialized!" );
             return Result::AlreadyInitialized;
         }
 
-        m_device           = renderer->get_gpudevice();
+        m_Device           = renderer->get_gpudevice();
         SDL_Window* window = renderer->get_window()->get_sdlwindow();
 
         auto shaderRepo = assetmanager->get_repository<Shader>();
@@ -76,7 +63,7 @@ namespace InnoEngine
 
         // Create the pipeline
         SDL_GPUColorTargetDescription colorTargets[ 1 ]     = {};
-        colorTargets[ 0 ].format                            = SDL_GetGPUSwapchainTextureFormat( m_device, window );
+        colorTargets[ 0 ].format                            = SDL_GetGPUSwapchainTextureFormat( m_Device, window );
         colorTargets[ 0 ].blend_state.src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
         colorTargets[ 0 ].blend_state.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
         colorTargets[ 0 ].blend_state.color_blend_op        = SDL_GPU_BLENDOP_ADD;
@@ -92,19 +79,9 @@ namespace InnoEngine
         pipelineCreateInfo.target_info.color_target_descriptions = colorTargets;
         pipelineCreateInfo.target_info.num_color_targets         = 1;
 
-        m_pipeline = SDL_CreateGPUGraphicsPipeline( m_device, &pipelineCreateInfo );
+        m_pipeline = SDL_CreateGPUGraphicsPipeline( m_Device, &pipelineCreateInfo );
         if ( m_pipeline == nullptr ) {
             IE_LOG_ERROR( "Failed to create pipeline!" );
-            return Result::InitializationError;
-        }
-
-        SDL_GPUTransferBufferCreateInfo tbufferCreateInfo = {};
-        tbufferCreateInfo.usage                           = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-        tbufferCreateInfo.size                            = SpriteBatchSizeMax * sizeof( Command::StructuredBufferLayout );
-
-        m_spriteTransferBuffer = SDL_CreateGPUTransferBuffer( m_device, &tbufferCreateInfo );
-        if ( m_spriteTransferBuffer == nullptr ) {
-            IE_LOG_ERROR( "Failed to create GPUTransferBuffer!" );
             return Result::InitializationError;
         }
 
@@ -116,29 +93,29 @@ namespace InnoEngine
         sampler_create_info.address_mode_v           = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
         sampler_create_info.address_mode_w           = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
 
-        m_defaultSampler = SDL_CreateGPUSampler( m_device, &sampler_create_info );
+        m_defaultSampler = SDL_CreateGPUSampler( m_Device, &sampler_create_info );
         if ( m_defaultSampler == nullptr ) {
             IE_LOG_ERROR( "Failed to create GPUSampler!" );
             return Result::InitializationError;
         }
 
-        m_batches.reserve( 100 );
+        m_GPUBatch = GPUBatchStorageBuffer<Command::StructuredBufferLayout, BatchData>::create( m_Device, MaxBatchSize);
 
-        m_initialized = true;
+        m_Initialized = true;
         return Result::Success;
     }
 
     void Sprite2DPipeline::prepare_render( const CommandList& command_list )
     {
-        IE_ASSERT( m_device != nullptr );
+        IE_ASSERT( m_Device != nullptr );
 
-        if (command_list.size() == 0)
+        if ( command_list.size() == 0 )
             return;
 
         sort_commands( command_list );
-        clear_batches();
+        m_GPUBatch->clear();
 
-        SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_device );
+        SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_Device );
         if ( gpu_copy_cmd_buf == nullptr ) {
             IE_LOG_ERROR( "AcquireGPUCommandBuffer failed: {}", SDL_GetError() );
             return;
@@ -146,47 +123,18 @@ namespace InnoEngine
 
         SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass( gpu_copy_cmd_buf );
 
-        Command::StructuredBufferLayout* uniform_data    = nullptr;
-        FrameBufferIndex        current_texture = -1;
-
-        bool       first_batch   = true;
-        BatchData* current_batch = nullptr;
-
+        FrameBufferIndex current_texture = -1;
         for ( const Command* command : m_sortedCommands ) {
-            // start new batch when changing texture or max batch size is reached (should be sorted by texture at this point)
-            if ( current_batch == nullptr || current_texture != command->texture_index || current_batch->command_count >= SpriteBatchSizeMax ) {
-                // unmap and upload previous batch data before changeing to new batch
-                if ( first_batch == false ) {
-                    SDL_UnmapGPUTransferBuffer( m_device, m_spriteTransferBuffer );
-                    SDL_GPUTransferBufferLocation tranferBufferLocation { .transfer_buffer = m_spriteTransferBuffer, .offset = 0 };
-                    SDL_GPUBufferRegion           bufferRegion { .buffer = get_gpubuffer_by_index( current_batch->buffer_index ),
-                                                                 .offset = 0,
-                                                                 .size   = static_cast<uint32_t>( current_batch->command_count * sizeof( Command::StructuredBufferLayout ) ) };
-                    SDL_UploadToGPUBuffer( copy_pass, &tranferBufferLocation, &bufferRegion, true );
-                    uniform_data = nullptr;
-                }
-
-                current_batch                = add_batch();
-                current_batch->texture_index = command->texture_index;
-                current_texture              = command->texture_index;
-
-                uniform_data = static_cast<Command::StructuredBufferLayout*>( SDL_MapGPUTransferBuffer( m_device, m_spriteTransferBuffer, true ) );
-                first_batch  = false;
+            if ( m_GPUBatch->current_batch_full() || current_texture != command->texture_index ) {
+                BatchData& batch_data    = m_GPUBatch->upload_and_add_batch( copy_pass );
+                batch_data.texture_index = command->texture_index;
+                current_texture          = command->texture_index;
             }
 
-            // add to batch
-            uniform_data[ current_batch->command_count++ ] = command->info;
+            Command::StructuredBufferLayout* buffer_data = m_GPUBatch->next_data();
+            *buffer_data                                 = command->info;
         }
-
-        // unmap and upload last batch data
-        if ( current_batch && current_batch->command_count > 0 ) {
-            SDL_UnmapGPUTransferBuffer( m_device, m_spriteTransferBuffer );
-            SDL_GPUTransferBufferLocation tranferBufferLocation { .transfer_buffer = m_spriteTransferBuffer, .offset = 0 };
-            SDL_GPUBufferRegion           bufferRegion { .buffer = get_gpubuffer_by_index( current_batch->buffer_index ),
-                                                         .offset = 0,
-                                                         .size   = static_cast<uint32_t>( current_batch->command_count * sizeof( Command::StructuredBufferLayout ) ) };
-            SDL_UploadToGPUBuffer( copy_pass, &tranferBufferLocation, &bufferRegion, true );
-        }
+        m_GPUBatch->upload_last( copy_pass );
 
         SDL_EndGPUCopyPass( copy_pass );
 
@@ -197,39 +145,33 @@ namespace InnoEngine
     }
 
     uint32_t Sprite2DPipeline::swapchain_render( const DXSM::Matrix&   view_projection,
-                                             const CommandList&    command_list,
-                                             const TextureList&    texture_list,
-                                             SDL_GPUCommandBuffer* gpu_cmd_buf,
-                                             SDL_GPURenderPass*    render_pass )
+                                                 const TextureList&    texture_list,
+                                                 SDL_GPUCommandBuffer* gpu_cmd_buf,
+                                                 SDL_GPURenderPass*    render_pass )
     {
-        (void)command_list;
-
-        IE_ASSERT( m_device != nullptr );
+        IE_ASSERT( m_Device != nullptr );
         IE_ASSERT( gpu_cmd_buf != nullptr && render_pass != nullptr );
 
-        uint32_t draw_calls = 0;
+        if ( m_GPUBatch->size() == 0 )
+            return 0;
 
         SDL_BindGPUGraphicsPipeline( render_pass, m_pipeline );
         SDL_PushGPUVertexUniformData( gpu_cmd_buf, 0, &view_projection, sizeof( DXSM::Matrix ) );
-
         SDL_BindGPUVertexBuffers( render_pass, 0, nullptr, 0 );
 
-        for ( size_t i = 0; i < m_batches.size(); ++i ) {
-
-            const BatchData& current_batch = m_batches[ i ];
-
-            auto gpuBuffer = get_gpubuffer_by_index( current_batch.buffer_index );
-            SDL_BindGPUVertexStorageBuffers( render_pass, 0, &gpuBuffer, 1 );
+        uint32_t draw_calls = 0;
+        for ( const auto& batch_data : m_GPUBatch->get_batchlist() ) {
+            SDL_BindGPUVertexStorageBuffers( render_pass, 0, &batch_data.GPUBuffer, 1 );
 
             SDL_GPUTextureSamplerBinding texture_sampler_binding = {};
             texture_sampler_binding.sampler                      = m_defaultSampler;
-            texture_sampler_binding.texture                      = texture_list[ current_batch.texture_index ]->get_sdltexture();
-
+            texture_sampler_binding.texture                      = texture_list[ batch_data.CustomData.texture_index ]->get_sdltexture();
             SDL_BindGPUFragmentSamplers( render_pass, 0, &texture_sampler_binding, 1 );
 
-            SDL_DrawGPUPrimitives( render_pass, current_batch.command_count * 6, 1, 0, 0 );
+            SDL_DrawGPUPrimitives( render_pass, batch_data.Count * 6, 1, 0, 0 );
             ++draw_calls;
         }
+
         return draw_calls;
     }
 
@@ -253,44 +195,5 @@ namespace InnoEngine
 
             return false;
         } );
-    }
-
-    Sprite2DPipeline::BatchData* Sprite2DPipeline::add_batch()
-    {
-        Sprite2DPipeline::BatchData& newbatch = m_batches.emplace_back();
-        newbatch.buffer_index                 = find_free_gpubuffer();
-        newbatch.command_count                        = 0;
-        return &newbatch;
-    }
-
-    void Sprite2DPipeline::clear_batches()
-    {
-        m_batches.clear();
-        m_gpuBuffer_used = 0;
-    }
-
-    uint32_t Sprite2DPipeline::find_free_gpubuffer()
-    {
-        if ( m_gpuBuffer_used < m_gpuBuffer.size() )
-            return m_gpuBuffer_used++;
-
-        auto&                   buffer     = m_gpuBuffer.emplace_back();
-        SDL_GPUBufferCreateInfo createInfo = {};
-        createInfo.usage                   = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ;
-        createInfo.size                    = SpriteBatchSizeMax * sizeof( Command::StructuredBufferLayout );
-
-        buffer = SDL_CreateGPUBuffer( m_device, &createInfo );
-        if ( buffer == nullptr ) {
-            // TODO: this needs to be handled better
-            IE_LOG_ERROR( "SDL_CreateGPUBuffer failed : {0}", SDL_GetError() );
-            return 0;
-        }
-        return m_gpuBuffer_used++;
-    }
-
-    SDL_GPUBuffer* Sprite2DPipeline::get_gpubuffer_by_index( uint32_t index ) const
-    {
-        IE_ASSERT( index < m_gpuBuffer_used );
-        return m_gpuBuffer[ index ];
     }
 }    // namespace InnoEngine

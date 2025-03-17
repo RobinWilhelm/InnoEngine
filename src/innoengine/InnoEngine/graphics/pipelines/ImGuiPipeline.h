@@ -66,7 +66,7 @@ namespace InnoEngine
         void create_or_resize_buffer( SDL_GPUBuffer** buffer, uint32_t* old_size, uint32_t new_size, SDL_GPUBufferUsageFlags usage );
 
     private:
-        GPUDeviceRef m_device      = nullptr;
-        bool         m_initialized = false;
+        GPUDeviceRef m_Device      = nullptr;
+        bool         m_Initialized = false;
     };
 }    // namespace InnoEngine

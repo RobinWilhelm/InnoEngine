@@ -38,7 +38,7 @@ namespace InnoEngine
 
     ImGuiPipeline::~ImGuiPipeline()
     {
-        if ( m_initialized ) {
+        if ( m_Initialized ) {
             ImGui_ImplSDL3_Shutdown();
             ImGui_ImplSDLGPU3_Shutdown();
             ImGui::DestroyContext();
@@ -48,10 +48,10 @@ namespace InnoEngine
     Result ImGuiPipeline::initialize( GPURenderer* renderer )
     {
         IE_ASSERT( renderer != nullptr && renderer->get_window() != nullptr );
-        if ( m_initialized )
+        if ( m_Initialized )
             return Result::AlreadyInitialized;
 
-        m_device = renderer->get_gpudevice();
+        m_Device = renderer->get_gpudevice();
 
         // Setup Dear ImGui context
         ImGui::CreateContext();
@@ -67,17 +67,17 @@ namespace InnoEngine
         ImGui_ImplSDL3_InitForSDLGPU( renderer->get_window()->get_sdlwindow() );
         ImGui_ImplSDLGPU3_InitInfo init_info = {};
         init_info.Device                     = renderer->get_gpudevice();
-        init_info.ColorTargetFormat          = SDL_GetGPUSwapchainTextureFormat( m_device, renderer->get_window()->get_sdlwindow() );
+        init_info.ColorTargetFormat          = SDL_GetGPUSwapchainTextureFormat( m_Device, renderer->get_window()->get_sdlwindow() );
         init_info.MSAASamples                = SDL_GPU_SAMPLECOUNT_1;
         ImGui_ImplSDLGPU3_Init( &init_info );
 
-        m_initialized = true;
+        m_Initialized = true;
         return Result::Success;
     }
 
     void ImGuiPipeline::prepare_render( const CommandData& command_data )
     {
-        IE_ASSERT( m_device != nullptr );
+        IE_ASSERT( m_Device != nullptr );
 
         // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
         int fb_width  = (int)(command_data.DisplaySize.x * command_data.FrameBufferScale.x);
@@ -88,7 +88,7 @@ namespace InnoEngine
         if (ImGui::GetCurrentContext() == nullptr)
             return;
 
-        SDL_GPUCommandBuffer* copyCmdbuf = SDL_AcquireGPUCommandBuffer( m_device );
+        SDL_GPUCommandBuffer* copyCmdbuf = SDL_AcquireGPUCommandBuffer( m_Device );
         if ( copyCmdbuf == nullptr ) {
             IE_LOG_ERROR( "AcquireGPUCommandBuffer failed: {}", SDL_GetError() );
             return;
@@ -112,21 +112,21 @@ namespace InnoEngine
         index_transferbuffer_info.usage                            = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
         index_transferbuffer_info.size                             = index_size;
 
-        SDL_GPUTransferBuffer* vertex_transferbuffer = SDL_CreateGPUTransferBuffer( m_device, &vertex_transferbuffer_info );
+        SDL_GPUTransferBuffer* vertex_transferbuffer = SDL_CreateGPUTransferBuffer( m_Device, &vertex_transferbuffer_info );
         IM_ASSERT( vertex_transferbuffer != nullptr && "Failed to create the vertex transfer buffer, call SDL_GetError() for more information" );
-        SDL_GPUTransferBuffer* index_transferbuffer = SDL_CreateGPUTransferBuffer( m_device, &index_transferbuffer_info );
+        SDL_GPUTransferBuffer* index_transferbuffer = SDL_CreateGPUTransferBuffer( m_Device, &index_transferbuffer_info );
         IM_ASSERT( index_transferbuffer != nullptr && "Failed to create the index transfer buffer, call SDL_GetError() for more information" );
 
-        ImDrawVert* vtx_dst = (ImDrawVert*)SDL_MapGPUTransferBuffer( m_device, vertex_transferbuffer, true );
-        ImDrawIdx*  idx_dst = (ImDrawIdx*)SDL_MapGPUTransferBuffer( m_device, index_transferbuffer, true );
+        ImDrawVert* vtx_dst = (ImDrawVert*)SDL_MapGPUTransferBuffer( m_Device, vertex_transferbuffer, true );
+        ImDrawIdx*  idx_dst = (ImDrawIdx*)SDL_MapGPUTransferBuffer( m_Device, index_transferbuffer, true );
         for ( const auto& cmdList : command_data.RenderCommandLists ) {
             memcpy( vtx_dst, cmdList.VertexBuffer.Data, cmdList.VertexBuffer.Size * sizeof( ImDrawVert ) );
             memcpy( idx_dst, cmdList.IndexBuffer.Data, cmdList.IndexBuffer.Size * sizeof( ImDrawIdx ) );
             vtx_dst += cmdList.VertexBuffer.Size;
             idx_dst += cmdList.IndexBuffer.Size;
         }
-        SDL_UnmapGPUTransferBuffer( m_device, vertex_transferbuffer );
-        SDL_UnmapGPUTransferBuffer( m_device, index_transferbuffer );
+        SDL_UnmapGPUTransferBuffer( m_Device, vertex_transferbuffer );
+        SDL_UnmapGPUTransferBuffer( m_Device, index_transferbuffer );
 
         SDL_GPUTransferBufferLocation vertex_buffer_location = {};
         vertex_buffer_location.offset                        = 0;
@@ -149,8 +149,8 @@ namespace InnoEngine
         SDL_UploadToGPUBuffer( copy_pass, &vertex_buffer_location, &vertex_buffer_region, true );
         SDL_UploadToGPUBuffer( copy_pass, &index_buffer_location, &index_buffer_region, true );
         SDL_EndGPUCopyPass( copy_pass );
-        SDL_ReleaseGPUTransferBuffer( m_device, index_transferbuffer );
-        SDL_ReleaseGPUTransferBuffer( m_device, vertex_transferbuffer );
+        SDL_ReleaseGPUTransferBuffer( m_Device, index_transferbuffer );
+        SDL_ReleaseGPUTransferBuffer( m_Device, vertex_transferbuffer );
 
         if ( SDL_SubmitGPUCommandBuffer( copyCmdbuf ) == false ) {
             IE_LOG_ERROR( "SDL_SubmitGPUCommandBuffer failed: {}", SDL_GetError() );

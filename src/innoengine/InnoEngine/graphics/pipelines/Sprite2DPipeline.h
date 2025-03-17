@@ -5,6 +5,8 @@
 #include "InnoEngine/graphics/GPUDeviceRef.h"
 
 #include "InnoEngine/graphics/Texture2D.h"
+#include "InnoEngine/graphics/GPUBatchBuffer.h"
+
 
 #include <string>
 #include <memory>
@@ -20,8 +22,6 @@ namespace InnoEngine
         struct BatchData
         {
             FrameBufferIndex texture_index = -1;
-            uint32_t         buffer_index  = 0;
-            uint32_t         command_count         = 0;
         };
 
         struct Command
@@ -55,7 +55,6 @@ namespace InnoEngine
         Result initialize( GPURenderer* renderer, AssetManager* assetmanager );
         void   prepare_render( const CommandList& command_list );
         uint32_t swapchain_render( const DXSM::Matrix&   view_projection,
-                                   const CommandList&    command_list,
                                    const TextureList&    texture_list,
                                    SDL_GPUCommandBuffer* cmdbuf,
                                    SDL_GPURenderPass*    renderPass );
@@ -70,18 +69,15 @@ namespace InnoEngine
         void sort_commands( const CommandList& command_list );
 
     private:
-        bool                     m_initialized    = false;
-        GPUDeviceRef             m_device         = nullptr;
+        bool                     m_Initialized    = false;
+        GPUDeviceRef             m_Device         = nullptr;
         SDL_GPUGraphicsPipeline* m_pipeline       = nullptr;
         SDL_GPUSampler*          m_defaultSampler = nullptr;
 
         std::vector<const Command*> m_sortedCommands;    // objects owned by the RenderCommandBuffer
 
-        SDL_GPUTransferBuffer* m_spriteTransferBuffer = nullptr;
-
-        std::vector<SDL_GPUBuffer*> m_gpuBuffer;
-        uint32_t                    m_gpuBuffer_used = 0;
-        std::vector<BatchData>      m_batches;
+        static constexpr uint32_t MaxBatchSize = 20000;
+        Ref<GPUBatchStorageBuffer<Command::StructuredBufferLayout, BatchData>> m_GPUBatch;
     };
 
     using SpriteCommandBuffer = Sprite2DPipeline::CommandList;

@@ -36,7 +36,7 @@ namespace InnoEngine
         Ref<Texture2D> m_atlasTexture;
         Ref<MSDFData>  m_msdfData;
 
-        bool  m_initialized         = false;
+        bool  m_Initialized         = false;
 
         FrameBufferIndex m_frameBufferIndex = -1;
     };

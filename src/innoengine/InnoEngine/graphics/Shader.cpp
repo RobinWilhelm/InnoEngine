@@ -13,7 +13,7 @@ namespace InnoEngine
     Shader::~Shader()
     {
         if ( m_sdlShader != nullptr ) {
-            SDL_ReleaseGPUShader( m_device, m_sdlShader );
+            SDL_ReleaseGPUShader( m_Device, m_sdlShader );
             m_sdlShader = nullptr;
         }
     }
@@ -74,7 +74,7 @@ namespace InnoEngine
             return Result::Fail;
         }
 
-        m_sdlShader = SDL_CreateGPUShader( m_device, &sdl_shadercreateinfo );
+        m_sdlShader = SDL_CreateGPUShader( m_Device, &sdl_shadercreateinfo );
         SDL_free( shader_data );
 
         IE_LOG_DEBUG("Loaded shader \"{}\"", full_path.string());

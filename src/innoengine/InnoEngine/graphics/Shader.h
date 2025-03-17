@@ -24,7 +24,7 @@ namespace InnoEngine
         friend class AssetRepository<Shader>;
 
         Shader() :
-            m_device( CoreAPI::get_gpurenderer()->get_gpudevice() ) { };
+            m_Device( CoreAPI::get_gpurenderer()->get_gpudevice() ) { };
 
     public:
         virtual ~Shader();
@@ -39,7 +39,7 @@ namespace InnoEngine
     private:
         static ShaderFormatInfo ms_shaderFormat;
 
-        GPUDeviceRef       m_device    = nullptr;
+        GPUDeviceRef       m_Device    = nullptr;
         SDL_GPUShader*     m_sdlShader = nullptr;
         SDL_GPUShaderStage m_stage = SDL_GPUShaderStage::SDL_GPU_SHADERSTAGE_VERTEX;
     };
