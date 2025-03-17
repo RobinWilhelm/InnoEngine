@@ -108,6 +108,10 @@ namespace InnoEngine
     void Font2DPipeline::prepare_render( const CommandList& command_list, const FontList& font_list, const StringArena& string_buffer )
     {
         IE_ASSERT( m_Device != nullptr );
+
+        if ( command_list.size() == 0 )
+            return;
+
         sort_commands( command_list );
         m_GPUBatch->clear();
 
@@ -116,23 +120,21 @@ namespace InnoEngine
             IE_LOG_ERROR( "AcquireGPUCommandBuffer failed: {}", SDL_GetError() );
             return;
         }
+
         SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass( gpu_copy_cmd_buf );
 
-        FrameBufferIndex current_texture = -1;
-
-        Ref<Font>     font      = nullptr;
-        Ref<MSDFData> msdf_data = nullptr;
-
-        float texel_width  = 0.0f;
-        float texel_height = 0.0f;
-
-        double spaceGlyphAdvance = 0.0f;
-        double fsScale           = 0.0f;
-
-        const msdf_atlas::FontGeometry* fontGeometry = nullptr;
-        const msdfgen::FontMetrics*     metrics      = nullptr;
+        // current font data
+        Ref<Font>                       font              = nullptr;
+        Ref<MSDFData>                   msdf_data         = nullptr;
+        float                           texel_width       = 0.0f;
+        float                           texel_height      = 0.0f;
+        double                          spaceGlyphAdvance = 0.0f;
+        double                          scale             = 0.0f;
+        const msdf_atlas::FontGeometry* font_geometry     = nullptr;
+        const msdfgen::FontMetrics*     metrics           = nullptr;
 
         // each command represents one string
+        FrameBufferIndex current_texture = -1;
         for ( const Command* command : m_sortedCommands ) {
 
             // check if have to switch to a new batch
@@ -143,16 +145,16 @@ namespace InnoEngine
 
                 // font change?
                 if ( current_texture != command->font_fbidx ) {
-                    font         = font_list[ command->font_fbidx ];
-                    msdf_data    = font->get_msdf_data();
-                    fontGeometry = &msdf_data->FontGeo;
-                    metrics      = &fontGeometry->getMetrics();
+                    font          = font_list[ command->font_fbidx ];
+                    msdf_data     = font->get_msdf_data();
+                    font_geometry = &msdf_data->FontGeo;
+                    metrics       = &font_geometry->getMetrics();
 
                     texel_width  = 1.0f / font->get_atlas_texture()->width();
                     texel_height = 1.0f / font->get_atlas_texture()->height();
 
                     spaceGlyphAdvance = msdf_data->get_glyph( ' ' )->getAdvance();
-                    fsScale           = 1.0 / ( metrics->ascenderY - metrics->descenderY ) * command->font_size;
+                    scale             = 1.0 / ( metrics->ascenderY - metrics->descenderY ) * command->font_size;
 
                     current_texture = command->font_fbidx;
                 }
@@ -173,7 +175,7 @@ namespace InnoEngine
 
                 if ( character == '\n' ) {
                     x = command->x;
-                    y += fsScale * metrics->lineHeight;
+                    y += scale * metrics->lineHeight;
                     continue;
                 }
 
@@ -184,12 +186,12 @@ namespace InnoEngine
                         msdf_data->get_advance( advance, character, nextCharacter );
                     }
 
-                    x += fsScale * advance;
+                    x += scale * advance;
                     continue;
                 }
 
                 if ( character == '\t' ) {
-                    x += 4.0 * ( fsScale * spaceGlyphAdvance );
+                    x += 4.0 * ( scale * spaceGlyphAdvance );
                     continue;
                 }
 
@@ -210,10 +212,10 @@ namespace InnoEngine
 
                 double pl, pb, pr, pt;
                 glyph->getQuadPlaneBounds( pl, pb, pr, pt );
-                buffer_data->destination.x = static_cast<float>( x + pl * fsScale );
-                buffer_data->destination.y = static_cast<float>( y + ( pb * fsScale ) * -1 );
-                buffer_data->destination.z = static_cast<float>( x + pr * fsScale );
-                buffer_data->destination.w = static_cast<float>( y + ( pt * fsScale ) * -1 );
+                buffer_data->destination.x = static_cast<float>( x + pl * scale );
+                buffer_data->destination.y = static_cast<float>( y + ( pb * scale ) * -1 );
+                buffer_data->destination.z = static_cast<float>( x + pr * scale );
+                buffer_data->destination.w = static_cast<float>( y + ( pt * scale ) * -1 );
 
                 buffer_data->color            = command->color;
                 buffer_data->depth            = command->depth;
@@ -224,7 +226,7 @@ namespace InnoEngine
                     char   nextCharacter = text[ i + 1 ];
                     msdf_data->get_advance( advance, character, nextCharacter );
                     // fontGeometry->getAdvance(advance, character, nextCharacter);
-                    x += fsScale * advance;
+                    x += scale * advance;
                 }
             }
         }
