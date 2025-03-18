@@ -5,6 +5,7 @@
 #include "InnoEngine/graphics/pipelines/Sprite2DPipeline.h"
 #include "InnoEngine/graphics/pipelines/Font2DPipeline.h"
 #include "InnoEngine/graphics/pipelines/ImGuiPipeline.h"
+#include "InnoEngine/graphics/pipelines/Primitive2DPipeline.h"
 
 #include "InnoEngine/utility/StringArena.h"
 
@@ -34,6 +35,9 @@ namespace InnoEngine
         TextureList TextureRegister;    // hold a reference to all texture objects we are going to use this frame
 
         SpriteCommandBuffer SpriteRenderCommands;
+        QuadCommandBuffer   QuadRenderCommands;
+        LineCommandBuffer   LineRenderCommands;
+        CircleCommandBuffer CircleRenderCommands;
 
         StringArena       StringBuffer;    // arena like container to hold a copy of all strings we are going to render this frame
         FontList          FontRegister;    // hold a reference to all font objects we are going to use this frame
@@ -42,14 +46,14 @@ namespace InnoEngine
         ImGuiPipeline::CommandData ImGuiCommandBuffer;
 
         size_t SpriteDrawCalls;
+        size_t PrimitivesDrawCalls;
         size_t FontDrawCalls;
         size_t ImGuiDrawCalls;
 
         RenderCommandBuffer();
         RenderCommandBuffer& operator=( RenderCommandBuffer& other );
-       
 
-        void clear();
+        void         clear();
         const Stats& get_stats() const;
     };
 

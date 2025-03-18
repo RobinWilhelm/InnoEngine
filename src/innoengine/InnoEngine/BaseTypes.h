@@ -62,6 +62,16 @@ namespace InnoEngine
 
     using FrameBufferIndex = int32_t;
 
+
+    enum class Origin
+    {
+        Middle = 0,
+        TopLeft,
+        TopRight,
+        BottomLeft,
+        BottomRight,
+    };
+
     template <typename T>
     class RenderCommandQueue
     {

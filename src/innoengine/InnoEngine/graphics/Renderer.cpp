@@ -35,22 +35,29 @@ namespace InnoEngine
 
             Result result = Result::Fail;
 
-            m_sprite2DPipeline = std::make_unique<Sprite2DPipeline>();
-            result             = m_sprite2DPipeline->initialize( renderer, assetmanager );
+            m_Sprite2DPipeline = std::make_unique<Sprite2DPipeline>();
+            result             = m_Sprite2DPipeline->initialize( renderer, assetmanager );
             if ( IE_FAILED( result ) ) {
                 IE_LOG_CRITICAL( "Failed to initialze Sprite pipeline! Errorcode: {}", static_cast<uint32_t>( result ) );
                 return result;
             }
 
-            m_font2DPipeline = std::make_unique<Font2DPipeline>();
-            result           = m_font2DPipeline->initialize( renderer, assetmanager );
+            m_PrimitivePipeline = std::make_unique<Primitive2DPipeline>();
+            result              = m_PrimitivePipeline->initialize( renderer, assetmanager );
+            if ( IE_FAILED( result ) ) {
+                IE_LOG_CRITICAL( "Failed to initialze Primitives pipeline! Errorcode: {}", static_cast<uint32_t>( result ) );
+                return result;
+            }
+
+            m_Font2DPipeline = std::make_unique<Font2DPipeline>();
+            result           = m_Font2DPipeline->initialize( renderer, assetmanager );
             if ( IE_FAILED( result ) ) {
                 IE_LOG_CRITICAL( "Failed to initialze Font pipeline! Errorcode: {}", static_cast<uint32_t>( result ) );
                 return result;
             }
 
-            m_imguiPipeline = std::make_unique<ImGuiPipeline>();
-            result          = m_imguiPipeline->initialize( renderer );
+            m_ImGuiPipeline = std::make_unique<ImGuiPipeline>();
+            result          = m_ImGuiPipeline->initialize( renderer );
             if ( IE_FAILED( result ) ) {
                 IE_LOG_CRITICAL( "Failed to initialze ImGui pipeline! Errorcode: {}", static_cast<uint32_t>( result ) );
                 return result;
@@ -65,13 +72,15 @@ namespace InnoEngine
             IE_ASSERT( m_Initialized );
             RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
 
-            m_sprite2DPipeline->prepare_render( render_cmd_buf.SpriteRenderCommands );
+            m_Sprite2DPipeline->prepare_render( render_cmd_buf.SpriteRenderCommands );
 
-            m_font2DPipeline->prepare_render( render_cmd_buf.FontRenderCommands,
+            m_PrimitivePipeline->prepare_render( render_cmd_buf.QuadRenderCommands );
+
+            m_Font2DPipeline->prepare_render( render_cmd_buf.FontRenderCommands,
                                               render_cmd_buf.FontRegister,
                                               render_cmd_buf.StringBuffer );
 
-            m_imguiPipeline->prepare_render( render_cmd_buf.ImGuiCommandBuffer );
+            m_ImGuiPipeline->prepare_render( render_cmd_buf.ImGuiCommandBuffer );
         }
 
         void render( SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass )
@@ -79,42 +88,47 @@ namespace InnoEngine
             IE_ASSERT( m_Initialized );
             RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
 
-            render_cmd_buf.SpriteDrawCalls = m_sprite2DPipeline->swapchain_render( render_cmd_buf.CameraMatrix,
+            render_cmd_buf.SpriteDrawCalls = m_Sprite2DPipeline->swapchain_render( render_cmd_buf.CameraMatrix,
                                                                                    render_cmd_buf.TextureRegister,
                                                                                    gpu_cmd_buf,
                                                                                    render_pass );
 
-            render_cmd_buf.FontDrawCalls = m_font2DPipeline->swapchain_render( render_cmd_buf.CameraMatrix,
+            render_cmd_buf.PrimitivesDrawCalls = m_PrimitivePipeline->swapchain_render( render_cmd_buf.CameraMatrix,
+                                                                                        gpu_cmd_buf,
+                                                                                        render_pass );
+
+            render_cmd_buf.FontDrawCalls = m_Font2DPipeline->swapchain_render( render_cmd_buf.CameraMatrix,
                                                                                render_cmd_buf.FontRegister,
                                                                                gpu_cmd_buf,
                                                                                render_pass );
 
-            render_cmd_buf.ImGuiDrawCalls = m_imguiPipeline->swapchain_render( render_cmd_buf.ImGuiCommandBuffer,
+            render_cmd_buf.ImGuiDrawCalls = m_ImGuiPipeline->swapchain_render( render_cmd_buf.ImGuiCommandBuffer,
                                                                                gpu_cmd_buf,
                                                                                render_pass );
         }
 
         RenderCommandBuffer& get_command_buffer_for_collecting()
         {
-            return m_renderCommandBuffer.get_first();
+            return m_RenderCommandBuffer.get_first();
         }
 
         RenderCommandBuffer& get_command_buffer_for_rendering()
         {
-            return m_renderCommandBuffer.get_second();
+            return m_RenderCommandBuffer.get_second();
         }
 
         void on_synchronize()
         {
-            m_renderCommandBuffer.swap();
+            m_RenderCommandBuffer.swap();
             get_command_buffer_for_collecting().clear();
         }
 
     private:
-        DoubleBuffered<RenderCommandBuffer> m_renderCommandBuffer;
-        Own<Sprite2DPipeline>               m_sprite2DPipeline;
-        Own<Font2DPipeline>                 m_font2DPipeline;
-        Own<ImGuiPipeline>                  m_imguiPipeline;
+        DoubleBuffered<RenderCommandBuffer> m_RenderCommandBuffer;
+        Own<Sprite2DPipeline>               m_Sprite2DPipeline;
+        Own<Font2DPipeline>                 m_Font2DPipeline;
+        Own<ImGuiPipeline>                  m_ImGuiPipeline;
+        Own<Primitive2DPipeline>            m_PrimitivePipeline;
         bool                                m_Initialized = false;
     };
 
@@ -122,6 +136,11 @@ namespace InnoEngine
     {
         if ( m_sdlGPUDevice ) {
             wait_for_gpu_idle();
+
+            if ( m_DepthTexture ) {
+                SDL_ReleaseGPUTexture( m_sdlGPUDevice, m_DepthTexture );
+                m_DepthTexture = nullptr;
+            }
 
             m_pipelineProcessor.reset();
 
@@ -144,9 +163,6 @@ namespace InnoEngine
     {
         Own<GPURenderer> renderer( new GPURenderer() );
 
-        bool res = SDL_Vulkan_LoadLibrary( nullptr );
-        (void)res;
-
         const char* driver       = nullptr;
         bool        debug_device = false;
 
@@ -167,11 +183,6 @@ namespace InnoEngine
 
         IE_LOG_DEBUG( "Selected gpu driver: {}", renderer->get_devicedriver() );
 
-        if ( renderer->m_sdlGPUDevice == nullptr ) {
-            IE_LOG_CRITICAL( "GPUCreateDevice failed" );
-            return std::nullopt;
-        }
-
         renderer->m_pipelineProcessor = std::make_unique<PipelineProcessor>();
         renderer->retrieve_shaderformatinfo();
         return renderer;
@@ -189,6 +200,22 @@ namespace InnoEngine
             if ( !SDL_ClaimWindowForGPUDevice( m_sdlGPUDevice, m_window->get_sdlwindow() ) ) {
                 IE_LOG_CRITICAL( "GPUClaimWindow failed! Errorcode: {}", SDL_GetError() );
                 return Result::InitializationError;
+            }
+
+            SDL_GPUTextureCreateInfo depthtexture_createinfo = {};
+
+            depthtexture_createinfo.usage                = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET;
+            depthtexture_createinfo.format               = SDL_GPU_TEXTUREFORMAT_D16_UNORM;
+            depthtexture_createinfo.width                = m_window->width();
+            depthtexture_createinfo.height               = m_window->height();
+            depthtexture_createinfo.num_levels           = 1;
+            depthtexture_createinfo.layer_count_or_depth = 1;
+            depthtexture_createinfo.type                 = SDL_GPU_TEXTURETYPE_2D;
+
+            m_DepthTexture = SDL_CreateGPUTexture( m_sdlGPUDevice, &depthtexture_createinfo );
+            if ( m_DepthTexture == nullptr ) {
+                IE_LOG_ERROR( "Failed to create depth texture: {}", SDL_GetError() );
+                return Result::Fail;
             }
         }
 
@@ -268,16 +295,16 @@ namespace InnoEngine
             font->m_frameBufferIndex = -1;
 #endif
         m_pipelineProcessor->on_synchronize();
+
+        set_layer( 0 );
     }
 
     void GPURenderer::render()
     {
         IE_ASSERT( m_Initialized );
-        // std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        //  dont render when minimized
+
+        // dont render when minimized
         if ( m_window && SDL_GetWindowFlags( m_window->get_sdlwindow() ) & SDL_WINDOW_MINIMIZED ) {
-            // if ( m_doubleBuffered == false )
-            // m_pipelineProcessor->get_command_buffer_for_rendering().clear();
             return;
         }
 
@@ -311,13 +338,19 @@ namespace InnoEngine
             profiler->stop( ProfilePoint::GPUSwapChainWait );
 
             if ( swapchainTexture != nullptr ) {
-                SDL_GPUColorTargetInfo color_target_info = {};
-                color_target_info.texture                = swapchainTexture;
-                color_target_info.clear_color            = { render_commands.ClearColor.R(), render_commands.ClearColor.G(), render_commands.ClearColor.B(), render_commands.ClearColor.A() };
-                color_target_info.load_op                = render_commands.Clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
-                color_target_info.store_op               = SDL_GPU_STOREOP_STORE;
+                SDL_GPUDepthStencilTargetInfo depth_stencil = {};
+                depth_stencil.texture                       = m_DepthTexture;
+                depth_stencil.clear_depth                   = 0;
+                depth_stencil.load_op                       = SDL_GPU_LOADOP_CLEAR;
+                depth_stencil.store_op                      = SDL_GPU_STOREOP_STORE;
 
-                SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass( gpu_cmd_buf, &color_target_info, 1, nullptr );
+                SDL_GPUColorTargetInfo color_target = {};
+                color_target.texture                = swapchainTexture;
+                color_target.clear_color            = { render_commands.ClearColor.R(), render_commands.ClearColor.G(), render_commands.ClearColor.B(), render_commands.ClearColor.A() };
+                color_target.load_op                = render_commands.Clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
+                color_target.store_op               = SDL_GPU_STOREOP_STORE;
+
+                SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass( gpu_cmd_buf, &color_target, 1, &depth_stencil );
                 m_pipelineProcessor->render( gpu_cmd_buf, render_pass );
                 SDL_EndGPURenderPass( render_pass );
             }
@@ -379,38 +412,80 @@ namespace InnoEngine
         RenderCommandBuffer&       render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
         Sprite2DPipeline::Command& cmd            = render_cmd_buf.SpriteRenderCommands.emplace_back();
 
-        cmd.texture_index        = sprite.m_texture->m_frameBufferIndex;
-        cmd.info.x               = sprite.m_position.x;
-        cmd.info.y               = sprite.m_position.y;
-        cmd.info.z               = sprite.m_layer;
-        cmd.info.rotation        = DirectX::XMConvertToRadians( sprite.m_rotationDegrees );
-        cmd.info.width           = sprite.m_scale.x * sprite.m_texture->m_width;
-        cmd.info.height          = sprite.m_scale.y * sprite.m_texture->m_height;
-        cmd.info.origin_offset_x = sprite.m_originOffset.x * cmd.info.width;
-        cmd.info.origin_offset_y = sprite.m_originOffset.y * cmd.info.height;
-        cmd.info.source          = sprite.m_sourceRect;
-        cmd.info.color           = sprite.m_color;
+        cmd.TextureIndex      = sprite.m_texture->m_frameBufferIndex;
+        cmd.info.Position     = sprite.m_position;
+        cmd.info.Size         = { sprite.m_scale.x * sprite.m_texture->m_width, sprite.m_scale.y * sprite.m_texture->m_height };
+        cmd.info.OriginOffset = sprite.m_originOffset * cmd.info.Size;
+        cmd.info.SourceRect   = sprite.m_sourceRect;
+        cmd.info.Color        = sprite.m_color;
+        cmd.info.Depth        = m_CurrentLayerDepth;
+        cmd.info.Rotation     = DirectX::XMConvertToRadians( sprite.m_rotationDegrees );
     }
 
-    void GPURenderer::add_texture( Ref<Texture2D> texture, float x, float y, uint32_t layer, float rotation, DXSM::Color color, float scale )
+    void GPURenderer::add_pixel( const DXSM::Vector2& position, const DXSM::Color& color )
     {
-        (void)color;
+        add_quad( position,
+                  { 1.0f, 1.0f },
+                  0.0f,
+                  color );
+    }
+
+    void GPURenderer::add_quad( const DXSM::Vector2& position, const DXSM::Vector2& size, float rotation, const DXSM::Color& color )
+    {
+        RenderCommandBuffer&              render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
+        Primitive2DPipeline::QuadCommand& cmd            = render_cmd_buf.QuadRenderCommands.emplace_back();
+
+        cmd.Position = position;
+        cmd.Size     = size;
+        cmd.Depth    = m_CurrentLayerDepth;
+        cmd.Rotation = DirectX::XMConvertToRadians( rotation );
+        cmd.Color    = color;
+    }
+
+    void GPURenderer::add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector2& position )
+    {
+        add_textured_quad( texture,
+                           position,
+                           { 1.0f, 1.0f },
+                           0.0f,
+                           { 1.0f, 1.0f, 1.0f, 1.0f } );
+    }
+
+    void GPURenderer::add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color )
+    {
+        add_textured_quad( texture,
+                           { 1.0f, 1.0f, 1.0f, 1.0f },
+                           position,
+                           scale,
+                           rotation,
+                           color );
+    }
+
+    void GPURenderer::add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector4& source_rect, const DXSM::Vector2& position )
+    {
+        add_textured_quad( texture,
+                           source_rect,
+                           position,
+                           { 1.0f, 1.0f },
+                           0.0f,
+                           { 1.0f, 1.0f, 1.0f, 1.0f } );
+    }
+
+    void GPURenderer::add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector4& source_rect, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color )
+    {
         IE_ASSERT( texture != nullptr && texture->m_frameBufferIndex >= 0 );
 
         RenderCommandBuffer&       render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
         Sprite2DPipeline::Command& cmd            = render_cmd_buf.SpriteRenderCommands.emplace_back();
 
-        cmd.texture_index        = texture->m_frameBufferIndex;
-        cmd.info.x               = x;
-        cmd.info.y               = y;
-        cmd.info.z               = layer;
-        cmd.info.rotation        = DirectX::XMConvertToRadians( rotation );
-        cmd.info.width           = scale * texture->m_width;
-        cmd.info.height          = scale * texture->m_height;
-        cmd.info.origin_offset_x = 0.5f * cmd.info.width;
-        cmd.info.origin_offset_y = 0.5f * cmd.info.height;
-        cmd.info.source          = DXSM::Vector4( 0.0f, 0.0f, 1.0f, 1.0f );
-        cmd.info.color           = color;
+        cmd.TextureIndex      = texture->m_frameBufferIndex;
+        cmd.info.Position     = position;
+        cmd.info.Size         = { scale.x * texture->m_width, scale.y * texture->m_height };
+        cmd.info.OriginOffset = cmd.info.Size * 0.5f;
+        cmd.info.SourceRect   = source_rect;
+        cmd.info.Color        = color;
+        cmd.info.Depth        = m_CurrentLayerDepth;
+        cmd.info.Rotation     = DirectX::XMConvertToRadians( rotation );
     }
 
     void GPURenderer::add_imgui_draw_data( ImDrawData* draw_data )
@@ -436,26 +511,42 @@ namespace InnoEngine
         }
     }
 
+    uint16_t GPURenderer::next_layer()
+    {
+        m_CurrentLayerDepth = transform_layer_to_depth( ++m_CurrentLayer );
+        return m_CurrentLayer;
+    }
+
+    void GPURenderer::set_layer( uint16_t layer )
+    {
+        m_CurrentLayer      = layer;
+        m_CurrentLayerDepth = transform_layer_to_depth( m_CurrentLayer );
+    }
+
+    float GPURenderer::transform_layer_to_depth( uint16_t layer )
+    {
+        return layer == 0 ? 0.0f : static_cast<float>( layer ) / 65536.0f;
+    }
+
     const RenderCommandBuffer* GPURenderer::get_render_command_buffer() const
     {
         return &m_pipelineProcessor->get_command_buffer_for_collecting();
     }
 
-    void GPURenderer::add_text( const Font* font, float x, float y, uint32_t size, std::string_view text, DXSM::Color color, uint16_t layer )
+    void GPURenderer::add_text( const Font* font, const DXSM::Vector2& position, uint32_t size, std::string_view text, DXSM::Color color )
     {
         IE_ASSERT( font != nullptr && font->m_frameBufferIndex >= 0 );
 
         RenderCommandBuffer&     render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
         Font2DPipeline::Command& cmd            = render_cmd_buf.FontRenderCommands.emplace_back();
 
-        cmd.font_fbidx   = font->m_frameBufferIndex;
-        cmd.string_index = render_cmd_buf.StringBuffer.insert( text );
-        cmd.string_size  = static_cast<uint32_t>( text.size() );
-        cmd.x            = x;
-        cmd.y            = y;
-        cmd.font_size    = size;
-        cmd.color        = color;
-        cmd.depth        = static_cast<float>( layer );
+        cmd.FontFBIndex     = font->m_frameBufferIndex;
+        cmd.StringIndex     = render_cmd_buf.StringBuffer.insert( text );
+        cmd.StringLength    = static_cast<uint32_t>( text.size() );
+        cmd.Position        = position;
+        cmd.FontSize        = size;
+        cmd.ForegroundColor = color;
+        cmd.Depth           = m_CurrentLayerDepth;
     }
 
     void GPURenderer::retrieve_shaderformatinfo()

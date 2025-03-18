@@ -51,7 +51,8 @@ struct type_FrameMatrices
 
 struct MSDFSpriteData
 {
-    float4 DestinationRect;
+    float2 Position;
+    float2 Size;
     float4 SourceRect;
     float4 ForegroundColor;
     float Depth;
@@ -78,15 +79,16 @@ struct main0_out
 vertex main0_out main0(constant type_FrameMatrices& FrameMatrices [[buffer(0)]], const device type_StructuredBuffer_MSDFSpriteData& DataBuffer [[buffer(1)]], uint gl_VertexIndex [[vertex_id]])
 {
     main0_out out = {};
-    uint _56 = gl_VertexIndex / 6u;
-    uint _57 = gl_VertexIndex % 6u;
-    float2 _75 = _50[_45[_57]] * (DataBuffer._m0[_56].DestinationRect.zw - DataBuffer._m0[_56].DestinationRect.xy);
-    spvUnsafeArray<float2, 4> _91 = spvUnsafeArray<float2, 4>({ float2(DataBuffer._m0[_56].SourceRect.xy), float2(DataBuffer._m0[_56].SourceRect.zy), float2(DataBuffer._m0[_56].SourceRect.xw), float2(DataBuffer._m0[_56].SourceRect.zw) });
-    spvUnsafeArray<float2, 4> _54 = _91;
-    out.out_var_TEXCOORD0 = _54[_45[_57]];
-    out.out_var_TEXCOORD1 = DataBuffer._m0[_56].ForegroundColor;
-    out.out_var_TEXCOORD2 = DataBuffer._m0[_56].ScreenPixRange;
-    out.gl_Position = FrameMatrices.ViewProjectionMatrix * float4(_75.x + DataBuffer._m0[_56].DestinationRect.x, _75.y + DataBuffer._m0[_56].DestinationRect.y, DataBuffer._m0[_56].Depth, 1.0);
+    uint _58 = gl_VertexIndex / 6u;
+    uint _59 = gl_VertexIndex % 6u;
+    spvUnsafeArray<float2, 4> _89 = spvUnsafeArray<float2, 4>({ float2(DataBuffer._m0[_58].SourceRect.xy), float2(DataBuffer._m0[_58].SourceRect.zy), float2(DataBuffer._m0[_58].SourceRect.xw), float2(DataBuffer._m0[_58].SourceRect.zw) });
+    spvUnsafeArray<float2, 4> _56 = _89;
+    float4 _92 = FrameMatrices.ViewProjectionMatrix * float4((_50[_45[_59]] * DataBuffer._m0[_58].Size) + DataBuffer._m0[_58].Position, DataBuffer._m0[_58].Depth, 1.0);
+    _92.z = DataBuffer._m0[_58].Depth;
+    out.out_var_TEXCOORD0 = _56[_45[_59]];
+    out.out_var_TEXCOORD1 = DataBuffer._m0[_58].ForegroundColor;
+    out.out_var_TEXCOORD2 = DataBuffer._m0[_58].ScreenPixRange;
+    out.gl_Position = _92;
     return out;
 }
 

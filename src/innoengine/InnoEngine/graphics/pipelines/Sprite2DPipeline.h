@@ -7,7 +7,6 @@
 #include "InnoEngine/graphics/Texture2D.h"
 #include "InnoEngine/graphics/GPUBatchBuffer.h"
 
-
 #include <string>
 #include <memory>
 
@@ -21,28 +20,22 @@ namespace InnoEngine
     public:
         struct BatchData
         {
-            FrameBufferIndex texture_index = -1;
+            FrameBufferIndex TextureIndex = -1;
         };
 
         struct Command
         {
-            Command() = default;
+            FrameBufferIndex TextureIndex;
 
-            Command( Command&& other )
-            {
-                texture_index = other.texture_index;
-                info          = other.info;
-            }
-            FrameBufferIndex texture_index;
             struct StructuredBufferLayout
             {
-                float    x, y;
-                uint32_t z;
-                float    rotation; // radians
-                float    origin_offset_x, origin_offset_y;    // for rotation
-                float    width, height;
-                DXSM::Vector4 source;
-                DXSM::Color   color;
+                DXSM::Vector4 SourceRect;
+                DXSM::Vector2 Position;
+                DXSM::Vector2 Size;
+                DXSM::Color   Color;
+                DXSM::Vector2 OriginOffset;    // for rotation, in texels
+                float         Depth;
+                float         Rotation;        // in radians
             } info;
         };
 
@@ -52,8 +45,8 @@ namespace InnoEngine
         Sprite2DPipeline() = default;
         ~Sprite2DPipeline();
 
-        Result initialize( GPURenderer* renderer, AssetManager* assetmanager );
-        void   prepare_render( const CommandList& command_list );
+        Result   initialize( GPURenderer* renderer, AssetManager* assetmanager );
+        void     prepare_render( const CommandList& command_list );
         uint32_t swapchain_render( const DXSM::Matrix&   view_projection,
                                    const TextureList&    texture_list,
                                    SDL_GPUCommandBuffer* cmdbuf,
@@ -71,12 +64,12 @@ namespace InnoEngine
     private:
         bool                     m_Initialized    = false;
         GPUDeviceRef             m_Device         = nullptr;
-        SDL_GPUGraphicsPipeline* m_pipeline       = nullptr;
-        SDL_GPUSampler*          m_defaultSampler = nullptr;
+        SDL_GPUGraphicsPipeline* m_Pipeline       = nullptr;
+        SDL_GPUSampler*          m_DefaultSampler = nullptr;
 
-        std::vector<const Command*> m_sortedCommands;    // objects owned by the RenderCommandBuffer
+        std::vector<const Command*> m_SortedCommands;    // objects owned by the RenderCommandBuffer
 
-        static constexpr uint32_t MaxBatchSize = 20000;
+        static constexpr uint32_t                                              MaxBatchSize = 20000;
         Ref<GPUBatchStorageBuffer<Command::StructuredBufferLayout, BatchData>> m_GPUBatch;
     };
 

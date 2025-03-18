@@ -18,7 +18,6 @@ namespace InnoEngine
             uint32_t        Count      = 0;
             BatchCustomData CustomData = {};
         };
-
         using BatchDataList = std::vector<BatchData>;
 
         ~GPUBatchStorageBuffer();
@@ -26,7 +25,7 @@ namespace InnoEngine
         static auto create( GPUDeviceRef device, uint32_t batch_size ) -> Ref<GPUBatchStorageBuffer>;
 
         bool             current_batch_full();
-        BatchCustomData& upload_and_add_batch( SDL_GPUCopyPass* copy_pass );
+        BatchCustomData* upload_and_add_batch( SDL_GPUCopyPass* copy_pass );
         BufferLayout*    next_data();
 
         void upload_last( SDL_GPUCopyPass* copy_pass );
@@ -105,7 +104,7 @@ namespace InnoEngine
     }
 
     template <typename BufferLayout, typename BatchCustomData>
-    inline BatchCustomData& GPUBatchStorageBuffer<BufferLayout, BatchCustomData>::upload_and_add_batch( SDL_GPUCopyPass* copy_pass )
+    inline BatchCustomData* GPUBatchStorageBuffer<BufferLayout, BatchCustomData>::upload_and_add_batch( SDL_GPUCopyPass* copy_pass )
     {
         // Unmap and upload previous batch (if there is one) data before changing to new batch
         if ( m_CurrentBatchIndex != -1 ) {
@@ -120,7 +119,7 @@ namespace InnoEngine
         newbatch.Count      = 0;
 
         m_CurrentBufferPointer = map_transferbuffer();
-        return newbatch.CustomData;
+        return &newbatch.CustomData;
     }
 
     template <typename BufferLayout, typename BatchCustomData>

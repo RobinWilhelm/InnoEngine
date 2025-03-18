@@ -55,15 +55,27 @@ namespace InnoEngine
         void register_sprite( Sprite& sprite );
         void register_font( Ref<Font> font );
 
+        uint16_t next_layer();
+        void     set_layer( uint16_t layer );
+
         void set_clear_color( DXSM::Color color );    // the color the swapchain texture should be cleared to at the begin of the frame
         void set_view_projection( const DXSM::Matrix view_projection );
+
         void add_sprite( const Sprite& sprite );
-        void add_texture( Ref<Texture2D> texture, float x, float y, uint32_t layer = 0, float rotation = 0.0f, DXSM::Color color = { 1.0f, 1.0f, 1.0f, 1.0f }, float scale = 1.0f );
-        void add_text( const Font* font, float x, float y, uint32_t size, std::string_view text, DXSM::Color color = { 1.0f, 1.0f, 1.0f, 1.0f }, uint16_t layer = 0 );
+        void add_pixel( const DXSM::Vector2& position, const DXSM::Color& color );
+        void add_quad( const DXSM::Vector2& position, const DXSM::Vector2& size, float rotation, const DXSM::Color& color );
+
+        void add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector2& position );
+        void add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color );
+        void add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector4& source_rect, const DXSM::Vector2& position );
+        void add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector4& source_rect, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color );
+
+        void add_text( const Font* font, const DXSM::Vector2& position, uint32_t text_size, std::string_view text, DXSM::Color color );
         void add_imgui_draw_data( ImDrawData* draw_data );
 
     private:
-        void retrieve_shaderformatinfo();
+        void  retrieve_shaderformatinfo();
+        float transform_layer_to_depth( uint16_t layer );
 
         // debug only
         const RenderCommandBuffer* get_render_command_buffer() const;
@@ -72,11 +84,16 @@ namespace InnoEngine
         bool m_Initialized  = false;
         bool m_vsyncEnabled = true;
 
+        uint16_t m_CurrentLayer      = 0;
+        float    m_CurrentLayerDepth = 0.0f;
+
         class PipelineProcessor;
         Own<PipelineProcessor> m_pipelineProcessor = nullptr;
 
         GPUDeviceRef m_sdlGPUDevice = nullptr;
         Window*      m_window       = nullptr;
+
+        SDL_GPUTexture* m_DepthTexture = nullptr;
 
         bool m_doubleBuffered = false;
     };

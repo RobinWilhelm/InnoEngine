@@ -2,13 +2,13 @@
 
 struct SpriteData
 {
-    float X, Y;
-    uint Z;
-    float Rotation;
-    float2 OriginOffset;
-    float2 Size;
-    float4 SourceRect;
+    float4 SourceRect;    
     float4 Color;
+    float2 Position;
+    float2 Size;
+    float2 OriginOffset;
+    float Depth;
+    float Rotation;
 };
 
 StructuredBuffer<SpriteData> DataBuffer : register(t0, space0);
@@ -39,7 +39,7 @@ Output main(uint id : SV_VertexID)
         coord = mul(coord , rotation) ;
     }
     
-    float4 coordWithDepth = float4(coord.x + sprite.X, coord.y + sprite.Y, float(sprite.Z), 1.0f);
+    float4 coord_with_depth = float4(coord + sprite.Position,sprite.Depth, 1.0f);
     
     
     float2 texcoord[4] =
@@ -51,7 +51,7 @@ Output main(uint id : SV_VertexID)
     };
             
     Output output;
-    output.Position = mul(ViewProjectionMatrix, coordWithDepth);
+    output.Position = transform_coordinates_2D(coord_with_depth);
     output.TexCoord = texcoord[vert];
     output.Color = sprite.Color;
     return output;

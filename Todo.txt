@@ -1,27 +1,15 @@
 TODO List:
 
+- fix vulkan complaining about imgui pipeline not using depth 
 - add runtime shader compiling and loading /w shadercross
-
 - figure out how to properly handle the case when runnging in headless mode
-- SDF font loading and rendering https://github.com/Chlumsky/msdfgen8
-- arena allocation for renderer string buffer
-- use layers as depth values (probably 24bit depth 8bit stencil)
 - refactor AssetManager
 - AssetView::get() is currently unsafe because it might not have been created by the assetmanager
-
-Texture2D:
-- should represent a single image file in memory
-- separate from Sprite by not having any transformations or rendering capabilities on its own
-- can be atlastextures and a sprite should only reference a subsection of it
 
 RenderTarget:
 - should be a Texture2D with the ability to be set as a rendertarget (color or depth/stencil)
 - design an api to switch rendertargets and direct RenderCommands to specific rendertargets
 - maybe give each rendertarget a unique id and add that to rendercommands -> how should that work with imgui rendering
-
-GPUPipeline: 
-- this should evolve into a multi SDL_Pipeline holder with different shader permutations and rendering settings
-- maybe rename to something else eg GPUEffect or GPUTechnique idk
 
 GeometryprimitivesPipeline
 - add a pipeline to render simple geometry fast (points, lines, spheres, etc.. )

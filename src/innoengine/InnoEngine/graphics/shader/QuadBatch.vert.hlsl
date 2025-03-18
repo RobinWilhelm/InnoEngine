@@ -1,9 +1,16 @@
 #include "GPUPipelineBase.verti.hlsl"
 
-struct Input
+struct QuadData
 {
-    float4 Color : TEXCOORD1;
+    float2 Position;
+    float2 Size;
+    float4 Color;
+    float Depth;
+    float Rotation;
+    float2 pad;
 };
+
+StructuredBuffer<QuadData> DataBuffer : register(t0, space0);
 
 struct Output
 {
@@ -11,8 +18,29 @@ struct Output
     float4 Position : SV_Position;
 };
 
-Output main(Input input)
+Output main(uint id : SV_VertexID)
 {
+    uint quad_index = id / 6;
+    uint vert = QuadIndices[id % 6];
+    QuadData quad = DataBuffer[quad_index];
+    float2 coord = QuadVertices[vert];
+    
+    coord -= float2(0.5f, 0.5f);
+    coord *= quad.Size;    
+    
+    if (quad.Rotation != 0.0f)
+    {
+        float c = cos(quad.Rotation);
+        float s = sin(quad.Rotation);
+        
+        float2x2 rotation = { c, s, -s, c };
+        coord = mul(coord, rotation);
+    }
+    
+    float4 coord_with_depth = float4(coord + quad.Position, float(quad.Depth), 1.0f);
+                
     Output output;
+    output.Position = transform_coordinates_2D(coord_with_depth);
+    output.Color = quad.Color;
     return output;
 }

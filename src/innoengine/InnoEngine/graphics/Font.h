@@ -23,20 +23,20 @@ namespace InnoEngine
         Ref<Texture2D> get_atlas_texture() const;
         Ref<MSDFData>  get_msdf_data() const;
 
-        float calculate_screen_pix_range(float font_size) const;
+        float calculate_screen_pix_range( float FontSize ) const;
 
-        void render( float x, float y, uint32_t size, std::string_view text, DXSM::Color color = { 1.0f, 1.0f, 1.0f, 1.0f }, uint16_t layer = 0 );
+        void render( float x, float y, uint32_t size, std::string_view text, DXSM::Color ForegroundColor = { 1.0f, 1.0f, 1.0f, 1.0f } );
 
     private:
         // Inherited via Asset
         Result load_asset( const std::filesystem::path& full_path ) override;
-        void preload_msdf_ascii_data();
+        void   preload_msdf_ascii_data();
 
     private:
         Ref<Texture2D> m_atlasTexture;
         Ref<MSDFData>  m_msdfData;
 
-        bool  m_Initialized         = false;
+        bool m_Initialized = false;
 
         FrameBufferIndex m_frameBufferIndex = -1;
     };

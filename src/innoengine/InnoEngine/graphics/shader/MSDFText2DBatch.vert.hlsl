@@ -2,7 +2,8 @@
 
 struct MSDFSpriteData
 {
-    float4 DestinationRect;
+    float2 Position;
+    float2 Size;
     float4 SourceRect;
     float4 ForegroundColor; // text color
     float Depth;
@@ -27,8 +28,8 @@ Output main(uint id : SV_VertexID)
     float2 coord        = QuadVertices[vert];
     
     MSDFSpriteData sprite = DataBuffer[spriteIndex];    
-    coord *= (sprite.DestinationRect.zw - sprite.DestinationRect.xy);
-    float4 coordWithDepth = float4(coord.x + sprite.DestinationRect.x, coord.y + sprite.DestinationRect.y, float(sprite.Depth), 1.0f);    
+    coord *= sprite.Size;
+    float4 coordWithDepth = float4(coord + sprite.Position, sprite.Depth, 1.0f);
     
     float2 texcoord[4] =
     {
@@ -39,7 +40,7 @@ Output main(uint id : SV_VertexID)
     };
             
     Output output;
-    output.Position         = mul(ViewProjectionMatrix, coordWithDepth);
+    output.Position         = transform_coordinates_2D(coordWithDepth);
     output.TexCoord         = texcoord[vert];
     output.Color            = sprite.ForegroundColor;
     output.ScreenPixRange   = sprite.ScreenPixRange;

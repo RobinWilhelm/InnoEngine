@@ -6,6 +6,9 @@ namespace InnoEngine
     RenderCommandBuffer::RenderCommandBuffer()
     {
         SpriteRenderCommands.reserve( 20000 );
+        QuadRenderCommands.reserve( 20000 );
+        LineRenderCommands.reserve( 20000 );
+        CircleRenderCommands.reserve( 20000 );
         FontRenderCommands.reserve( 20000 );
     }
 
@@ -22,6 +25,21 @@ namespace InnoEngine
         std::memcpy( static_cast<void*>( SpriteRenderCommands.data() ),
                      static_cast<void*>( other.SpriteRenderCommands.data() ),
                      other.SpriteRenderCommands.size() * sizeof( Sprite2DPipeline::Command ) );
+
+        QuadRenderCommands.resize( other.QuadRenderCommands.size() );
+        std::memcpy( static_cast<void*>( QuadRenderCommands.data() ),
+                     static_cast<void*>( other.QuadRenderCommands.data() ),
+                     other.QuadRenderCommands.size() * sizeof( Primitive2DPipeline::QuadCommand ) );
+
+        LineRenderCommands.resize( other.LineRenderCommands.size() );
+        std::memcpy( static_cast<void*>( LineRenderCommands.data() ),
+                     static_cast<void*>( other.LineRenderCommands.data() ),
+                     other.LineRenderCommands.size() * sizeof( Primitive2DPipeline::LineCommand ) );
+
+        CircleRenderCommands.resize( other.CircleRenderCommands.size() );
+        std::memcpy( static_cast<void*>( CircleRenderCommands.data() ),
+                     static_cast<void*>( other.CircleRenderCommands.data() ),
+                     other.CircleRenderCommands.size() * sizeof( Primitive2DPipeline::CircleCommand ) );
 
         ImGuiCommandBuffer = other.ImGuiCommandBuffer;
 
@@ -49,6 +67,15 @@ namespace InnoEngine
         LastFrameStats.TotalCommands += SpriteRenderCommands.size();
         LastFrameStats.TotalBufferSize += SpriteRenderCommands.size() * sizeof( Sprite2DPipeline::Command );
 
+        LastFrameStats.TotalCommands += QuadRenderCommands.size();
+        LastFrameStats.TotalBufferSize += QuadRenderCommands.size() * sizeof( Primitive2DPipeline::QuadCommand );
+
+        LastFrameStats.TotalCommands += LineRenderCommands.size();
+        LastFrameStats.TotalBufferSize += LineRenderCommands.size() * sizeof( Primitive2DPipeline::LineCommand );
+
+        LastFrameStats.TotalCommands += CircleRenderCommands.size();
+        LastFrameStats.TotalBufferSize += CircleRenderCommands.size() * sizeof( Primitive2DPipeline::CircleCommand );
+
         LastFrameStats.TotalBufferSize += FontRegister.size() * sizeof( Ref<Font> );
         LastFrameStats.TotalCommands += FontRenderCommands.size();
         LastFrameStats.TotalBufferSize += FontRenderCommands.size() * sizeof( Font2DPipeline::Command );
@@ -65,7 +92,11 @@ namespace InnoEngine
 
         Clear      = false;
         ClearColor = DXSM::Color( 0.0f, 0.0f, 0.0f, 0.0f );
+        CameraMatrix = DXSM::Matrix::Identity;
         SpriteRenderCommands.clear();
+        QuadRenderCommands.clear();
+        LineRenderCommands.clear();
+        CircleRenderCommands.clear();
         ImGuiCommandBuffer.RenderCommandLists.clear();
 
         FontRenderCommands.clear();

@@ -32,18 +32,18 @@ namespace InnoEngine
         return m_msdfData;
     }
 
-    float Font::calculate_screen_pix_range( float font_size ) const
+    float Font::calculate_screen_pix_range( float FontSize ) const
     {
         IE_ASSERT( m_msdfData != nullptr );
-        return font_size / m_msdfData->Scale * m_msdfData->Range;
+        return FontSize / m_msdfData->Scale * m_msdfData->Range;
     }
 
-    void Font::render( float x, float y, uint32_t size, std::string_view text, DXSM::Color color, uint16_t layer )
+    void Font::render( float x, float y, uint32_t size, std::string_view text, DXSM::Color ForegroundColor)
     {
         IE_ASSERT( m_atlasTexture != nullptr && m_frameBufferIndex >= 0 );
         static GPURenderer* renderer = CoreAPI::get_gpurenderer();
         IE_ASSERT( renderer != nullptr );
-        renderer->add_text( this, x, y, size, text, color, layer );
+        renderer->add_text( this, { x, y }, size, text, ForegroundColor );
     }
 
     Result Font::load_asset( const std::filesystem::path& full_path )

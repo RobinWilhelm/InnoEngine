@@ -6,7 +6,7 @@ namespace InnoEngine
     auto OrthographicCamera::create( float left, float right, float bottom, float top ) -> Own<OrthographicCamera>
     {
         Own<OrthographicCamera> pOrthoCamera( new OrthographicCamera() );
-        pOrthoCamera->m_projection     = DXSM::Matrix::CreateOrthographicOffCenter( left, right, bottom, top, 0.01f, 1.0f );
+        pOrthoCamera->m_projection     = DXSM::Matrix::CreateOrthographicOffCenter( left, right, bottom, top, 1.0f, 0.0f );
         pOrthoCamera->m_view           = DXSM::Matrix::Identity;
         pOrthoCamera->m_viewProjection = pOrthoCamera->m_projection * pOrthoCamera->m_view;
         return pOrthoCamera;

@@ -29,7 +29,7 @@ DemoLayer::DemoLayer()
     for ( int i = 0; i < sprite_count; ++i ) {
         m_positions[ i ]      = DXSM::Vector2( SDL_randf() * 1920, SDL_randf() * 1080 );
         m_rotationSpeeds[ i ] = SDL_randf() * 2 - 1;
-        m_colors[ i ]         = DXSM::Color( SDL_randf(), SDL_randf(), SDL_randf(), max(0.7f,SDL_randf()) );
+        m_colors[ i ]         = DXSM::Color( SDL_randf(), SDL_randf(), SDL_randf(), max( 0.7f, SDL_randf() ) );
         m_scales[ i ]         = SDL_randf() * 2;
     }
 }
@@ -42,33 +42,17 @@ void DemoLayer::update( double delta_time )
         m_rotations[ i ] += m_rotationSpeeds[ i ] * 360.0f * delta_time;
         if ( m_rotations[ i ] >= 360.0f )
             m_rotations[ i ] -= 360.0f;
-
-        /*
-        m_colors[ i ].x += delta_time * 0.01f;
-        if ( m_colors[ i ].x > 1 )
-            m_colors[ i ].x -= 1;
-        m_colors[ i ].y += delta_time * 0.01f;
-        if ( m_colors[ i ].y > 1 )
-            m_colors[ i ].y -= 1;
-        m_colors[ i ].z += delta_time * 0.01f;
-        if ( m_colors[ i ].z > 1 )
-            m_colors[ i ].z -= 1;
-        // m_colors[i].w += delta_time * 0.1f;
-        // if (m_colors[i].w > 1)
-        // m_colors[i].w -= 1;
-        */
     }
 
     uint64_t delta = IE::get_tick_count() - m_colorAnimStart;
-    m_color_h =  static_cast<float>(delta) / (IE::TicksPerSecond * 3);
+    m_color_h      = static_cast<float>( delta ) / ( IE::TicksPerSecond * 3 );
 
-    if(delta >= IE::TicksPerSecond * 3)
-    {
+    if ( delta >= IE::TicksPerSecond * 3 ) {
         m_colorAnimStart = IE::get_tick_count();
-        m_color_h = 0.0f;
+        m_color_h        = 0.0f;
     }
 
-    ImGui::ColorConvertHSVtoRGB(m_color_h, m_color_s, m_color_v, m_textColor.x, m_textColor.y, m_textColor.z);
+    ImGui::ColorConvertHSVtoRGB( m_color_h, m_color_s, m_color_v, m_textColor.x, m_textColor.y, m_textColor.z );
 }
 
 void DemoLayer::render( float interp_factor, IE::GPURenderer* renderer )
@@ -80,20 +64,14 @@ void DemoLayer::render( float interp_factor, IE::GPURenderer* renderer )
 
     renderer->register_texture( m_testTexture );
 
-    for ( int i = 0; i < sprite_count; ++i ) {
-        // m_testSprite.set_position( m_positions[ i ], IE::Sprite::Origin::Middle );
-        // m_testSprite.set_scale( { m_scales[ i ], m_scales[ i ] } );
-        // m_testSprite.set_rotation( m_rotations[ i ] );
-        // m_testSprite.set_color( m_colors[ i ] );
-        // renderer->add_sprite( m_testSprite );
-         renderer->add_texture( m_testTexture, m_positions[ i ].x, m_positions[ i ].y, 0, m_rotations[ i ], m_colors[ i ], m_scales[ i ] );
-    }
 
-    renderer->register_font( m_testFont );
-    m_testFont->render( 0, 400, 410, "InnoEngine", m_textColor);
-    //m_testFont->render( 200, 200, 100, "MSDF Text Rendering!", DXSM::Color( 1.0f, 1.0f, 1.0f, 1.0f ) );
-    //m_testFont->render( 200, 300, 100, "MSDF Text Rendering!", DXSM::Color( 1.0f, 1.0f, 1.0f, 1.0f ) );
-    //m_testFont->render( 200, 400, 100, "MSDF Text Rendering!", DXSM::Color( 1.0f, 1.0f, 1.0f, 1.0f ) );
+    renderer->register_font(m_testFont);
+
+    uint32_t count = 0;
+    for ( int i = 0; i < sprite_count; ++i ) {
+        renderer->add_pixel( m_positions[ i ], m_colors[ i ] );
+    }
+   
 }
 
 bool DemoLayer::handle_event( const SDL_Event& event )

@@ -14,6 +14,6 @@ int main()
 
     Sandbox sandbox;
     sandbox.init( creationParams );
-    sandbox.enable_debugui( true );
+    sandbox.enable_debugui(true);
     return static_cast<int>( sandbox.run() );
 }

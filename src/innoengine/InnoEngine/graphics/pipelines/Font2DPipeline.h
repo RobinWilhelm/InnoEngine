@@ -18,29 +18,29 @@ namespace InnoEngine
     public:
         struct BatchData
         {
-            FrameBufferIndex font_index = -1;
+            FrameBufferIndex FontFBIndex = -1;
         };
 
         struct Command
         {
-            FrameBufferIndex font_fbidx   = -1;
-            StringArenaIndex string_index = 0;
-            uint32_t         string_size  = 0;
-            uint32_t         font_size    = 0;
-            float            x            = 0;
-            float            y            = 0;
-            DXSM::Color      color        = {};
-            float            depth        = 0.0f;
+            FrameBufferIndex FontFBIndex      = -1;
+            StringArenaIndex StringIndex    = 0;
+            uint32_t         StringLength     = 0;
+            uint32_t         FontSize       = 0;
+            DXSM::Vector2    Position        = {};
+            DXSM::Color      ForegroundColor = {};
+            float            Depth           = 0.0f;
         };
 
         struct StructuredBufferLayout
         {
-            DXSM::Vector4 destination      = {};
-            DXSM::Vector4 source           = {};
-            DXSM::Color   color            = {};
-            float         depth            = 0.0f;
-            float         screen_pix_width = 0.0f;
-            float         pad[ 2 ]         = {};
+            DXSM::Vector2 Position         = {};
+            DXSM::Vector2 Size             = {};
+            DXSM::Vector4 SourceRect       = {};
+            DXSM::Color   ForegroundColor  = {};
+            float         Depth            = 0.0f;
+            float         ScreenPixelWidth = 0.0f;
+            float pad [2];
         };
 
         using CommandList = std::vector<Command>;
@@ -68,13 +68,12 @@ namespace InnoEngine
     private:
         bool                     m_Initialized = false;
         GPUDeviceRef             m_Device      = nullptr;
-        SDL_GPUGraphicsPipeline* m_pipeline    = nullptr;
-        SDL_GPUSampler*          m_fontSampler = nullptr;
+        SDL_GPUGraphicsPipeline* m_Pipeline    = nullptr;
+        SDL_GPUSampler*          m_FontSampler = nullptr;
 
-        std::vector<const Command*> m_sortedCommands;    // objects owned by the RenderCommandBuffer
-        SDL_GPUTransferBuffer*      m_transferBuffer = nullptr;
+        std::vector<const Command*> m_SortedCommands;    // objects owned by the RenderCommandBuffer
 
-        static constexpr uint32_t MaxBatchSize = 20000;
+        static constexpr uint32_t                                     MaxBatchSize = 20000;
         Ref<GPUBatchStorageBuffer<StructuredBufferLayout, BatchData>> m_GPUBatch;
     };
 

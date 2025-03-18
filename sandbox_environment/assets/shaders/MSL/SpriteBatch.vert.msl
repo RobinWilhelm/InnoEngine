@@ -51,14 +51,13 @@ struct type_FrameMatrices
 
 struct SpriteData
 {
-    float X;
-    float Y;
-    uint Z;
-    float Rotation;
-    float2 OriginOffset;
-    float2 Size;
     float4 SourceRect;
     float4 Color;
+    float2 Position;
+    float2 Size;
+    float2 OriginOffset;
+    float Depth;
+    float Rotation;
 };
 
 struct type_StructuredBuffer_SpriteData
@@ -81,23 +80,25 @@ vertex main0_out main0(constant type_FrameMatrices& FrameMatrices [[buffer(0)]],
     main0_out out = {};
     uint _56 = gl_VertexIndex / 6u;
     uint _57 = gl_VertexIndex % 6u;
-    float2 _73 = (_52[_47[_57]] * DataBuffer._m0[_56].Size) - DataBuffer._m0[_56].OriginOffset;
-    float2 _84;
+    float2 _72 = (_52[_47[_57]] * DataBuffer._m0[_56].Size) - DataBuffer._m0[_56].OriginOffset;
+    float2 _83;
     if (DataBuffer._m0[_56].Rotation != 0.0)
     {
-        float _77 = cos(DataBuffer._m0[_56].Rotation);
-        float _78 = sin(DataBuffer._m0[_56].Rotation);
-        _84 = float2x2(float2(_77, _78), float2(-_78, _77)) * _73;
+        float _76 = cos(DataBuffer._m0[_56].Rotation);
+        float _77 = sin(DataBuffer._m0[_56].Rotation);
+        _83 = float2x2(float2(_76, _77), float2(-_77, _76)) * _72;
     }
     else
     {
-        _84 = _73;
+        _83 = _72;
     }
-    spvUnsafeArray<float2, 4> _99 = spvUnsafeArray<float2, 4>({ float2(DataBuffer._m0[_56].SourceRect.xy), float2(DataBuffer._m0[_56].SourceRect.zy), float2(DataBuffer._m0[_56].SourceRect.xw), float2(DataBuffer._m0[_56].SourceRect.zw) });
-    spvUnsafeArray<float2, 4> _54 = _99;
+    spvUnsafeArray<float2, 4> _96 = spvUnsafeArray<float2, 4>({ float2(DataBuffer._m0[_56].SourceRect.xy), float2(DataBuffer._m0[_56].SourceRect.zy), float2(DataBuffer._m0[_56].SourceRect.xw), float2(DataBuffer._m0[_56].SourceRect.zw) });
+    spvUnsafeArray<float2, 4> _54 = _96;
+    float4 _99 = FrameMatrices.ViewProjectionMatrix * float4(_83 + DataBuffer._m0[_56].Position, DataBuffer._m0[_56].Depth, 1.0);
+    _99.z = DataBuffer._m0[_56].Depth;
     out.out_var_TEXCOORD0 = _54[_47[_57]];
     out.out_var_TEXCOORD1 = DataBuffer._m0[_56].Color;
-    out.gl_Position = FrameMatrices.ViewProjectionMatrix * float4(_84.x + DataBuffer._m0[_56].X, _84.y + DataBuffer._m0[_56].Y, float(DataBuffer._m0[_56].Z), 1.0);
+    out.gl_Position = _99;
     return out;
 }
 

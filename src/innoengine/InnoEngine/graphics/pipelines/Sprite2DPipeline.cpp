@@ -18,14 +18,14 @@ namespace InnoEngine
     Sprite2DPipeline::~Sprite2DPipeline()
     {
         if ( m_Device != nullptr ) {
-            if ( m_defaultSampler ) {
-                SDL_ReleaseGPUSampler( m_Device, m_defaultSampler );
-                m_defaultSampler = nullptr;
+            if ( m_DefaultSampler ) {
+                SDL_ReleaseGPUSampler( m_Device, m_DefaultSampler );
+                m_DefaultSampler = nullptr;
             }
 
-            if ( m_pipeline ) {
-                SDL_ReleaseGPUGraphicsPipeline( m_Device, m_pipeline );
-                m_pipeline = nullptr;
+            if ( m_Pipeline ) {
+                SDL_ReleaseGPUGraphicsPipeline( m_Device, m_Pipeline );
+                m_Pipeline = nullptr;
             }
         }
     }
@@ -79,8 +79,17 @@ namespace InnoEngine
         pipelineCreateInfo.target_info.color_target_descriptions = colorTargets;
         pipelineCreateInfo.target_info.num_color_targets         = 1;
 
-        m_pipeline = SDL_CreateGPUGraphicsPipeline( m_Device, &pipelineCreateInfo );
-        if ( m_pipeline == nullptr ) {
+        pipelineCreateInfo.target_info.depth_stencil_format     = SDL_GPU_TEXTUREFORMAT_D16_UNORM;
+        pipelineCreateInfo.target_info.has_depth_stencil_target = true;
+
+        pipelineCreateInfo.depth_stencil_state.compare_op          = SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
+        pipelineCreateInfo.depth_stencil_state.enable_depth_test   = true;
+        pipelineCreateInfo.depth_stencil_state.enable_depth_write  = true;
+        pipelineCreateInfo.depth_stencil_state.enable_stencil_test = false;
+        pipelineCreateInfo.depth_stencil_state.write_mask          = 0xFF;
+
+        m_Pipeline = SDL_CreateGPUGraphicsPipeline( m_Device, &pipelineCreateInfo );
+        if ( m_Pipeline == nullptr ) {
             IE_LOG_ERROR( "Failed to create pipeline!" );
             return Result::InitializationError;
         }
@@ -93,8 +102,8 @@ namespace InnoEngine
         sampler_create_info.address_mode_v           = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
         sampler_create_info.address_mode_w           = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
 
-        m_defaultSampler = SDL_CreateGPUSampler( m_Device, &sampler_create_info );
-        if ( m_defaultSampler == nullptr ) {
+        m_DefaultSampler = SDL_CreateGPUSampler( m_Device, &sampler_create_info );
+        if ( m_DefaultSampler == nullptr ) {
             IE_LOG_ERROR( "Failed to create GPUSampler!" );
             return Result::InitializationError;
         }
@@ -124,11 +133,11 @@ namespace InnoEngine
         SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass( gpu_copy_cmd_buf );
 
         FrameBufferIndex current_texture = -1;
-        for ( const Command* command : m_sortedCommands ) {
-            if ( m_GPUBatch->current_batch_full() || current_texture != command->texture_index ) {
-                BatchData& batch_data    = m_GPUBatch->upload_and_add_batch( copy_pass );
-                batch_data.texture_index = command->texture_index;
-                current_texture          = command->texture_index;
+        for ( const Command* command : m_SortedCommands ) {
+            if ( m_GPUBatch->current_batch_full() || current_texture != command->TextureIndex ) {
+                BatchData* batch_data    = m_GPUBatch->upload_and_add_batch( copy_pass );
+                batch_data->TextureIndex = command->TextureIndex;
+                current_texture          = command->TextureIndex;
             }
 
             Command::StructuredBufferLayout* buffer_data = m_GPUBatch->next_data();
@@ -155,7 +164,7 @@ namespace InnoEngine
         if ( m_GPUBatch->size() == 0 )
             return 0;
 
-        SDL_BindGPUGraphicsPipeline( render_pass, m_pipeline );
+        SDL_BindGPUGraphicsPipeline( render_pass, m_Pipeline );
         SDL_PushGPUVertexUniformData( gpu_cmd_buf, 0, &view_projection, sizeof( DXSM::Matrix ) );
         SDL_BindGPUVertexBuffers( render_pass, 0, nullptr, 0 );
 
@@ -164,8 +173,8 @@ namespace InnoEngine
             SDL_BindGPUVertexStorageBuffers( render_pass, 0, &batch_data.GPUBuffer, 1 );
 
             SDL_GPUTextureSamplerBinding texture_sampler_binding = {};
-            texture_sampler_binding.sampler                      = m_defaultSampler;
-            texture_sampler_binding.texture                      = texture_list[ batch_data.CustomData.texture_index ]->get_sdltexture();
+            texture_sampler_binding.sampler                      = m_DefaultSampler;
+            texture_sampler_binding.texture                      = texture_list[ batch_data.CustomData.TextureIndex ]->get_sdltexture();
             SDL_BindGPUFragmentSamplers( render_pass, 0, &texture_sampler_binding, 1 );
 
             SDL_DrawGPUPrimitives( render_pass, batch_data.Count * 6, 1, 0, 0 );
@@ -177,20 +186,20 @@ namespace InnoEngine
 
     void Sprite2DPipeline::sort_commands( const CommandList& command_list )
     {
-        m_sortedCommands.clear();
+        m_SortedCommands.clear();
 
-        if ( command_list.size() > m_sortedCommands.size() )
-            m_sortedCommands.resize( command_list.size() );
+        if ( command_list.size() > m_SortedCommands.size() )
+            m_SortedCommands.resize( command_list.size() );
 
         for ( size_t i = 0; i < command_list.size(); ++i ) {
-            m_sortedCommands[ i ] = &command_list[ i ];
+            m_SortedCommands[ i ] = &command_list[ i ];
         }
 
-        std::sort( m_sortedCommands.begin(), m_sortedCommands.end(), []( const Command* a, const Command* b ) {
-            if ( a->texture_index < b->texture_index )
+        std::sort( m_SortedCommands.begin(), m_SortedCommands.end(), []( const Command* a, const Command* b ) {
+            if ( a->TextureIndex < b->TextureIndex )
                 return true;
 
-            if ( a->info.z > b->info.z )
+            if ( a->info.Depth > b->info.Depth )
                 return true;
 
             return false;

@@ -1,0 +1,98 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+    
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+    
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+    
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+    
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
+
+struct type_FrameMatrices
+{
+    float4x4 ViewProjectionMatrix;
+};
+
+struct QuadData
+{
+    float2 Position;
+    float2 Size;
+    float4 Color;
+    float Depth;
+    float Rotation;
+    float2 pad;
+};
+
+struct type_StructuredBuffer_QuadData
+{
+    QuadData _m0[1];
+};
+
+constant spvUnsafeArray<uint, 6> _46 = spvUnsafeArray<uint, 6>({ 0u, 1u, 2u, 3u, 2u, 1u });
+constant spvUnsafeArray<float2, 4> _51 = spvUnsafeArray<float2, 4>({ float2(0.0), float2(1.0, 0.0), float2(0.0, 1.0), float2(1.0) });
+
+struct main0_out
+{
+    float4 out_var_TEXCOORD1 [[user(locn0)]];
+    float4 gl_Position [[position]];
+};
+
+vertex main0_out main0(constant type_FrameMatrices& FrameMatrices [[buffer(0)]], const device type_StructuredBuffer_QuadData& DataBuffer [[buffer(1)]], uint gl_VertexIndex [[vertex_id]])
+{
+    main0_out out = {};
+    uint _57 = gl_VertexIndex / 6u;
+    float2 _74 = (_51[_46[gl_VertexIndex % 6u]] - float2(0.5)) * DataBuffer._m0[_57].Size;
+    float2 _85;
+    if (DataBuffer._m0[_57].Rotation != 0.0)
+    {
+        float _78 = cos(DataBuffer._m0[_57].Rotation);
+        float _79 = sin(DataBuffer._m0[_57].Rotation);
+        _85 = float2x2(float2(_78, _79), float2(-_79, _78)) * _74;
+    }
+    else
+    {
+        _85 = _74;
+    }
+    float4 _92 = FrameMatrices.ViewProjectionMatrix * float4(_85 + DataBuffer._m0[_57].Position, DataBuffer._m0[_57].Depth, 1.0);
+    _92.z = DataBuffer._m0[_57].Depth;
+    out.out_var_TEXCOORD1 = DataBuffer._m0[_57].Color;
+    out.gl_Position = _92;
+    return out;
+}
+
