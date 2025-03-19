@@ -223,8 +223,8 @@ namespace InnoEngine
                 glyph->getQuadPlaneBounds( pl, pb, pr, pt );
                 buffer_data->Position.x = static_cast<float>( x + pl * scale );
                 buffer_data->Position.y = static_cast<float>( y + ( pb * scale ) * -1 );
-                buffer_data->Size.x     = static_cast<float>( pr * scale );
-                buffer_data->Size.y     = static_cast<float>( ( pt * scale ) * -1 );
+                buffer_data->Size.x     = static_cast<float>( (pr - pl) * scale );
+                buffer_data->Size.y     = static_cast<float>( ((pb - pt) * scale ));
 
                 buffer_data->ForegroundColor  = command->ForegroundColor;
                 buffer_data->Depth            = command->Depth;

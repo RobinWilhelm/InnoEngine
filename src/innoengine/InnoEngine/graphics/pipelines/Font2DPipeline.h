@@ -57,12 +57,6 @@ namespace InnoEngine
                                    SDL_GPURenderPass*    render_pass );
 
     private:
-        BatchData* add_batch();
-        void       clear_batches();
-
-        uint32_t       find_free_gpubuffer();
-        SDL_GPUBuffer* get_gpubuffer_by_index( uint32_t index ) const;
-
         void sort_commands( const CommandList& command_list );
 
     private:

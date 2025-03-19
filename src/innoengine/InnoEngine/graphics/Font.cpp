@@ -38,12 +38,88 @@ namespace InnoEngine
         return FontSize / m_msdfData->Scale * m_msdfData->Range;
     }
 
-    void Font::render( float x, float y, uint32_t size, std::string_view text, DXSM::Color ForegroundColor)
+    void Font::render( float x, float y, uint32_t size, std::string_view text, DXSM::Color ForegroundColor )
     {
         IE_ASSERT( m_atlasTexture != nullptr && m_frameBufferIndex >= 0 );
         static GPURenderer* renderer = CoreAPI::get_gpurenderer();
         IE_ASSERT( renderer != nullptr );
         renderer->add_text( this, { x, y }, size, text, ForegroundColor );
+    }
+
+    DXSM::Vector4 Font::get_aabb( uint32_t size, std::string_view text ) const
+    {
+        DXSM::Vector4 aabb( std::numeric_limits<float>::max(), std::numeric_limits<float>::min(),
+                            std::numeric_limits<float>::min(), std::numeric_limits<float>::max() );
+
+        const msdf_atlas::FontGeometry* font_geometry       = &m_msdfData->FontGeo;
+        const msdfgen::FontMetrics*     metrics             = &font_geometry->getMetrics();
+        double                          space_glyph_advance = m_msdfData->get_glyph( ' ' )->getAdvance();
+        double                          scale               = 1.0 / ( metrics->ascenderY - metrics->descenderY ) * size;
+
+        double x = 0.0;
+        double y = 0.0;
+
+        for ( uint32_t i = 0; i < text.length(); ++i ) {
+            char character = text[ i ];
+
+            IE_ASSERT( character != '\0' );
+
+            if ( character == '\n' ) {
+                x = 0.0;
+                y += scale * metrics->lineHeight;
+                continue;
+            }
+
+            if ( character == ' ' ) {
+                double advance = space_glyph_advance;
+                if ( i < text.length() - 1 ) {
+                    char nextCharacter = text[ i + 1 ];
+                    m_msdfData->get_advance( advance, character, nextCharacter );
+                }
+
+                x += scale * advance;
+                continue;
+            }
+
+            if ( character == '\t' ) {
+                x += 4.0 * ( scale * space_glyph_advance );
+                continue;
+            }
+
+            const msdf_atlas::GlyphGeometry* glyph = m_msdfData->get_glyph( character );
+            if ( !glyph )
+                glyph = m_msdfData->get_glyph( '?' );
+            if ( !glyph )
+                continue;
+
+            double pl, pb, pr, pt;
+            glyph->getQuadPlaneBounds( pl, pb, pr, pt );
+            float left = static_cast<float>( x + pl * scale );
+            if (left < aabb.x )
+                aabb.x = left;
+
+            float bottom = static_cast<float>( y + ( pb * scale ) * -1);
+            if (bottom > aabb.y )
+                aabb.y = bottom;
+
+            float right = static_cast<float>( x + pr * scale );
+            if (right > aabb.z )
+                aabb.z = right;
+
+            float top = static_cast<float>( y + ( pt * scale ) * -1 );
+            if (top < aabb.w )
+                aabb.w = top;
+
+            if ( i < text.length() - 1 ) {
+                double advance       = glyph->getAdvance();
+                char   nextCharacter = text[ i + 1 ];
+                m_msdfData->get_advance( advance, character, nextCharacter );
+                x += scale * advance;
+            }
+        }
+        //aabb.z += aabb.x;
+        //aabb.w += aabb.y;
+        return aabb;
     }
 
     Result Font::load_asset( const std::filesystem::path& full_path )
