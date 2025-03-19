@@ -74,8 +74,10 @@ namespace InnoEngine
         void add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector4& source_rect, const DXSM::Vector2& position );
         void add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector4& source_rect, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color );
 
-        void add_text( const Font* font, const DXSM::Vector2& position, uint32_t text_size, std::string_view text, DXSM::Color color );
+        void add_text( const Font* font, const DXSM::Vector2& position, uint32_t text_size, std::string_view text, const DXSM::Color& color );
         void add_imgui_draw_data( ImDrawData* draw_data );
+
+        void add_bounding_box(const DXSM::Vector4& aabb, const DXSM::Color& color);
 
     private:
         void  retrieve_shaderformatinfo();

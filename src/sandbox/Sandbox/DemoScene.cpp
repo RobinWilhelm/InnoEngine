@@ -71,25 +71,17 @@ void DemoLayer::render( float interp_factor, IE::GPURenderer* renderer )
     float       pos_y = renderer->get_window()->height() / 2;
     const char* text  = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\nUt enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.\nDuis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.\nExcepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
 
-    DXSM::Vector4 aabb = m_testFont->get_aabb( 20, text );
+    DXSM::Vector4 aabb = m_testFont->get_aabb( 30, text );
 
     float text_width  = aabb.z - aabb.x;
     float text_height = aabb.y - aabb.w;
     pos_x -= text_width / 2;
     pos_y -= text_height / 2;
 
-    renderer->add_text( m_testFont.get(), { pos_x, pos_y }, 20, text, { 1.0f, 1.0f, 1.0f, 1.0f } );
+    renderer->add_text( m_testFont.get(), { pos_x, pos_y }, 30, text, { 1.0f, 1.0f, 1.0f, 1.0f } );
 
-    uint32_t line_width = 1;
     aabb += { pos_x, pos_y, pos_x, pos_y };
-
-    static std::vector<DXSM::Vector2> points {
-        {              aabb.x,              aabb.y },
-        { aabb.z + line_width,              aabb.y },
-        { aabb.z + line_width, aabb.w + line_width },
-        {              aabb.x, aabb.w + line_width },
-    };
-    renderer->add_lines( points, line_width, 0.0f, { 0.0f, 1.0f, 0.0f, 1.0f }, true );
+    renderer->add_bounding_box( aabb, { 0.0f, 1.0f, 0.0f, 1.0f } );
 }
 
 bool DemoLayer::handle_event( const SDL_Event& event )

@@ -575,6 +575,19 @@ namespace InnoEngine
         }
     }
 
+    void GPURenderer::add_bounding_box( const DXSM::Vector4& aabb, const DXSM::Color& color )
+    {
+        float line_width = 1;
+
+        std::vector<DXSM::Vector2> points {
+            {              aabb.x,              aabb.y },
+            { aabb.z + line_width,              aabb.y },
+            { aabb.z + line_width, aabb.w + line_width },
+            {              aabb.x, aabb.w + line_width },
+        };
+        add_lines( points, line_width, 0.0f, color, true );
+    }
+
     uint16_t GPURenderer::next_layer()
     {
         m_CurrentLayerDepth = transform_layer_to_depth( ++m_CurrentLayer );
@@ -597,7 +610,7 @@ namespace InnoEngine
         return &m_pipelineProcessor->get_command_buffer_for_collecting();
     }
 
-    void GPURenderer::add_text( const Font* font, const DXSM::Vector2& position, uint32_t size, std::string_view text, DXSM::Color color )
+    void GPURenderer::add_text( const Font* font, const DXSM::Vector2& position, uint32_t size, std::string_view text, const DXSM::Color& color )
     {
         IE_ASSERT( font != nullptr && font->m_frameBufferIndex >= 0 );
 
