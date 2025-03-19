@@ -6,7 +6,7 @@ int main()
     creationParams.WindowParams.title  = "Sandbox";
     creationParams.WindowParams.width  = 1920;
     creationParams.WindowParams.height = 1080;
-    creationParams.EnableVSync         = true;
+    creationParams.EnableVSync         = false;
     creationParams.SimulationFrequency = 0;
     // creationParams.AssetDirectory      = "..\\..\\..\\..\\sandbox_environment\\assets";
     creationParams.AssetDirectory      = "../assets";

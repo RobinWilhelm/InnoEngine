@@ -43,15 +43,15 @@ namespace InnoEngine
         size_t data_size   = 0;
         void*  shader_data = SDL_LoadFile( full_path.string().c_str(), &data_size );
         if ( shader_data == nullptr ) {
-            IE_LOG_ERROR("Loading shader \"{}\" failed at SDL_LoadFile: {}", full_path.string(), SDL_GetError());
+            IE_LOG_ERROR( "Loading shader \"{}\" failed at SDL_LoadFile: {}", full_path.string(), SDL_GetError() );
             return Result::Fail;
         }
 
         std::filesystem::path metadata_full_path = full_path.parent_path().parent_path().concat( "/meta/" );
-        metadata_full_path.concat(full_path.filename().replace_extension(".json").string() );
+        metadata_full_path.concat( full_path.filename().replace_extension( ".json" ).string() );
 
         if ( std::filesystem::exists( metadata_full_path ) == false ) {
-            IE_LOG_ERROR("Loading shader \"{}\" failed: {}", full_path.string(), "Couldn't find meta data");
+            IE_LOG_ERROR( "Loading shader \"{}\" failed: {}", full_path.string(), "Couldn't find meta data" );
             return Result::Fail;
         }
 
@@ -59,6 +59,12 @@ namespace InnoEngine
         try {
             std::ifstream  ifs( metadata_full_path.string().c_str() );
             nlohmann::json meta_data_json = nlohmann::json::parse( ifs );
+
+            SDL_PropertiesID pid = 0;
+#ifdef _DEBUG
+            pid = SDL_CreateProperties();
+            SDL_SetStringProperty( pid, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, file_name.c_str() );
+#endif
 
             sdl_shadercreateinfo.code_size            = data_size;
             sdl_shadercreateinfo.code                 = static_cast<Uint8*>( shader_data );
@@ -69,15 +75,17 @@ namespace InnoEngine
             sdl_shadercreateinfo.num_storage_textures = meta_data_json.at( "storage_textures" );
             sdl_shadercreateinfo.num_storage_buffers  = meta_data_json.at( "storage_buffers" );
             sdl_shadercreateinfo.num_uniform_buffers  = meta_data_json.at( "uniform_buffers" );
+            sdl_shadercreateinfo.props                = pid;
+
         } catch ( std::exception e ) {
-            IE_LOG_ERROR("Loading shader \"{}\" failed: {}", full_path.string(), "Invalid meta data");
+            IE_LOG_ERROR( "Loading shader \"{}\" failed: {}", full_path.string(), "Invalid meta data" );
             return Result::Fail;
         }
 
         m_sdlShader = SDL_CreateGPUShader( m_Device, &sdl_shadercreateinfo );
         SDL_free( shader_data );
 
-        IE_LOG_DEBUG("Loaded shader \"{}\"", full_path.string());
+        IE_LOG_DEBUG( "Loaded shader \"{}\"", full_path.string() );
         return Result::Success;
     }
 
