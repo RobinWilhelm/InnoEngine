@@ -575,15 +575,15 @@ namespace InnoEngine
         }
     }
 
-    void GPURenderer::add_bounding_box( const DXSM::Vector4& aabb, const DXSM::Color& color )
+    void GPURenderer::add_bounding_box( const DXSM::Vector4& aabb, const DXSM::Vector2& position, const DXSM::Color& color )
     {
         float line_width = 1;
 
         std::vector<DXSM::Vector2> points {
-            {              aabb.x,              aabb.y },
-            { aabb.z + line_width,              aabb.y },
-            { aabb.z + line_width, aabb.w + line_width },
-            {              aabb.x, aabb.w + line_width },
+            {              aabb.x + position.x,              aabb.y + position.y },
+            { aabb.z + line_width + position.x,              aabb.y + position.y },
+            { aabb.z + line_width + position.x, aabb.w + line_width + position.y },
+            {              aabb.x + position.x, aabb.w + line_width + position.y },
         };
         add_lines( points, line_width, 0.0f, color, true );
     }
@@ -624,6 +624,14 @@ namespace InnoEngine
         cmd.FontSize        = size;
         cmd.ForegroundColor = color;
         cmd.Depth           = m_CurrentLayerDepth;
+    }
+
+    void GPURenderer::add_text_centered( const Font* font, const DXSM::Vector2& position, uint32_t text_size, std::string_view text, const DXSM::Color& color )
+    {
+        DXSM::Vector4 aabb        = font->get_aabb( text_size, text );
+        float         text_width  = aabb.z - aabb.x;
+        float         text_height = aabb.y - aabb.w;
+        add_text( font, { position.x - text_width / 2, position.y - text_height / 2 }, text_size, text, color );
     }
 
     void GPURenderer::retrieve_shaderformatinfo()

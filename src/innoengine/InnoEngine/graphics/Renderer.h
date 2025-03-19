@@ -65,9 +65,9 @@ namespace InnoEngine
         void add_pixel( const DXSM::Vector2& position, const DXSM::Color& color );
         void add_quad( const DXSM::Vector2& position, const DXSM::Vector2& size, float rotation, const DXSM::Color& color );
         void add_line( const DXSM::Vector2& start, const DXSM::Vector2& end, float thickness, float edge_fade, const DXSM::Color& color );
-        void add_lines( const std::vector<DXSM::Vector2>& points, float thickness, float edge_fade, const DXSM::Color& color, bool loop );            
-        void add_circle(const DXSM::Vector2& position, float radius, float edge_fade, const DXSM::Color& color);
-        void add_circle(const DXSM::Vector2& position, float radius, float thickness, float edge_fade, const DXSM::Color& color);
+        void add_lines( const std::vector<DXSM::Vector2>& points, float thickness, float edge_fade, const DXSM::Color& color, bool loop );
+        void add_circle( const DXSM::Vector2& position, float radius, float edge_fade, const DXSM::Color& color );
+        void add_circle( const DXSM::Vector2& position, float radius, float thickness, float edge_fade, const DXSM::Color& color );
 
         void add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector2& position );
         void add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color );
@@ -75,9 +75,10 @@ namespace InnoEngine
         void add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector4& source_rect, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color );
 
         void add_text( const Font* font, const DXSM::Vector2& position, uint32_t text_size, std::string_view text, const DXSM::Color& color );
+        void add_text_centered( const Font* font, const DXSM::Vector2& position, uint32_t text_size, std::string_view text, const DXSM::Color& color ); // recalculates text size every time
         void add_imgui_draw_data( ImDrawData* draw_data );
 
-        void add_bounding_box(const DXSM::Vector4& aabb, const DXSM::Color& color);
+        void add_bounding_box( const DXSM::Vector4& aabb, const DXSM::Vector2& position, const DXSM::Color& color );
 
     private:
         void  retrieve_shaderformatinfo();

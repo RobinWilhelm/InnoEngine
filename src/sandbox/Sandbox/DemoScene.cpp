@@ -79,9 +79,7 @@ void DemoLayer::render( float interp_factor, IE::GPURenderer* renderer )
     pos_y -= text_height / 2;
 
     renderer->add_text( m_testFont.get(), { pos_x, pos_y }, 30, text, { 1.0f, 1.0f, 1.0f, 1.0f } );
-
-    aabb += { pos_x, pos_y, pos_x, pos_y };
-    renderer->add_bounding_box( aabb, { 0.0f, 1.0f, 0.0f, 1.0f } );
+    renderer->add_bounding_box( aabb, { pos_x, pos_y }, { 0.0f, 1.0f, 0.0f, 1.0f } );
 }
 
 bool DemoLayer::handle_event( const SDL_Event& event )
