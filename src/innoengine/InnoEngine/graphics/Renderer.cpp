@@ -518,7 +518,7 @@ namespace InnoEngine
     void GPURenderer::add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color )
     {
         add_textured_quad( texture,
-                           { 1.0f, 1.0f, 1.0f, 1.0f },
+                           { 0.0f, 0.0f, 1.0f, 1.0f },
                            position,
                            scale,
                            rotation,

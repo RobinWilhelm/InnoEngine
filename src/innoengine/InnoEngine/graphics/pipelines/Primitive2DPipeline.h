@@ -24,9 +24,9 @@ namespace InnoEngine
         {
             DXSM::Vector2 Position;
             DXSM::Vector2 Size;
-            DXSM::Color   Color;
-            float         Depth;
+            DXSM::Color   Color;                
             float         Rotation;
+            float         Depth;
         };
 
         struct QuadStorageBufferLayout

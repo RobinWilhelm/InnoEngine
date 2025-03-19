@@ -148,7 +148,7 @@ namespace InnoEngine
 
             // check if have to switch to a new batch
             // reasons might be: change in texture, batch is full
-            if ( m_GPUBatch->current_batch_full() || current_texture != command->FontFBIndex ) {
+            if ( m_GPUBatch->current_batch_full() || current_texture != command->FontFBIndex || m_GPUBatch->get_current_batch_remaining_size() < command->StringLength) {
                 BatchData* batch_data   = m_GPUBatch->upload_and_add_batch( copy_pass );
                 batch_data->FontFBIndex = command->FontFBIndex;
 

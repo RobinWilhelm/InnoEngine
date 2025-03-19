@@ -10,7 +10,7 @@ int main()
     creationParams.SimulationFrequency = 0;
     // creationParams.AssetDirectory      = "..\\..\\..\\..\\sandbox_environment\\assets";
     creationParams.AssetDirectory      = "../assets";
-    creationParams.RunAsync            = true;
+    creationParams.RunAsync            = false;
 
     Sandbox sandbox;
     sandbox.init( creationParams );

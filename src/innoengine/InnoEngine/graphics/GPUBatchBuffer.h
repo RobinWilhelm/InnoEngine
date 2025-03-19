@@ -18,6 +18,7 @@ namespace InnoEngine
             uint32_t        Count      = 0;
             BatchCustomData CustomData = {};
         };
+
         using BatchDataList = std::vector<BatchData>;
 
         ~GPUBatchStorageBuffer();
@@ -34,6 +35,8 @@ namespace InnoEngine
         void   clear();
 
         const BatchDataList& get_batchlist() const;
+
+        size_t get_current_batch_remaining_size() const;
 
     private:
         int32_t       find_free_gpubuffer_index();
@@ -157,6 +160,12 @@ namespace InnoEngine
     inline const GPUBatchStorageBuffer<BufferLayout, BatchCustomData>::BatchDataList& GPUBatchStorageBuffer<BufferLayout, BatchCustomData>::get_batchlist() const
     {
         return m_Batches;
+    }
+
+    template<typename BufferLayout, typename BatchCustomData>
+    inline size_t GPUBatchStorageBuffer<BufferLayout, BatchCustomData>::get_current_batch_remaining_size() const
+    {
+        return m_BatchSize - m_CurrentDataCount;
     }
 
     template <typename BufferLayout, typename BatchCustomData>

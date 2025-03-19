@@ -30,9 +30,9 @@ namespace InnoEngine
             struct StructuredBufferLayout
             {
                 DXSM::Vector4 SourceRect;
+                DXSM::Color   Color;
                 DXSM::Vector2 Position;
                 DXSM::Vector2 Size;
-                DXSM::Color   Color;
                 DXSM::Vector2 OriginOffset;    // for rotation, in texels
                 float         Depth;
                 float         Rotation;        // in radians
@@ -53,12 +53,6 @@ namespace InnoEngine
                                    SDL_GPURenderPass*    renderPass );
 
     private:
-        BatchData* add_batch();
-        void       clear_batches();
-
-        uint32_t       find_free_gpubuffer();
-        SDL_GPUBuffer* get_gpubuffer_by_index( uint32_t index ) const;
-
         void sort_commands( const CommandList& command_list );
 
     private:
