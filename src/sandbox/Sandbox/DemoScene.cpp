@@ -64,14 +64,23 @@ void DemoLayer::render( float interp_factor, IE::GPURenderer* renderer )
 
     renderer->register_texture( m_testTexture );
 
-
-    renderer->register_font(m_testFont);
+    renderer->register_font( m_testFont );
 
     uint32_t count = 0;
-    for ( int i = 0; i < sprite_count; ++i ) {
-        renderer->add_pixel( m_positions[ i ], m_colors[ i ] );
+    for ( int i = 0; i < 100; ++i ) {
+        // renderer->add_pixel( m_positions[ i ], m_colors[ i ] );
+        renderer->add_circle({0, 0}, 100, 0.01f, {0.0f, 1.0f, 0.0f, 1.0f});
     }
-   
+
+    static std::vector<DXSM::Vector2> points {
+        { 200.0f, 100.0f },
+        { 600.0f, 200.0f },
+        { 500.0f, 600.0f },
+        { 200.0f, 600.0f }
+    };
+    //renderer->add_lines( points, 40, 0.1f, { 0.0f, 1.0f, 0.0f, 1.0f }, true );
+    //renderer->next_layer();
+    //renderer->add_circle( { 600, 400 }, 300.0f, 5.0f, 0.01f, { 0.5f, 0.5f, 0.5f, 1.0f } );
 }
 
 bool DemoLayer::handle_event( const SDL_Event& event )

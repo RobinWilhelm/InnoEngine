@@ -74,7 +74,9 @@ namespace InnoEngine
 
             m_Sprite2DPipeline->prepare_render( render_cmd_buf.SpriteRenderCommands );
 
-            m_PrimitivePipeline->prepare_render( render_cmd_buf.QuadRenderCommands );
+            m_PrimitivePipeline->prepare_render( render_cmd_buf.QuadRenderCommands,
+                                                 render_cmd_buf.LineRenderCommands,
+                                                 render_cmd_buf.CircleRenderCommands );
 
             m_Font2DPipeline->prepare_render( render_cmd_buf.FontRenderCommands,
                                               render_cmd_buf.FontRegister,
@@ -440,6 +442,68 @@ namespace InnoEngine
         cmd.Depth    = m_CurrentLayerDepth;
         cmd.Rotation = DirectX::XMConvertToRadians( rotation );
         cmd.Color    = color;
+    }
+
+    void GPURenderer::add_line( const DXSM::Vector2& start, const DXSM::Vector2& end, float thickness, float edge_fade, const DXSM::Color& color )
+    {
+        RenderCommandBuffer&              render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
+        Primitive2DPipeline::LineCommand& cmd            = render_cmd_buf.LineRenderCommands.emplace_back();
+
+        cmd.Start     = start;
+        cmd.End       = end;
+        cmd.Color     = color;
+        cmd.Thickness = thickness;
+        cmd.EdgeFade  = edge_fade;
+        cmd.Depth     = m_CurrentLayerDepth;
+    }
+
+    void GPURenderer::add_lines( const std::vector<DXSM::Vector2>& points, float thickness, float edge_fade, const DXSM::Color& color, bool loop )
+    {
+        uint32_t point_amount = static_cast<uint32_t>( points.size() );
+        if ( point_amount == 1 )
+            return;
+
+        RenderCommandBuffer& render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
+
+        for ( size_t i = 0; i < point_amount; ++i ) {
+            if ( i + 1 < point_amount ) {
+                Primitive2DPipeline::LineCommand& cmd = render_cmd_buf.LineRenderCommands.emplace_back();
+                cmd.Start                             = points[ i ];
+                cmd.End                               = points[ i + 1 ];
+                cmd.Color                             = color;
+                cmd.Thickness                         = thickness;
+                cmd.EdgeFade                          = edge_fade;
+                cmd.Depth                             = m_CurrentLayerDepth;
+            }
+            else if ( loop ) {
+                Primitive2DPipeline::LineCommand& cmd = render_cmd_buf.LineRenderCommands.emplace_back();
+                cmd.Start                             = points[ i ];
+                cmd.End                               = points[ 0 ];
+                cmd.Color                             = color;
+                cmd.Thickness                         = thickness;
+                cmd.EdgeFade                          = edge_fade;
+                cmd.Depth                             = m_CurrentLayerDepth;
+            }
+        }
+    }
+
+    void GPURenderer::add_circle( const DXSM::Vector2& position, float radius, float edge_fade, const DXSM::Color& color )
+    {
+        add_circle( position, radius, radius, edge_fade, color );
+    }
+
+    void GPURenderer::add_circle( const DXSM::Vector2& position, float radius, float thickness, float edge_fade, const DXSM::Color& color )
+    {
+        RenderCommandBuffer&                render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
+        Primitive2DPipeline::CircleCommand& cmd            = render_cmd_buf.CircleRenderCommands.emplace_back();
+
+        cmd.Position.x = position.x - radius;
+        cmd.Position.y = position.y - radius;
+        cmd.Color      = color;
+        cmd.Radius     = radius;
+        cmd.Fade       = edge_fade;
+        cmd.Thickness  = thickness / radius;
+        cmd.Depth      = m_CurrentLayerDepth;
     }
 
     void GPURenderer::add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector2& position )

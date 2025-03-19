@@ -6,7 +6,7 @@ int main()
     creationParams.WindowParams.title  = "Sandbox";
     creationParams.WindowParams.width  = 1920;
     creationParams.WindowParams.height = 1080;
-    creationParams.EnableVSync         = false;
+    creationParams.EnableVSync         = true;
     creationParams.SimulationFrequency = 0;
     // creationParams.AssetDirectory      = "..\\..\\..\\..\\sandbox_environment\\assets";
     creationParams.AssetDirectory      = "../assets";
@@ -14,6 +14,6 @@ int main()
 
     Sandbox sandbox;
     sandbox.init( creationParams );
-    sandbox.enable_debugui(true);
+    sandbox.enable_debugui(false);
     return static_cast<int>( sandbox.run() );
 }

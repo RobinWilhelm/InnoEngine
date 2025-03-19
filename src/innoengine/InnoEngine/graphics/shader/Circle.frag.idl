@@ -1,0 +1,9 @@
+namespace InnoEngine
+{
+    [default_interface]
+    runtimeclass Circle : Windows.UI.Xaml.Controls.Page
+    {
+        Circle();
+        Int32 MyProperty;
+    }
+}

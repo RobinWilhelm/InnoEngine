@@ -4,9 +4,9 @@ struct QuadData
 {
     float2 Position;
     float2 Size;
-    float4 Color;
-    float Depth;
+    float4 Color;    
     float Rotation;
+    float Depth;
     float2 pad;
 };
 
