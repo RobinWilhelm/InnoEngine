@@ -1,5 +1,5 @@
 #pragma once
-#include <SDL3/SDL_timer.h>
+#include "SDL3/SDL_timer.h"
 
 #include "Directxtk/SimpleMath.h"
 namespace DXSM = DirectX::SimpleMath;
@@ -53,7 +53,9 @@ namespace InnoEngine
 #define RETURN_IF_FAILED( x ) { if ( IE_FAILED( x ) ) { return; } }
     // clang-format on
 
-    inline uint64_t get_tick_count()
+    using TimeStampNS = uint64_t;
+
+    inline TimeStampNS get_tick_count()
     {
         return SDL_GetTicksNS();
     };
@@ -61,77 +63,6 @@ namespace InnoEngine
     constexpr uint64_t TicksPerSecond = 1'000'000'000;
 
     using FrameBufferIndex = int32_t;
-
-
-    enum class Origin
-    {
-        Middle = 0,
-        TopLeft,
-        TopRight,
-        BottomLeft,
-        BottomRight,
-    };
-
-    template <typename T>
-    class RenderCommandQueue
-    {
-    public:
-        RenderCommandQueue( size_t expectedQueueSize = 1000 )
-        {
-            m_collectQueue.reserve( expectedQueueSize );
-            m_dispatchQueue.reserve( expectedQueueSize );
-        }
-
-        virtual ~RenderCommandQueue() = default;
-
-        [[nodiscard]]
-        T& create_entry()
-        {
-            grow_if_needed();
-            return m_collectQueue.emplace_back();
-        }
-
-        void grow_if_needed()
-        {
-            if ( m_collectQueue.size() == m_collectQueue.capacity() ) {
-                // Grow by a factor of 2.
-                m_collectQueue.reserve( m_collectQueue.capacity() * 2 );
-            }
-        }
-
-        void on_submit()
-        {
-            size_t items = m_collectQueue.size();
-            if ( items != 0 ) {
-                switch_buffers();
-
-                // clear to get ready for collecting next frames commands
-                m_collectQueue.clear();
-                m_collectQueue.reserve( items );
-            }
-        }
-
-        void switch_buffers()
-        {
-            // make a pointer swap
-            m_collectQueue.swap( m_dispatchQueue );
-        }
-
-        std::vector<T>& get_collecting_queue()
-        {
-            return m_collectQueue;
-        }
-
-        std::vector<T>& get_dispatching_queue()
-        {
-            return m_dispatchQueue;
-        }
-
-    private:
-        // force it to align to cache lines to prevent false sharing
-        alignas( std::hardware_destructive_interference_size ) std::vector<T> m_collectQueue;
-        alignas( std::hardware_destructive_interference_size ) std::vector<T> m_dispatchQueue;
-    };
 
     template <typename T>
     class DoubleBuffered
@@ -142,12 +73,12 @@ namespace InnoEngine
             m_switch = !m_switch;
         }
 
-        T& get_first()
+        T& get_producer_data()
         {
             return m_switch ? m_second : m_first;
         }
 
-        T& get_second()
+        const T& get_consumer_data() const
         {
             return m_switch ? m_first : m_second;
         }
@@ -160,6 +91,13 @@ namespace InnoEngine
         alignas( std::hardware_destructive_interference_size ) T m_first;
         alignas( std::hardware_destructive_interference_size ) T m_second;
 #pragma warning( pop )
+    };
+
+    struct RenderCommandBase
+    {
+        float    Depth             = 0;
+        uint16_t RenderTargetIndex = 0;
+        uint16_t ViewMatrixIndex   = 0;
     };
 
 }    // namespace InnoEngine

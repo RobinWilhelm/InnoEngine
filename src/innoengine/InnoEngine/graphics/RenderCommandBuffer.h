@@ -19,18 +19,9 @@ namespace InnoEngine
 {
     struct RenderCommandBuffer
     {
-        struct Stats
-        {
-            size_t TotalCommands   = 0;
-            size_t TotalDrawCalls  = 0;
-            size_t TotalBufferSize = 0;
-        };
-
-        Stats LastFrameStats;
-
         bool         Clear;
         DXSM::Color  ClearColor;
-        DXSM::Matrix CameraMatrix;
+        std::vector<DXSM::Matrix> ViewProjectionMatrices;
 
         TextureList TextureRegister;    // hold a reference to all texture objects we are going to use this frame
 
@@ -45,16 +36,10 @@ namespace InnoEngine
 
         ImGuiPipeline::CommandData ImGuiCommandBuffer;
 
-        size_t SpriteDrawCalls;
-        size_t PrimitivesDrawCalls;
-        size_t FontDrawCalls;
-        size_t ImGuiDrawCalls;
-
         RenderCommandBuffer();
         RenderCommandBuffer& operator=( RenderCommandBuffer& other );
 
         void         clear();
-        const Stats& get_stats() const;
     };
 
 }    // namespace InnoEngine

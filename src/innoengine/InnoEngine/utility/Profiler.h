@@ -47,6 +47,7 @@ namespace InnoEngine
     };
 
     class Profiler
+
     {
 #pragma warning( push )
 #pragma warning( disable :4324 )
@@ -56,6 +57,7 @@ namespace InnoEngine
             uint64_t              Current;
             uint64_t              TotalFrame;
             AverageCalc<uint64_t> AverageCalc;
+            bool                  Active;
         };
 
 #pragma warning( pop )
@@ -76,5 +78,19 @@ namespace InnoEngine
 
     private:
         std::array<Timing, static_cast<size_t>( ProfilePoint::Count )> m_timings;
+    };
+
+    class ProfileScoped
+    {
+        friend class Profiler;
+    public:
+        ProfileScoped(ProfilePoint profile_point);
+        ~ProfileScoped();
+
+        void stop();
+
+    private:
+        static Profiler* ms_Profiler;
+        ProfilePoint m_ProfilePoint;
     };
 }    // namespace InnoEngine

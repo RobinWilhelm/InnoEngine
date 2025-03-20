@@ -22,7 +22,20 @@ namespace InnoEngine
     class Texture2D;
     struct RenderCommandBuffer;
 
+    struct RenderStatistics
+    {
+        size_t SpriteDrawCalls     = 0;
+        size_t PrimitivesDrawCalls = 0;
+        size_t FontDrawCalls       = 0;
+        size_t ImGuiDrawCalls      = 0;
+
+        size_t TotalCommands   = 0;
+        size_t TotalDrawCalls  = 0;
+        size_t TotalBufferSize = 0;
+    };
+
     class GPURenderer
+
     {
         friend class DebugUI;
         GPURenderer() = default;
@@ -45,8 +58,10 @@ namespace InnoEngine
 
         const char* get_devicedriver() const;
 
+        const RenderStatistics& get_statistics() const;    // get the stats with of the last completed fram
+
         void wait_for_gpu_idle();
-        void on_synchronize();
+        void synchronize();
         void render();    // process all available rendercommands and send them to the gpu
 
         // Important: needs to be externally synchronized when adding rendercommands from multiple threads
@@ -58,8 +73,9 @@ namespace InnoEngine
         uint16_t next_layer();
         void     set_layer( uint16_t layer );
 
-        void set_clear_color( DXSM::Color color );    // the color the swapchain texture should be cleared to at the begin of the frame
-        void set_view_projection( const DXSM::Matrix view_projection );
+        void     set_clear_color( DXSM::Color color );    // the color the swapchain texture should be cleared to at the begin of the frame
+        uint16_t set_view_projection( const DXSM::Matrix view_projection );
+        void     set_view_projection( uint16_t vp_index );
 
         void add_sprite( const Sprite& sprite );
         void add_pixel( const DXSM::Vector2& position, const DXSM::Color& color );
@@ -75,7 +91,7 @@ namespace InnoEngine
         void add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector4& source_rect, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color );
 
         void add_text( const Font* font, const DXSM::Vector2& position, uint32_t text_size, std::string_view text, const DXSM::Color& color );
-        void add_text_centered( const Font* font, const DXSM::Vector2& position, uint32_t text_size, std::string_view text, const DXSM::Color& color ); // recalculates text size every time
+        void add_text_centered( const Font* font, const DXSM::Vector2& position, uint32_t text_size, std::string_view text, const DXSM::Color& color );    // recalculates text size every time
         void add_imgui_draw_data( ImDrawData* draw_data );
 
         void add_bounding_box( const DXSM::Vector4& aabb, const DXSM::Vector2& position, const DXSM::Color& color );
@@ -84,8 +100,12 @@ namespace InnoEngine
         void  retrieve_shaderformatinfo();
         float transform_layer_to_depth( uint16_t layer );
 
+        void update_statistics();    // update the stats with of the last completed frame
+
         // debug only
         const RenderCommandBuffer* get_render_command_buffer() const;
+
+        void populate_command_base(RenderCommandBase* command);
 
     private:
         bool m_Initialized  = false;
@@ -94,14 +114,17 @@ namespace InnoEngine
         uint16_t m_CurrentLayer      = 0;
         float    m_CurrentLayerDepth = 0.0f;
 
+        uint16_t m_CurrentViewProjectionIndex = 0;
+        uint16_t m_CurrentRenderTargetIndex = 0;
+
         class PipelineProcessor;
         Own<PipelineProcessor> m_pipelineProcessor = nullptr;
 
         GPUDeviceRef m_sdlGPUDevice = nullptr;
-        Window*      m_window       = nullptr;
+        Window*      m_Window       = nullptr;
 
         SDL_GPUTexture* m_DepthTexture = nullptr;
 
-        bool m_doubleBuffered = false;
+        DoubleBuffered<RenderStatistics> m_Statistics;
     };
 }    // namespace InnoEngine

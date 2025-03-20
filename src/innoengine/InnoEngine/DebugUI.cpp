@@ -8,6 +8,8 @@
 #include "InnoEngine/graphics/Renderer.h"
 #include "InnoEngine/graphics/RenderCommandBuffer.h"
 
+#include "InnoEngine/graphics/Camera.h"
+
 namespace InnoEngine
 {
     auto DebugUI::create( GPURenderer* renderer ) -> std::optional<Own<DebugUI>>
@@ -31,13 +33,13 @@ namespace InnoEngine
 
         set_style();
 
-        ImGui::SetNextWindowSize({300, 300}, ImGuiCond_Always);
-        if (ImGui::Begin("InnoEngine Debug Info", &m_open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings)) {
+        ImGui::SetNextWindowSize( { 300, 300 }, ImGuiCond_Always );
+        if ( ImGui::Begin( "InnoEngine Debug Info", &m_open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings ) ) {
 
             auto                   app = CoreAPI::get_application();
             const FrameTimingInfo& fti = app->get_frame_timings();
 
-            const RenderCommandBuffer::Stats& render_stats = renderer->get_render_command_buffer()->get_stats();
+            const RenderStatistics& render_stats = renderer->get_statistics();
 
             if ( ImGui::BeginTabBar( "IEDebugMenuTabBar" ) ) {
 
@@ -64,7 +66,7 @@ namespace InnoEngine
 
                 if ( ImGui::BeginTabItem( "Frame Timings" ) ) {
                     if ( ImGui::BeginTable( "DebugTimingsTable", 2, ImGuiTabBarFlags_None ) ) {
-                        ImGui::TableSetupColumn( "#Description", ImGuiTableColumnFlags_WidthFixed, 150);
+                        ImGui::TableSetupColumn( "#Description", ImGuiTableColumnFlags_WidthFixed, 150 );
                         ImGui::TableSetupColumn( "#Timing", ImGuiTableColumnFlags_WidthFixed, 50 );
                         ImGui::TableNextColumn();
 
@@ -107,7 +109,7 @@ namespace InnoEngine
                             ImGui::TableNextColumn();
                         }
                         else {
-                            ImGui::Text( "Main Thread:" );
+                            ImGui::Text( "Render Thread:" );
                             ImGui::TableNextColumn();
                             ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::MainThreadTotal ) * 1000 );
                             ImGui::TableNextColumn();
@@ -133,7 +135,7 @@ namespace InnoEngine
                             ImGui::Separator();
 
                             ImGui::Unindent();
-                            ImGui::Text( "Update Thread:" );
+                            ImGui::Text( "Layer Thread:" );
                             ImGui::TableNextColumn();
                             ImGui::Text( "%.2f ms", app->get_timing( ProfilePoint::UpdateThreadTotal ) * 1000 );
                             ImGui::TableNextColumn();
@@ -160,6 +162,14 @@ namespace InnoEngine
                         }
                         ImGui::EndTable();
                     }
+                    ImGui::EndTabItem();
+                }
+
+                if ( ImGui::BeginTabItem( "Camera" ) ) {
+                    Camera*     camera  = CoreAPI::get_camera();
+                    const auto& cam_pos = camera->get_position();
+
+                    ImGui::Text( "Position: %.1f %.1f %.1f", cam_pos.x, cam_pos.y, cam_pos.z );
                     ImGui::EndTabItem();
                 }
 

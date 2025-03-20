@@ -148,7 +148,7 @@ namespace InnoEngine
 
             // check if have to switch to a new batch
             // reasons might be: change in texture, batch is full
-            if ( m_GPUBatch->current_batch_full() || current_texture != command->FontFBIndex || m_GPUBatch->get_current_batch_remaining_size() < command->StringLength) {
+            if ( m_GPUBatch->current_batch_full() || current_texture != command->FontFBIndex || m_GPUBatch->get_current_batch_remaining_size() < command->StringLength ) {
                 BatchData* batch_data   = m_GPUBatch->upload_and_add_batch( copy_pass );
                 batch_data->FontFBIndex = command->FontFBIndex;
 
@@ -223,8 +223,8 @@ namespace InnoEngine
                 glyph->getQuadPlaneBounds( pl, pb, pr, pt );
                 buffer_data->Position.x = static_cast<float>( x + pl * scale );
                 buffer_data->Position.y = static_cast<float>( y + ( pb * scale ) * -1 );
-                buffer_data->Size.x     = static_cast<float>( (pr - pl) * scale );
-                buffer_data->Size.y     = static_cast<float>( ((pb - pt) * scale ));
+                buffer_data->Size.x     = static_cast<float>( ( pr - pl ) * scale );
+                buffer_data->Size.y     = static_cast<float>( ( ( pb - pt ) * scale ) );
 
                 buffer_data->ForegroundColor  = command->ForegroundColor;
                 buffer_data->Depth            = command->Depth;
@@ -249,23 +249,17 @@ namespace InnoEngine
         }
     }
 
-    uint32_t Font2DPipeline::swapchain_render( const DXSM::Matrix& view_projection, const FontList& font_list, SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass )
+    uint32_t Font2DPipeline::swapchain_render( const std::vector<DXSM::Matrix>& view_projections_list, const FontList& font_list, SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass )
     {
         IE_ASSERT( m_Device != nullptr );
         IE_ASSERT( gpu_cmd_buf != nullptr && render_pass != nullptr );
 
-        DXSM::Vector4 vec_bottom( 400, 400, -10, 1 );
-        DXSM::Vector4 vec_top( 400, 400, 65530, 1 );
-
-        DXSM::Vector4 output_top    = DXSM::Vector4::Transform( vec_top, view_projection );
-        DXSM::Vector4 output_bottom = DXSM::Vector4::Transform( vec_bottom, view_projection );
-
         SDL_BindGPUGraphicsPipeline( render_pass, m_Pipeline );
-        SDL_PushGPUVertexUniformData( gpu_cmd_buf, 0, &view_projection, sizeof( DXSM::Matrix ) );
         SDL_BindGPUVertexBuffers( render_pass, 0, nullptr, 0 );
 
         uint32_t draw_calls = 0;
         for ( const auto& batch_data : m_GPUBatch->get_batchlist() ) {
+            SDL_PushGPUVertexUniformData( gpu_cmd_buf, 0, &view_projections_list[ batch_data.CustomData.ViewMatrixIndex ], sizeof( DXSM::Matrix ) );
             SDL_BindGPUVertexStorageBuffers( render_pass, 0, &batch_data.GPUBuffer, 1 );
 
             SDL_GPUTextureSamplerBinding texture_sampler_binding = {};
@@ -291,7 +285,13 @@ namespace InnoEngine
         }
 
         std::sort( m_SortedCommands.begin(), m_SortedCommands.end(), []( const Command* a, const Command* b ) {
+            if ( a->RenderTargetIndex > b->RenderTargetIndex )
+                return true;
+
             if ( a->FontFBIndex < b->FontFBIndex )
+                return true;
+
+            if ( a->ViewMatrixIndex > b->ViewMatrixIndex )
                 return true;
 
             if ( a->Depth > b->Depth )

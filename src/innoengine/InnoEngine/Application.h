@@ -15,8 +15,10 @@ namespace InnoEngine
 {
     class GPURenderer;
     class AssetManager;
-    class OrthographicCamera;
+    class Camera;
     class Layer;
+    class InputSystem;
+    class CameraController;
 
     struct FrameTimingInfo
     {
@@ -48,7 +50,7 @@ namespace InnoEngine
         Result init( const CreationParams& appParams );
         Result run();
 
-        void set_simulation_target_frequency( int updatesPerSecond );
+        void                   set_simulation_target_frequency( int updatesPerSecond );
         const FrameTimingInfo& get_frame_timings() const;
 
         Window*       get_window() const;
@@ -63,6 +65,8 @@ namespace InnoEngine
         float get_fps();
         float get_timing( ProfilePoint element );
         void  push_layer( Layer* layer );
+
+        void set_camera_controller( Ref<CameraController> camera_controller );
 
     private:
         virtual void   on_init_assets( AssetManager* assetmanager ) = 0;
@@ -86,33 +90,36 @@ namespace InnoEngine
         void update_profiledata();
 
     private:
-        FrameTimingInfo         m_frameTimingInfo = {};
-        Own<Window>             m_window;
-        Own<GPURenderer>        m_renderer;
-        Own<AssetManager>       m_assetManager;
-        Own<OrthographicCamera> m_camera;
-        Own<Profiler>           m_profiler;
+        FrameTimingInfo   m_FrameTimingInfo = {};
+        Own<Window>       m_Window;
+        Own<GPURenderer>  m_Renderer;
+        Own<AssetManager> m_AssetManager;
+        Own<Profiler>     m_Profiler;
+        Own<InputSystem>  m_InputSystem;
 
-        bool             m_initializationSucceded = false;
-        std::atomic_bool m_mustQuit               = false;
+        Ref<Camera>           m_Camera;
+        Ref<CameraController> m_CameraController;
 
-        bool                    m_multiThreaded = false;
-        std::thread             m_asyncApplicationThread;
-        std::mutex              m_asyncMutex;
-        std::condition_variable m_asyncThreadWaiting;
-        std::condition_variable m_mainThreadWaiting;
-        bool                    m_asyncThreadFinished = true;
-        bool                    m_syncComplete        = false;
+        bool             m_InitializationSucceded = false;
+        std::atomic_bool m_MustQuit               = false;
+
+        bool                    m_MultiThreaded = false;
+        std::thread             m_AsyncApplicationThread;
+        std::mutex              m_AsyncMutex;
+        std::condition_variable m_AsyncThreadWaiting;
+        std::condition_variable m_MainThreadWaiting;
+        bool                    m_AsyncThreadFinished = true;
+        bool                    m_SyncComplete        = false;
 
         // buffered events for async handling
-        DoubleBuffered<std::vector<SDL_Event>> m_eventBuffer;
+        DoubleBuffered<std::vector<SDL_Event>> m_EventBuffer;
 
-        std::vector<Layer*> m_layerStack;
+        std::vector<Layer*> m_LayerStack;
         // keep debuglayer seperate and always topmost
-        Own<Layer>          m_debugLayer;
-        bool                m_debugui_active = false;
+        Own<Layer>          m_DebugLayer;
+        bool                m_DebugUIEnabled = false;
 
-        std::array<float, static_cast<int>( ProfilePoint::Count )> m_profileData;
+        std::array<float, static_cast<int>( ProfilePoint::Count )> m_ProfileData = {};
     };
 
 }    // namespace InnoEngine

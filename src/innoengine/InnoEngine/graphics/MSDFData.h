@@ -16,7 +16,7 @@ namespace InnoEngine
     struct MSDFData
     {
         const float Range   = 2.0f;
-        const float Scale   = 40.0f;
+        const float Scale   = 64.0f;
         bool        IsASCII = true;
 
         // Storage for glyph geometry and their coordinates in the atlas

@@ -9,6 +9,15 @@ namespace InnoEngine
 {
     class GPURenderer;
 
+    enum class Origin
+    {
+        Middle = 0,
+        TopLeft,
+        TopRight,
+        BottomLeft,
+        BottomRight,
+    };
+
     class Sprite
     {
         friend class GPURenderer;
@@ -38,7 +47,7 @@ namespace InnoEngine
         void render();
 
     private:
-        GPURenderer*   m_renderer        = nullptr;
+        GPURenderer*   m_Renderer        = nullptr;
         Ref<Texture2D> m_texture         = nullptr;
         DXSM::Vector4  m_sourceRect      = { 0.0f, 0.0f, 1.0f, 1.0f };
         DXSM::Vector2  m_position        = { 0, 0 };

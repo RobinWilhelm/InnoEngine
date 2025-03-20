@@ -108,7 +108,7 @@ namespace InnoEngine
             return Result::InitializationError;
         }
 
-        m_GPUBatch = GPUBatchStorageBuffer<Command::StructuredBufferLayout, BatchData>::create( m_Device, MaxBatchSize);
+        m_GPUBatch = GPUBatchStorageBuffer<StructuredBufferLayout, BatchData>::create( m_Device, MaxBatchSize );
 
         m_Initialized = true;
         return Result::Success;
@@ -140,8 +140,14 @@ namespace InnoEngine
                 current_texture          = command->TextureIndex;
             }
 
-            Command::StructuredBufferLayout* buffer_data = m_GPUBatch->next_data();
-            *buffer_data                                 = command->info;
+            StructuredBufferLayout* buffer_data = m_GPUBatch->next_data();
+            buffer_data->Color                  = command->Color;
+            buffer_data->Position               = command->Position;
+            buffer_data->OriginOffset           = command->OriginOffset;
+            buffer_data->Size                   = command->Size;
+            buffer_data->Rotation               = command->Rotation;
+            buffer_data->Depth                  = command->Depth;
+            buffer_data->SourceRect             = command->SourceRect;
         }
         m_GPUBatch->upload_last( copy_pass );
 
@@ -153,10 +159,10 @@ namespace InnoEngine
         }
     }
 
-    uint32_t Sprite2DPipeline::swapchain_render( const DXSM::Matrix&   view_projection,
-                                                 const TextureList&    texture_list,
-                                                 SDL_GPUCommandBuffer* gpu_cmd_buf,
-                                                 SDL_GPURenderPass*    render_pass )
+    uint32_t Sprite2DPipeline::swapchain_render( const std::vector<DXSM::Matrix>& view_projections_list,
+                                                 const TextureList&               texture_list,
+                                                 SDL_GPUCommandBuffer*            gpu_cmd_buf,
+                                                 SDL_GPURenderPass*               render_pass )
     {
         IE_ASSERT( m_Device != nullptr );
         IE_ASSERT( gpu_cmd_buf != nullptr && render_pass != nullptr );
@@ -165,11 +171,12 @@ namespace InnoEngine
             return 0;
 
         SDL_BindGPUGraphicsPipeline( render_pass, m_Pipeline );
-        SDL_PushGPUVertexUniformData( gpu_cmd_buf, 0, &view_projection, sizeof( DXSM::Matrix ) );
+
         SDL_BindGPUVertexBuffers( render_pass, 0, nullptr, 0 );
 
         uint32_t draw_calls = 0;
         for ( const auto& batch_data : m_GPUBatch->get_batchlist() ) {
+            SDL_PushGPUVertexUniformData( gpu_cmd_buf, 0, &view_projections_list[ batch_data.CustomData.ViewMatrixIndex ], sizeof( DXSM::Matrix ) );
             SDL_BindGPUVertexStorageBuffers( render_pass, 0, &batch_data.GPUBuffer, 1 );
 
             SDL_GPUTextureSamplerBinding texture_sampler_binding = {};
@@ -196,10 +203,16 @@ namespace InnoEngine
         }
 
         std::sort( m_SortedCommands.begin(), m_SortedCommands.end(), []( const Command* a, const Command* b ) {
-            if ( a->TextureIndex < b->TextureIndex )
+            if ( a->RenderTargetIndex > b->RenderTargetIndex )
                 return true;
 
-            if ( a->info.Depth > b->info.Depth )
+            if ( a->TextureIndex > b->TextureIndex )
+                return true;
+
+            if ( a->ViewMatrixIndex > b->ViewMatrixIndex )
+                return true;
+
+            if ( a->Depth > b->Depth )
                 return true;
 
             return false;

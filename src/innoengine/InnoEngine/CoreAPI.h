@@ -6,8 +6,9 @@ namespace InnoEngine
     class Application;
     class AssetManager;
     class GPURenderer;
-    class OrthographicCamera;
+    class Camera;
     class Profiler;
+    class InputSystem;
 
     class CoreAPI
     {
@@ -29,40 +30,47 @@ namespace InnoEngine
 
         static Application* get_application()
         {
-            IE_ASSERT( get_instance().m_app != nullptr );
-            return get_instance().m_app;
+            IE_ASSERT( get_instance().m_App != nullptr );
+            return get_instance().m_App;
         }
 
         static AssetManager* get_assetmanager()
         {
-            IE_ASSERT( get_instance().m_assetManager != nullptr );
-            return get_instance().m_assetManager;
+            IE_ASSERT( get_instance().m_AssetManager != nullptr );
+            return get_instance().m_AssetManager;
         }
 
         static GPURenderer* get_gpurenderer()
         {
-            IE_ASSERT( get_instance().m_renderer != nullptr );
-            return get_instance().m_renderer;
+            IE_ASSERT( get_instance().m_Renderer != nullptr );
+            return get_instance().m_Renderer;
         }
 
-        static OrthographicCamera* get_camera()
+        static Camera* get_camera()
         {
-            IE_ASSERT( get_instance().m_camera != nullptr );
-            return get_instance().m_camera;
+            IE_ASSERT( get_instance().m_Camera != nullptr );
+            return get_instance().m_Camera;
         }
 
         static Profiler* get_profiler()
         {
-            IE_ASSERT(get_instance().m_profiler != nullptr);
-            return get_instance().m_profiler;
+            IE_ASSERT( get_instance().m_Profiler != nullptr );
+            return get_instance().m_Profiler;
+        }
+
+        static InputSystem* get_inputsystem()
+        {
+            IE_ASSERT( get_instance().m_Input != nullptr );
+            return get_instance().m_Input;
         }
 
     private:
-        Application*        m_app          = nullptr;
-        AssetManager*       m_assetManager = nullptr;
-        GPURenderer*        m_renderer     = nullptr;
-        OrthographicCamera* m_camera       = nullptr;
-        Profiler*           m_profiler     = nullptr;
+        Application*  m_App          = nullptr;
+        AssetManager* m_AssetManager = nullptr;
+        GPURenderer*  m_Renderer     = nullptr;
+        Camera*       m_Camera       = nullptr;
+        Profiler*     m_Profiler     = nullptr;
+        InputSystem*  m_Input        = nullptr;
     };
 
 }    // namespace InnoEngine

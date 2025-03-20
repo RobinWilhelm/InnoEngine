@@ -86,7 +86,12 @@ namespace InnoEngine
             }
 
             QuadStorageBufferLayout* buffer_data = m_QuadGPUBatch->next_data();
-            std::memcpy( buffer_data, command, sizeof( QuadCommand ) );
+
+            buffer_data->Color    = command->Color;
+            buffer_data->Depth    = command->Depth;
+            buffer_data->Position = command->Position;
+            buffer_data->Rotation = command->Rotation;
+            buffer_data->Size     = command->Size;
         }
         m_QuadGPUBatch->upload_last( copy_pass );
 
@@ -96,7 +101,13 @@ namespace InnoEngine
             }
 
             LineStorageBufferLayout* buffer_data = m_LineGPUBatch->next_data();
-            std::memcpy( buffer_data, command, sizeof( LineCommand ) );
+
+            buffer_data->Color     = command->Color;
+            buffer_data->Thickness = command->Thickness;
+            buffer_data->EdgeFade  = command->EdgeFade;
+            buffer_data->Start     = command->Start;
+            buffer_data->End       = command->End;
+            buffer_data->Depth     = command->Depth;
         }
         m_LineGPUBatch->upload_last( copy_pass );
 
@@ -106,7 +117,13 @@ namespace InnoEngine
             }
 
             CircleStorageBufferLayout* buffer_data = m_CircleGPUBatch->next_data();
-            std::memcpy( buffer_data, command, sizeof( CircleCommand ) );
+
+            buffer_data->Color     = command->Color;
+            buffer_data->Depth     = command->Depth;
+            buffer_data->Position  = command->Position;
+            buffer_data->Fade      = command->Fade;
+            buffer_data->Thickness = command->Thickness;
+            buffer_data->Radius    = command->Radius;
         }
         m_CircleGPUBatch->upload_last( copy_pass );
 
@@ -118,12 +135,11 @@ namespace InnoEngine
         }
     }
 
-    uint32_t Primitive2DPipeline::swapchain_render( const DXSM::Matrix& view_projection, SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass )
+    uint32_t Primitive2DPipeline::swapchain_render( const std::vector<DXSM::Matrix>& view_projections_list, SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass )
     {
         IE_ASSERT( m_Device != nullptr );
         IE_ASSERT( gpu_cmd_buf != nullptr && render_pass != nullptr );
 
-        SDL_PushGPUVertexUniformData( gpu_cmd_buf, 0, &view_projection, sizeof( DXSM::Matrix ) );
         SDL_BindGPUVertexBuffers( render_pass, 0, nullptr, 0 );
 
         uint32_t draw_calls = 0;
@@ -131,6 +147,7 @@ namespace InnoEngine
         if ( m_QuadGPUBatch->size() > 0 ) {
             SDL_BindGPUGraphicsPipeline( render_pass, m_QuadPipeline );
             for ( const auto& batch_data : m_QuadGPUBatch->get_batchlist() ) {
+                SDL_PushGPUVertexUniformData( gpu_cmd_buf, 0, &view_projections_list[ batch_data.CustomData.ViewMatrixIndex ], sizeof( DXSM::Matrix ) );
                 SDL_BindGPUVertexStorageBuffers( render_pass, 0, &batch_data.GPUBuffer, 1 );
                 SDL_DrawGPUPrimitives( render_pass, batch_data.Count * 6, 1, 0, 0 );
                 ++draw_calls;
@@ -140,6 +157,7 @@ namespace InnoEngine
         if ( m_LineGPUBatch->size() > 0 ) {
             SDL_BindGPUGraphicsPipeline( render_pass, m_LinePipeline );
             for ( const auto& batch_data : m_LineGPUBatch->get_batchlist() ) {
+                SDL_PushGPUVertexUniformData( gpu_cmd_buf, 0, &view_projections_list[ batch_data.CustomData.ViewMatrixIndex ], sizeof( DXSM::Matrix ) );
                 SDL_BindGPUVertexStorageBuffers( render_pass, 0, &batch_data.GPUBuffer, 1 );
                 SDL_DrawGPUPrimitives( render_pass, batch_data.Count * 6, 1, 0, 0 );
                 ++draw_calls;
@@ -149,6 +167,7 @@ namespace InnoEngine
         if ( m_CircleGPUBatch->size() > 0 ) {
             SDL_BindGPUGraphicsPipeline( render_pass, m_CirclePipeline );
             for ( const auto& batch_data : m_CircleGPUBatch->get_batchlist() ) {
+                SDL_PushGPUVertexUniformData( gpu_cmd_buf, 0, &view_projections_list[ batch_data.CustomData.ViewMatrixIndex ], sizeof( DXSM::Matrix ) );
                 SDL_BindGPUVertexStorageBuffers( render_pass, 0, &batch_data.GPUBuffer, 1 );
                 SDL_DrawGPUPrimitives( render_pass, batch_data.Count * 6, 1, 0, 0 );
                 ++draw_calls;
@@ -170,9 +189,14 @@ namespace InnoEngine
         }
 
         std::sort( m_SortedQuadCommands.begin(), m_SortedQuadCommands.end(), []( const QuadCommand* a, const QuadCommand* b ) {
-            if ( a->Depth > b->Depth )
+            if ( a->RenderTargetIndex > b->RenderTargetIndex )
                 return true;
 
+            if ( a->ViewMatrixIndex > b->ViewMatrixIndex )
+                return true;
+
+            if ( a->Depth > b->Depth )
+                return true;
             return false;
         } );
     }
@@ -189,6 +213,12 @@ namespace InnoEngine
         }
 
         std::sort( m_SortedLineCommands.begin(), m_SortedLineCommands.end(), []( const LineCommand* a, const LineCommand* b ) {
+            if ( a->RenderTargetIndex > b->RenderTargetIndex )
+                return true;
+
+            if ( a->ViewMatrixIndex > b->ViewMatrixIndex )
+                return true;
+
             if ( a->Depth > b->Depth )
                 return true;
 
@@ -207,6 +237,12 @@ namespace InnoEngine
             m_SortedCircleCommands[ i ] = &circle_command_list[ i ];
         }
         std::sort( m_SortedCircleCommands.begin(), m_SortedCircleCommands.end(), []( const CircleCommand* a, const CircleCommand* b ) {
+            if ( a->RenderTargetIndex > b->RenderTargetIndex )
+                return true;
+
+            if ( a->ViewMatrixIndex > b->ViewMatrixIndex )
+                return true;
+
             if ( a->Depth > b->Depth )
                 return true;
 

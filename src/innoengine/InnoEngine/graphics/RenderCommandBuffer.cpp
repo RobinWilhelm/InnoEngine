@@ -17,9 +17,9 @@ namespace InnoEngine
         if ( this == &other )
             return *this;
 
-        Clear        = other.Clear;
-        ClearColor   = other.ClearColor;
-        CameraMatrix = other.CameraMatrix;
+        Clear                  = other.Clear;
+        ClearColor             = other.ClearColor;
+        ViewProjectionMatrices = other.ViewProjectionMatrices;
 
         SpriteRenderCommands.resize( other.SpriteRenderCommands.size() );
         std::memcpy( static_cast<void*>( SpriteRenderCommands.data() ),
@@ -58,41 +58,9 @@ namespace InnoEngine
 
     void RenderCommandBuffer::clear()
     {
-        LastFrameStats = Stats();
-
-        LastFrameStats.TotalBufferSize += sizeof( DXSM::Color );
-        LastFrameStats.TotalBufferSize += sizeof( DXSM::Matrix );
-        LastFrameStats.TotalBufferSize += TextureRegister.size() * sizeof( Ref<Texture2D> );
-
-        LastFrameStats.TotalCommands += SpriteRenderCommands.size();
-        LastFrameStats.TotalBufferSize += SpriteRenderCommands.size() * sizeof( Sprite2DPipeline::Command );
-
-        LastFrameStats.TotalCommands += QuadRenderCommands.size();
-        LastFrameStats.TotalBufferSize += QuadRenderCommands.size() * sizeof( Primitive2DPipeline::QuadCommand );
-
-        LastFrameStats.TotalCommands += LineRenderCommands.size();
-        LastFrameStats.TotalBufferSize += LineRenderCommands.size() * sizeof( Primitive2DPipeline::LineCommand );
-
-        LastFrameStats.TotalCommands += CircleRenderCommands.size();
-        LastFrameStats.TotalBufferSize += CircleRenderCommands.size() * sizeof( Primitive2DPipeline::CircleCommand );
-
-        LastFrameStats.TotalBufferSize += FontRegister.size() * sizeof( Ref<Font> );
-        LastFrameStats.TotalCommands += FontRenderCommands.size();
-        LastFrameStats.TotalBufferSize += FontRenderCommands.size() * sizeof( Font2DPipeline::Command );
-        LastFrameStats.TotalBufferSize += StringBuffer.size();
-
-        for ( const auto& rcmd : ImGuiCommandBuffer.RenderCommandLists ) {
-            LastFrameStats.TotalCommands += rcmd.CommandBuffer.size();
-            LastFrameStats.TotalBufferSize += rcmd.CommandBuffer.size() * sizeof( ImDrawCmd );
-            LastFrameStats.TotalBufferSize += rcmd.IndexBuffer.size() * sizeof( ImDrawIdx );
-            LastFrameStats.TotalBufferSize += rcmd.VertexBuffer.size() * sizeof( ImDrawVert );
-        }
-
-        LastFrameStats.TotalDrawCalls = SpriteDrawCalls + FontDrawCalls + ImGuiDrawCalls;
-
         Clear      = false;
         ClearColor = DXSM::Color( 0.0f, 0.0f, 0.0f, 0.0f );
-        CameraMatrix = DXSM::Matrix::Identity;
+        ViewProjectionMatrices.clear();
         SpriteRenderCommands.clear();
         QuadRenderCommands.clear();
         LineRenderCommands.clear();
@@ -104,15 +72,5 @@ namespace InnoEngine
 
         FontRegister.clear();
         TextureRegister.clear();
-
-        SpriteDrawCalls = 0;
-        FontDrawCalls   = 0;
-        ImGuiDrawCalls  = 0;
     }
-
-    const RenderCommandBuffer::Stats& RenderCommandBuffer::get_stats() const
-    {
-        return LastFrameStats;
-    }
-
 }    // namespace InnoEngine

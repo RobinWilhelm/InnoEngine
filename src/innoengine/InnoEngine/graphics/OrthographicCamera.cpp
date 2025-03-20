@@ -1,50 +1,58 @@
 #include "InnoEngine/iepch.h"
 #include "InnoEngine/graphics/OrthographicCamera.h"
 
+#include "InnoEngine/CoreAPI.h"
+#include "InnoEngine/graphics/Window.h"
+
 namespace InnoEngine
 {
-    auto OrthographicCamera::create( float left, float right, float bottom, float top ) -> Own<OrthographicCamera>
+    auto OrthographicCamera::create( const DXSM::Vector2& view_port_size ) -> Own<OrthographicCamera>
     {
         Own<OrthographicCamera> pOrthoCamera( new OrthographicCamera() );
-        pOrthoCamera->m_projection     = DXSM::Matrix::CreateOrthographicOffCenter( left, right, bottom, top, 1.0f, 0.0f );
-        pOrthoCamera->m_view           = DXSM::Matrix::Identity;
-        pOrthoCamera->m_viewProjection = pOrthoCamera->m_projection * pOrthoCamera->m_view;
+        pOrthoCamera->m_ViewPortSize = view_port_size;
+        pOrthoCamera->set_position( { view_port_size.x / 2, view_port_size.y / 2, 1.0f } );
         return pOrthoCamera;
     }
 
     void OrthographicCamera::update()
     {
-        if ( m_dirty ) {
-            m_view = DXSM::Matrix::CreateLookAt( m_position, { 0.0f, 0.0f, -1.0f }, { 0.0f, 0.0f, 1.0f } );
-            m_view.Invert();
-            m_viewProjection = m_projection * m_view;
-            m_dirty          = false;
+        if ( m_Dirty ) {
+            m_Projection = DXSM::Matrix::CreateOrthographicOffCenter( m_Position.x - ( m_ViewPortSize.x / 2 * m_Position.z ),
+                                                                      m_Position.x + ( m_ViewPortSize.x / 2 * m_Position.z ),
+                                                                      m_Position.y + ( m_ViewPortSize.y / 2 * m_Position.z ),
+                                                                      m_Position.y - ( m_ViewPortSize.y / 2 * m_Position.z ),
+                                                                      1.0f,
+                                                                      0.0f );
+            m_View       = DXSM::Matrix::CreateLookAt( { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } );
+            m_View.Invert();
+            m_ViewProjection = m_Projection * m_View;
+            m_Dirty          = false;
         }
     }
 
     const DXSM::Vector3& OrthographicCamera::get_position()
     {
-        return m_position;
+        return m_Position;
     }
 
     void OrthographicCamera::set_position( const DXSM::Vector3& position )
     {
-        m_position = position;
-        m_dirty    = true;
+        m_Position = position;
+        m_Dirty    = true;
     }
 
     const DXSM::Matrix& OrthographicCamera::get_viewmatrix() const
     {
-        return m_view;
+        return m_View;
     }
 
     const DXSM::Matrix& OrthographicCamera::get_projectionmatrix() const
     {
-        return m_projection;
+        return m_Projection;
     }
 
     const DXSM::Matrix& OrthographicCamera::get_viewprojectionmatrix() const
     {
-        return m_viewProjection;
+        return m_ViewProjection;
     }
 }    // namespace InnoEngine

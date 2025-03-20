@@ -18,18 +18,19 @@ namespace InnoEngine
     public:
         struct BatchData
         {
-            FrameBufferIndex FontFBIndex = -1;
+            FrameBufferIndex FontFBIndex       = -1;
+            uint16_t         ViewMatrixIndex   = 0;
+            uint16_t         RenderTargetIndex = 0;
         };
 
-        struct Command
+        struct Command : RenderCommandBase
         {
-            FrameBufferIndex FontFBIndex      = -1;
-            StringArenaIndex StringIndex    = 0;
-            uint32_t         StringLength     = 0;
-            uint32_t         FontSize       = 0;
+            FrameBufferIndex FontFBIndex     = -1;
+            StringArenaIndex StringIndex     = 0;
+            uint32_t         StringLength    = 0;
+            uint32_t         FontSize        = 0;
             DXSM::Vector2    Position        = {};
             DXSM::Color      ForegroundColor = {};
-            float            Depth           = 0.0f;
         };
 
         struct StructuredBufferLayout
@@ -40,7 +41,7 @@ namespace InnoEngine
             DXSM::Color   ForegroundColor  = {};
             float         Depth            = 0.0f;
             float         ScreenPixelWidth = 0.0f;
-            float pad [2];
+            float         pad[ 2 ];
         };
 
         using CommandList = std::vector<Command>;
@@ -51,10 +52,10 @@ namespace InnoEngine
 
         Result   initialize( GPURenderer* renderer, AssetManager* assetmanager );
         void     prepare_render( const CommandList& command_list, const FontList& texture_list, const StringArena& string_buffer );
-        uint32_t swapchain_render( const DXSM::Matrix&   view_projection,
-                                   const FontList&       texture_list,
-                                   SDL_GPUCommandBuffer* gpu_cmd_buf,
-                                   SDL_GPURenderPass*    render_pass );
+        uint32_t swapchain_render( const std::vector<DXSM::Matrix>& view_projections_list,
+                                   const FontList&                  texture_list,
+                                   SDL_GPUCommandBuffer*            gpu_cmd_buf,
+                                   SDL_GPURenderPass*               render_pass );
 
     private:
         void sort_commands( const CommandList& command_list );

@@ -1,0 +1,14 @@
+{
+  "OutputFoldersPerTargetSystem": {
+    "Local Machine": [
+      "build\\win64-default"
+    ]
+  },
+  "ExpandedNodes": [
+    "",
+    "\\src\\innoengine",
+    "\\src\\innoengine\\InnoEngine"
+  ],
+  "SelectedNode": "\\CMakeLists.txt",
+  "PreviewInSolutionExplorer": false
+}

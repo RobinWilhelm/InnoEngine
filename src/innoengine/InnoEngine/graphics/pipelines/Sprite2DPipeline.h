@@ -21,22 +21,31 @@ namespace InnoEngine
         struct BatchData
         {
             FrameBufferIndex TextureIndex = -1;
+            uint16_t ViewMatrixIndex = 0;
+            uint16_t RenderTargetIndex = 0;
         };
 
-        struct Command
+        struct Command : RenderCommandBase
         {
             FrameBufferIndex TextureIndex;
 
-            struct StructuredBufferLayout
-            {
-                DXSM::Vector4 SourceRect;
-                DXSM::Color   Color;
-                DXSM::Vector2 Position;
-                DXSM::Vector2 Size;
-                DXSM::Vector2 OriginOffset;    // for rotation, in texels
-                float         Depth;
-                float         Rotation;        // in radians
-            } info;
+            DXSM::Vector4 SourceRect;
+            DXSM::Color   Color;
+            DXSM::Vector2 Position;
+            DXSM::Vector2 Size;
+            DXSM::Vector2 OriginOffset;    // for rotation, in texels
+            float         Rotation;        // in radians
+        };
+
+        struct StructuredBufferLayout
+        {
+            DXSM::Vector4 SourceRect;
+            DXSM::Color   Color;
+            DXSM::Vector2 Position;
+            DXSM::Vector2 Size;
+            DXSM::Vector2 OriginOffset;    // for rotation, in texels
+            float         Depth;
+            float         Rotation;    // in radians
         };
 
         using CommandList = std::vector<Command>;
@@ -47,10 +56,10 @@ namespace InnoEngine
 
         Result   initialize( GPURenderer* renderer, AssetManager* assetmanager );
         void     prepare_render( const CommandList& command_list );
-        uint32_t swapchain_render( const DXSM::Matrix&   view_projection,
-                                   const TextureList&    texture_list,
-                                   SDL_GPUCommandBuffer* cmdbuf,
-                                   SDL_GPURenderPass*    renderPass );
+        uint32_t swapchain_render( const std::vector<DXSM::Matrix>& view_projection_list,
+                                   const TextureList&               texture_list,
+                                   SDL_GPUCommandBuffer*            cmdbuf,
+                                   SDL_GPURenderPass*               renderPass );
 
     private:
         void sort_commands( const CommandList& command_list );
@@ -63,8 +72,9 @@ namespace InnoEngine
 
         std::vector<const Command*> m_SortedCommands;    // objects owned by the RenderCommandBuffer
 
-        static constexpr uint32_t                                              MaxBatchSize = 20000;
-        Ref<GPUBatchStorageBuffer<Command::StructuredBufferLayout, BatchData>> m_GPUBatch;
+        static constexpr uint32_t MaxBatchSize = 20000;
+
+        Ref<GPUBatchStorageBuffer<StructuredBufferLayout, BatchData>> m_GPUBatch;
     };
 
     using SpriteCommandBuffer = Sprite2DPipeline::CommandList;

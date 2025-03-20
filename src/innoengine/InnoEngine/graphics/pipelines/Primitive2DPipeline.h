@@ -17,16 +17,16 @@ namespace InnoEngine
     public:
         struct BatchData
         {
-            uint32_t Dummy;
+            uint16_t ViewMatrixIndex   = 0;
+            uint16_t RenderTargetIndex = 0;
         };
 
-        struct QuadCommand
+        struct QuadCommand : RenderCommandBase
         {
             DXSM::Vector2 Position;
             DXSM::Vector2 Size;
-            DXSM::Color   Color;                
+            DXSM::Color   Color;
             float         Rotation;
-            float         Depth;
         };
 
         struct QuadStorageBufferLayout
@@ -39,14 +39,13 @@ namespace InnoEngine
             float         pad[ 2 ];
         };
 
-        struct LineCommand
+        struct LineCommand : RenderCommandBase
         {
             DXSM::Vector2 Start;
             DXSM::Vector2 End;
             DXSM::Color   Color;
             float         Thickness;
             float         EdgeFade;
-            float         Depth;
         };
 
         struct LineStorageBufferLayout
@@ -60,14 +59,13 @@ namespace InnoEngine
             float         pad;
         };
 
-        struct CircleCommand
+        struct CircleCommand : RenderCommandBase
         {
             DXSM::Color   Color;
             DXSM::Vector2 Position;
             float         Radius;
             float         Thickness;
             float         Fade;
-            float         Depth;
         };
 
         struct CircleStorageBufferLayout
@@ -95,9 +93,9 @@ namespace InnoEngine
         void     prepare_render( const QuadCommandList&   quad_command_list,
                                  const LineCommandList&   line_command_list,
                                  const CircleCommandList& circle_command_list );
-        uint32_t swapchain_render( const DXSM::Matrix&   view_projection,
-                                   SDL_GPUCommandBuffer* gpu_cmd_buf,
-                                   SDL_GPURenderPass*    render_pass );
+        uint32_t swapchain_render( const std::vector<DXSM::Matrix>& view_projections_list,
+                                   SDL_GPUCommandBuffer*            gpu_cmd_buf,
+                                   SDL_GPURenderPass*               render_pass );
 
         void sort_quad_commands( const QuadCommandList& quad_command_list );
         void sort_line_commands( const LineCommandList& quad_command_list );
