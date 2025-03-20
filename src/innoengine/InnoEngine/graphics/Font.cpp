@@ -196,7 +196,7 @@ namespace InnoEngine
         // The atlas bitmap can now be retrieved via atlasStorage as a BitmapConstRef.
         // The glyphs array (or fontGeometry) contains positioning data for typesetting text.
         auto bmp       = static_cast<msdfgen::BitmapConstRef<byte, 3>>( generator.atlasStorage() );
-        m_atlasTexture = Texture2D::create( width, height, TextureFormat::RGBX, SDL_GPU_TEXTUREUSAGE_SAMPLER | SDL_GPU_TEXTUREUSAGE_COLOR_TARGET, false ).value();
+        m_atlasTexture = Texture2D::create( width, height, TextureFormat::RGBX, SDL_GPU_TEXTUREUSAGE_SAMPLER | SDL_GPU_TEXTUREUSAGE_COLOR_TARGET, true ).value();
         Result res     = m_atlasTexture->load_data( bmp.pixels, bmp.width * bmp.height, SDL_PIXELFORMAT_RGB24 );
 
         // Cleanup

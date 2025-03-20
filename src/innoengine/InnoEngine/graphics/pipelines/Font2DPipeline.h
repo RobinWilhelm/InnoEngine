@@ -35,13 +35,12 @@ namespace InnoEngine
 
         struct StructuredBufferLayout
         {
-            DXSM::Vector2 Position         = {};
-            DXSM::Vector2 Size             = {};
-            DXSM::Vector4 SourceRect       = {};
-            DXSM::Color   ForegroundColor  = {};
-            float         Depth            = 0.0f;
-            float         ScreenPixelWidth = 0.0f;
-            float         pad[ 2 ];
+            DXSM::Vector2 Position        = {};
+            DXSM::Vector2 Size            = {};
+            DXSM::Vector4 SourceRect      = {};
+            DXSM::Color   ForegroundColor = {};
+            float         Depth           = 0.0f;
+            float         pad[ 3 ];
         };
 
         using CommandList = std::vector<Command>;

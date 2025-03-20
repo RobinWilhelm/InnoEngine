@@ -39,12 +39,13 @@ void DemoLayer::update( double delta_time )
 {
     //
     // std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
+     /*
     for ( int i = 0; i < sprite_count; ++i ) {
         m_rotations[ i ] += m_rotationSpeeds[ i ] * 360.0f * delta_time;
         if ( m_rotations[ i ] >= 360.0f )
             m_rotations[ i ] -= 360.0f;
     }
+    */
     uint64_t delta = IE::get_tick_count() - m_colorAnimStart;
     m_color_h      = static_cast<float>( delta ) / ( IE::TicksPerSecond * 3 );
 
@@ -60,8 +61,8 @@ void DemoLayer::render( float interp_factor, IE::GPURenderer* renderer )
 {
     (void)interp_factor;
     renderer->set_view_projection( IE::CoreAPI::get_camera()->get_viewprojectionmatrix() );
-    renderer->set_clear_color( { 0.09f, 0.42f, 0.09f, 1.0f } );
-    // renderer->set_clear_color({1.0f, 1.0f, 1.0f, 1.0f});
+    //renderer->set_clear_color( { 0.09f, 0.42f, 0.09f, 1.0f } );
+     renderer->set_clear_color({0.0f, 0.0f, 0.0f, 1.0f});
 
     renderer->register_texture( m_testTexture );
 
@@ -88,7 +89,7 @@ void DemoLayer::render( float interp_factor, IE::GPURenderer* renderer )
     pos_x -= text_width / 2;
     pos_y -= text_height / 2;
     for ( int i = 0; i < 1; ++i ) {
-        renderer->add_text( m_testFont.get(), { pos_x, pos_y }, 50, text, m_textColor );
+        renderer->add_text( m_testFont.get(), { pos_x, pos_y }, 80, text, {1.0f, 1.0f, 1.0f, 1.0f});
         //renderer->add_bounding_box( aabb, { pos_x, pos_y }, { 0.0f, 1.0f, 0.0f, 1.0f } );
     }
     

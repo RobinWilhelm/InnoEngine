@@ -7,8 +7,7 @@ struct MSDFSpriteData
     float4 SourceRect;
     float4 ForegroundColor; // text color
     float Depth;
-    float ScreenPixRange;
-    float2 pad;
+    float3 pad;
 };
 
 StructuredBuffer<MSDFSpriteData> DataBuffer : register(t0, space0);
@@ -17,7 +16,6 @@ struct Output
 {
     float2 TexCoord : TEXCOORD0;
     float4 Color : TEXCOORD1;
-    float ScreenPixRange : TEXCOORD2;
     float4 Position : SV_Position;
 };
 
@@ -43,6 +41,5 @@ Output main(uint id : SV_VertexID)
     output.Position         = transform_coordinates_2D(coordWithDepth);
     output.TexCoord         = texcoord[vert];
     output.Color            = sprite.ForegroundColor;
-    output.ScreenPixRange   = sprite.ScreenPixRange;
     return output;
 }

@@ -172,8 +172,6 @@ namespace InnoEngine
             double x = static_cast<double>( command->Position.x );
             double y = static_cast<double>( command->Position.y );
 
-            float ScreenPixelWidth = font->calculate_screen_pix_range( static_cast<float>( command->FontSize ) );
-
             // now retrieve the string back and iterate it
             const char* text = string_buffer.get_string( command->StringIndex );
 
@@ -228,7 +226,6 @@ namespace InnoEngine
 
                 buffer_data->ForegroundColor  = command->ForegroundColor;
                 buffer_data->Depth            = command->Depth;
-                buffer_data->ScreenPixelWidth = ScreenPixelWidth;
 
                 if ( i < command->StringLength - 1 ) {
                     double advance       = glyph->getAdvance();
