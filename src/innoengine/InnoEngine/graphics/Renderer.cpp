@@ -9,6 +9,7 @@
 #include "InnoEngine/AssetManager.h"
 #include "InnoEngine/AssetRepository.h"
 
+#include "InnoEngine/graphics/Camera.h"
 #include "InnoEngine/graphics/Texture2D.h"
 #include "InnoEngine/graphics/Sprite.h"
 #include "InnoEngine/graphics/Font.h"
@@ -90,18 +91,15 @@ namespace InnoEngine
             IE_ASSERT( m_Initialized );
             const RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
 
-            stats.SpriteDrawCalls = m_Sprite2DPipeline->swapchain_render( render_cmd_buf.ViewProjectionMatrices,
+            stats.SpriteDrawCalls = m_Sprite2DPipeline->swapchain_render( render_cmd_buf.ViewPorts,
                                                                           render_cmd_buf.TextureRegister,
-                                                                          gpu_cmd_buf,
                                                                           render_pass );
 
-            stats.PrimitivesDrawCalls = m_PrimitivePipeline->swapchain_render( render_cmd_buf.ViewProjectionMatrices,
-                                                                               gpu_cmd_buf,
+            stats.PrimitivesDrawCalls = m_PrimitivePipeline->swapchain_render( render_cmd_buf.ViewPorts,
                                                                                render_pass );
 
-            stats.FontDrawCalls = m_Font2DPipeline->swapchain_render( render_cmd_buf.ViewProjectionMatrices,
+            stats.FontDrawCalls = m_Font2DPipeline->swapchain_render( render_cmd_buf.ViewPorts,
                                                                       render_cmd_buf.FontRegister,
-                                                                      gpu_cmd_buf,
                                                                       render_pass );
 
             stats.ImGuiDrawCalls = m_ImGuiPipeline->swapchain_render( render_cmd_buf.ImGuiCommandBuffer,
@@ -122,7 +120,6 @@ namespace InnoEngine
         void synchronize()
         {
             m_RenderCommandBuffer.swap();
-            get_command_buffer_for_collecting().clear();
         }
 
     private:
@@ -139,6 +136,16 @@ namespace InnoEngine
     {
         if ( m_sdlGPUDevice ) {
             wait_for_gpu_idle();
+
+            if ( m_CameraMatrixTransferBuffer ) {
+                SDL_ReleaseGPUTransferBuffer( m_sdlGPUDevice, m_CameraMatrixTransferBuffer );
+                m_CameraMatrixTransferBuffer = nullptr;
+            }
+
+            if ( m_CameraMatrixStorageBuffer ) {
+                SDL_ReleaseGPUBuffer( m_sdlGPUDevice, m_CameraMatrixStorageBuffer );
+                m_CameraMatrixStorageBuffer = nullptr;
+            }
 
             if ( m_DepthTexture ) {
                 SDL_ReleaseGPUTexture( m_sdlGPUDevice, m_DepthTexture );
@@ -220,7 +227,11 @@ namespace InnoEngine
                 IE_LOG_ERROR( "Failed to create depth texture: {}", SDL_GetError() );
                 return Result::Fail;
             }
+
+            m_FullscreenDefaultViewport = Viewport( 0, 0, static_cast<float>( m_Window->width() ), static_cast<float>( m_Window->height() ), 0.0f, 1.0f );
         }
+
+        RETURN_RESULT_IF_FAILED( create_camera_transformation_buffers() );
 
         RETURN_RESULT_IF_FAILED( m_pipelineProcessor->initialize( this, assetmanager ) );
         m_Initialized = true;
@@ -302,14 +313,17 @@ namespace InnoEngine
         for ( auto& font : render_commands.FontRegister )
             font->m_frameBufferIndex = -1;
 #endif
-        update_statistics();
         m_pipelineProcessor->synchronize();
-        set_layer( 0 );
     }
 
     void GPURenderer::render()
     {
         IE_ASSERT( m_Initialized );
+        const auto& render_commands = m_pipelineProcessor->get_command_buffer_for_rendering();
+
+        IE_ASSERT( render_commands.ViewProjectionMatrices.size() != 0 );
+        IE_ASSERT( render_commands.ViewPorts.size() != 0 );
+
         ProfileScoped profile_rendercommands( ProfilePoint::ProcessRenderCommands );
 
         // dont render when minimized
@@ -317,7 +331,8 @@ namespace InnoEngine
             return;
         }
 
-        const auto& render_commands = m_pipelineProcessor->get_command_buffer_for_rendering();
+        upload_camera_transformations( render_commands.ViewProjectionMatrices );
+
         m_pipelineProcessor->prepare();
 
         SDL_GPUCommandBuffer* gpu_cmd_buf = SDL_AcquireGPUCommandBuffer( m_sdlGPUDevice );
@@ -357,6 +372,9 @@ namespace InnoEngine
                 color_target.store_op               = SDL_GPU_STOREOP_STORE;
 
                 SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass( gpu_cmd_buf, &color_target, 1, &depth_stencil );
+
+                SDL_BindGPUVertexStorageBuffers( render_pass, 0, &m_CameraMatrixStorageBuffer, 1 );
+
                 m_pipelineProcessor->render( gpu_cmd_buf, render_pass, m_Statistics.get_producer_data() );
                 SDL_EndGPURenderPass( render_pass );
             }
@@ -366,6 +384,23 @@ namespace InnoEngine
             IE_LOG_ERROR( "SDL_SubmitGPUCommandBuffer failed : %s", SDL_GetError() );
             return;
         }
+    }
+
+    void GPURenderer::begin_collection()
+    {
+        update_statistics_from_last_completed_frame();
+        auto& collect_buffer = m_pipelineProcessor->get_command_buffer_for_collecting();
+        collect_buffer.clear();
+        collect_buffer.ViewPorts.push_back( m_FullscreenDefaultViewport );
+
+        use_layer( 0 );
+        use_default_viewport();
+        use_default_rendertarget();
+    }
+
+    void GPURenderer::end_collection()
+    {
+        // nothing yet but probably need to switch between multiple collecting commandbuffers in the future
     }
 
     void GPURenderer::register_texture( Ref<Texture2D> texture )
@@ -402,19 +437,60 @@ namespace InnoEngine
         render_cmd_buf.ClearColor = color;
     }
 
-    uint16_t GPURenderer::set_view_projection( const DXSM::Matrix view_projection )
+    CameraIndexType GPURenderer::use_camera( const Ref<Camera> camera )
     {
         auto& render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
-        IE_ASSERT( render_cmd_buf.ViewProjectionMatrices.size() <= ( std::numeric_limits<uint16_t>::max )() );
-        m_CurrentViewProjectionIndex = static_cast<uint16_t>( render_cmd_buf.ViewProjectionMatrices.size() );
-        render_cmd_buf.ViewProjectionMatrices.push_back( view_projection );
+        IE_ASSERT( render_cmd_buf.ViewProjectionMatrices.size() <= ( std::numeric_limits<uint8_t>::max )() );
+        m_CurrentViewProjectionIndex = static_cast<uint8_t>( render_cmd_buf.ViewProjectionMatrices.size() );
+        render_cmd_buf.ViewProjectionMatrices.push_back( camera->get_viewprojectionmatrix() );
         return m_CurrentViewProjectionIndex;
     }
 
-    void GPURenderer::set_view_projection( uint16_t vp_index )
+    CameraIndexType GPURenderer::use_camera( const Camera* camera )
     {
-        IE_ASSERT( vp_index < m_pipelineProcessor->get_command_buffer_for_collecting().ViewProjectionMatrices.size() );
-        m_CurrentViewProjectionIndex = vp_index;
+        auto& render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
+        IE_ASSERT( render_cmd_buf.ViewProjectionMatrices.size() <= ( std::numeric_limits<uint8_t>::max )() );
+        m_CurrentViewProjectionIndex = static_cast<uint8_t>( render_cmd_buf.ViewProjectionMatrices.size() );
+        render_cmd_buf.ViewProjectionMatrices.push_back( camera->get_viewprojectionmatrix() );
+        return m_CurrentViewProjectionIndex;
+    }
+
+    void GPURenderer::use_camera_by_index( CameraIndexType camera_index )
+    {
+        IE_ASSERT( camera_index < m_pipelineProcessor->get_command_buffer_for_collecting().ViewProjectionMatrices.size() );
+        m_CurrentViewProjectionIndex = camera_index;
+    }
+
+    void GPURenderer::use_default_viewport()
+    {
+        IE_ASSERT( m_pipelineProcessor->get_command_buffer_for_collecting().ViewPorts.size() > 0 );
+        m_CurrentViewPortIndex = 0;
+    }
+
+    const Viewport& GPURenderer::get_default_viewport() const
+    {
+        return m_FullscreenDefaultViewport;
+    }
+
+    void GPURenderer::use_default_rendertarget()
+    {
+        IE_ASSERT( m_Window != nullptr );
+        m_CurrentRenderTargetIndex = 0;
+    }
+
+    uint8_t GPURenderer::use_view_port( const Viewport& view_port )
+    {
+        auto& render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
+        IE_ASSERT( render_cmd_buf.ViewPorts.size() <= ( std::numeric_limits<uint8_t>::max )() );
+        m_CurrentViewPortIndex = static_cast<uint8_t>( render_cmd_buf.ViewPorts.size() );
+        render_cmd_buf.ViewPorts.push_back( view_port );
+        return m_CurrentViewPortIndex;
+    }
+
+    void GPURenderer::use_view_port_index( uint8_t view_port_index )
+    {
+        IE_ASSERT( view_port_index < m_pipelineProcessor->get_command_buffer_for_collecting().ViewPorts.size() );
+        m_CurrentViewPortIndex = view_port_index;
     }
 
     void GPURenderer::add_sprite( const Sprite& sprite )
@@ -587,24 +663,24 @@ namespace InnoEngine
 
     void GPURenderer::add_bounding_box( const DXSM::Vector4& aabb, const DXSM::Vector2& position, const DXSM::Color& color )
     {
-        float line_width = 1;
+        float line_width = 2;
 
         std::vector<DXSM::Vector2> points {
-            {              aabb.x + position.x,              aabb.y + position.y },
-            { aabb.z + line_width + position.x,              aabb.y + position.y },
-            { aabb.z + line_width + position.x, aabb.w + line_width + position.y },
-            {              aabb.x + position.x, aabb.w + line_width + position.y },
+            { aabb.x + position.x - line_width, aabb.y + position.y + line_width },
+            { aabb.z + line_width + position.x, aabb.y + position.y + line_width },
+            { aabb.z + line_width + position.x, aabb.w - line_width + position.y },
+            { aabb.x + position.x - line_width, aabb.w - line_width + position.y },
         };
         add_lines( points, line_width, 0.0f, color, true );
     }
 
-    uint16_t GPURenderer::next_layer()
+    uint16_t GPURenderer::use_next_layer()
     {
         m_CurrentLayerDepth = transform_layer_to_depth( ++m_CurrentLayer );
         return m_CurrentLayer;
     }
 
-    void GPURenderer::set_layer( uint16_t layer )
+    void GPURenderer::use_layer( uint16_t layer )
     {
         m_CurrentLayer      = layer;
         m_CurrentLayerDepth = transform_layer_to_depth( m_CurrentLayer );
@@ -615,7 +691,7 @@ namespace InnoEngine
         return layer == 0 ? 0.0f : static_cast<float>( layer ) / 65536.0f;
     }
 
-    void GPURenderer::update_statistics()
+    void GPURenderer::update_statistics_from_last_completed_frame()
     {
         const auto& render_commands = m_pipelineProcessor->get_command_buffer_for_rendering();
         auto&       stats           = m_Statistics.get_producer_data();
@@ -662,8 +738,64 @@ namespace InnoEngine
     void GPURenderer::populate_command_base( RenderCommandBase* command )
     {
         command->Depth             = m_CurrentLayerDepth;
-        command->ViewMatrixIndex   = m_CurrentViewProjectionIndex;
+        command->CameraIndex       = m_CurrentViewProjectionIndex;
         command->RenderTargetIndex = m_CurrentRenderTargetIndex;
+    }
+
+    Result GPURenderer::create_camera_transformation_buffers()
+    {
+        SDL_GPUTransferBufferCreateInfo tbufferCreateInfo = {};
+        tbufferCreateInfo.usage                           = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+        tbufferCreateInfo.size                            = 256 * sizeof( DXSM::Matrix );
+
+        m_CameraMatrixTransferBuffer = SDL_CreateGPUTransferBuffer( m_sdlGPUDevice, &tbufferCreateInfo );
+        if ( m_CameraMatrixTransferBuffer == nullptr ) {
+            IE_LOG_ERROR( "Failed to create GPUTransferBuffer! {}", SDL_GetError() );
+            return Result::Fail;
+        }
+
+        SDL_GPUBufferCreateInfo createInfo = {};
+        createInfo.usage                   = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ;
+        createInfo.size                    = 256 * sizeof( DXSM::Matrix );
+
+        m_CameraMatrixStorageBuffer = SDL_CreateGPUBuffer( m_sdlGPUDevice, &createInfo );
+        if ( m_CameraMatrixStorageBuffer == nullptr ) {
+            // TODO: this needs to be handled better
+            IE_LOG_ERROR( "SDL_CreateGPUBuffer failed : {0}", SDL_GetError() );
+            return Result::Fail;
+        }
+        return Result::Success;
+    }
+
+    void GPURenderer::upload_camera_transformations( const std::vector<DXSM::Matrix>& camera_transforms )
+    {
+        IE_ASSERT( m_sdlGPUDevice != nullptr );
+        IE_ASSERT( m_CameraMatrixTransferBuffer != nullptr );
+        IE_ASSERT( m_CameraMatrixStorageBuffer != nullptr );
+
+        DXSM::Matrix* buffer_data = static_cast<DXSM::Matrix*>( SDL_MapGPUTransferBuffer( m_sdlGPUDevice, m_CameraMatrixTransferBuffer, true ) );
+        std::memcpy( buffer_data, camera_transforms.data(), sizeof( DXSM::Matrix ) * camera_transforms.size() );
+
+        SDL_UnmapGPUTransferBuffer( m_sdlGPUDevice, m_CameraMatrixTransferBuffer );
+        SDL_GPUTransferBufferLocation tranferBufferLocation { .transfer_buffer = m_CameraMatrixTransferBuffer, .offset = 0 };
+        SDL_GPUBufferRegion           bufferRegion { .buffer = m_CameraMatrixStorageBuffer,
+                                                     .offset = 0,
+                                                     .size   = static_cast<uint32_t>( camera_transforms.size() * sizeof( DXSM::Matrix ) ) };
+
+        SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_sdlGPUDevice );
+        if ( gpu_copy_cmd_buf == nullptr ) {
+            IE_LOG_ERROR( "AcquireGPUCommandBuffer failed: {}", SDL_GetError() );
+            return;
+        }
+
+        SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass( gpu_copy_cmd_buf );
+        SDL_UploadToGPUBuffer( copy_pass, &tranferBufferLocation, &bufferRegion, true );
+        SDL_EndGPUCopyPass( copy_pass );
+
+        if ( SDL_SubmitGPUCommandBuffer( gpu_copy_cmd_buf ) == false ) {
+            IE_LOG_ERROR( "SDL_SubmitGPUCommandBuffer failed: {}", SDL_GetError() );
+            return;
+        }
     }
 
     void GPURenderer::add_text( const Font* font, const DXSM::Vector2& position, uint32_t size, std::string_view text, const DXSM::Color& color )

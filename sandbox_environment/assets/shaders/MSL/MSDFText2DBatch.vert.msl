@@ -44,19 +44,25 @@ struct spvUnsafeArray
     }
 };
 
-struct type_FrameMatrices
+struct CameraData
 {
     float4x4 ViewProjectionMatrix;
 };
 
+struct type_StructuredBuffer_CameraData
+{
+    CameraData _m0[1];
+};
+
 struct MSDFSpriteData
 {
-    packed_float2 Position;
-    packed_float2 Size;
-    packed_float4 SourceRect;
-    packed_float4 ForegroundColor;
+    float2 Position;
+    float2 Size;
+    float4 SourceRect;
+    float4 ForegroundColor;
     float Depth;
-    packed_float3 pad;
+    uint CameraIndex;
+    float2 pad;
 };
 
 struct type_StructuredBuffer_MSDFSpriteData
@@ -64,8 +70,8 @@ struct type_StructuredBuffer_MSDFSpriteData
     MSDFSpriteData _m0[1];
 };
 
-constant spvUnsafeArray<uint, 6> _44 = spvUnsafeArray<uint, 6>({ 0u, 1u, 2u, 3u, 2u, 1u });
-constant spvUnsafeArray<float2, 4> _49 = spvUnsafeArray<float2, 4>({ float2(0.0), float2(1.0, 0.0), float2(0.0, 1.0), float2(1.0) });
+constant spvUnsafeArray<uint, 6> _45 = spvUnsafeArray<uint, 6>({ 0u, 1u, 2u, 3u, 2u, 1u });
+constant spvUnsafeArray<float2, 4> _50 = spvUnsafeArray<float2, 4>({ float2(0.0), float2(1.0, 0.0), float2(0.0, 1.0), float2(1.0) });
 
 struct main0_out
 {
@@ -74,18 +80,18 @@ struct main0_out
     float4 gl_Position [[position]];
 };
 
-vertex main0_out main0(constant type_FrameMatrices& FrameMatrices [[buffer(0)]], const device type_StructuredBuffer_MSDFSpriteData& DataBuffer [[buffer(1)]], uint gl_VertexIndex [[vertex_id]])
+vertex main0_out main0(const device type_StructuredBuffer_CameraData& CameraDataBuffer [[buffer(0)]], const device type_StructuredBuffer_MSDFSpriteData& DataBuffer [[buffer(1)]], uint gl_VertexIndex [[vertex_id]])
 {
     main0_out out = {};
-    uint _56 = gl_VertexIndex / 6u;
-    uint _57 = gl_VertexIndex % 6u;
-    spvUnsafeArray<float2, 4> _85 = spvUnsafeArray<float2, 4>({ float2(DataBuffer._m0[_56].SourceRect[0], DataBuffer._m0[_56].SourceRect[1]), float2(DataBuffer._m0[_56].SourceRect[2], DataBuffer._m0[_56].SourceRect[1]), float2(DataBuffer._m0[_56].SourceRect[0], DataBuffer._m0[_56].SourceRect[3]), float2(DataBuffer._m0[_56].SourceRect[2], DataBuffer._m0[_56].SourceRect[3]) });
-    spvUnsafeArray<float2, 4> _54 = _85;
-    float4 _88 = FrameMatrices.ViewProjectionMatrix * float4((_49[_44[_57]] * float2(DataBuffer._m0[_56].Size)) + float2(DataBuffer._m0[_56].Position), DataBuffer._m0[_56].Depth, 1.0);
-    _88.z = DataBuffer._m0[_56].Depth;
-    out.out_var_TEXCOORD0 = _54[_44[_57]];
-    out.out_var_TEXCOORD1 = float4(DataBuffer._m0[_56].ForegroundColor);
-    out.gl_Position = _88;
+    uint _59 = gl_VertexIndex / 6u;
+    uint _60 = gl_VertexIndex % 6u;
+    spvUnsafeArray<float2, 4> _90 = spvUnsafeArray<float2, 4>({ float2(DataBuffer._m0[_59].SourceRect.xy), float2(DataBuffer._m0[_59].SourceRect.zy), float2(DataBuffer._m0[_59].SourceRect.xw), float2(DataBuffer._m0[_59].SourceRect.zw) });
+    spvUnsafeArray<float2, 4> _57 = _90;
+    float4 _93 = CameraDataBuffer._m0[DataBuffer._m0[_59].CameraIndex].ViewProjectionMatrix * float4((_50[_45[_60]] * DataBuffer._m0[_59].Size) + DataBuffer._m0[_59].Position, DataBuffer._m0[_59].Depth, 1.0);
+    _93.z = DataBuffer._m0[_59].Depth;
+    out.out_var_TEXCOORD0 = _57[_45[_60]];
+    out.out_var_TEXCOORD1 = DataBuffer._m0[_59].ForegroundColor;
+    out.gl_Position = _93;
     return out;
 }
 

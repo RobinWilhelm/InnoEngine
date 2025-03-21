@@ -8,6 +8,9 @@
 #include "InnoEngine/BaseTypes.h"
 #include "InnoEngine/graphics/GPUDeviceRef.h"
 
+#include "InnoEngine/graphics/Viewport.h"
+#include "InnoEngine/graphics/Camera.h"
+
 #include <string>
 #include <atomic>
 #include <optional>
@@ -62,7 +65,10 @@ namespace InnoEngine
 
         void wait_for_gpu_idle();
         void synchronize();
+
         void render();    // process all available rendercommands and send them to the gpu
+        void begin_collection();
+        void end_collection();
 
         // Important: needs to be externally synchronized when adding rendercommands from multiple threads
         // currently the commands are only synchronized between update and main thread once per frame
@@ -70,12 +76,22 @@ namespace InnoEngine
         void register_sprite( Sprite& sprite );
         void register_font( Ref<Font> font );
 
-        uint16_t next_layer();
-        void     set_layer( uint16_t layer );
+        uint16_t use_next_layer();
+        void     use_layer( uint16_t layer );
 
-        void     set_clear_color( DXSM::Color color );    // the color the swapchain texture should be cleared to at the begin of the frame
-        uint16_t set_view_projection( const DXSM::Matrix view_projection );
-        void     set_view_projection( uint16_t vp_index );
+        CameraIndexType use_camera( const Ref<Camera> camera );
+        CameraIndexType use_camera( const Camera* camera );
+        void            use_camera_by_index( CameraIndexType camera_index );
+
+        void            use_default_viewport();
+        const Viewport& get_default_viewport() const;
+
+        void use_default_rendertarget();
+
+        uint8_t use_view_port( const Viewport& view_port );
+        void    use_view_port_index( uint8_t view_port_index );
+
+        void set_clear_color( DXSM::Color color );    // the color the swapchain texture should be cleared to at the begin of the frame
 
         void add_sprite( const Sprite& sprite );
         void add_pixel( const DXSM::Vector2& position, const DXSM::Color& color );
@@ -100,12 +116,15 @@ namespace InnoEngine
         void  retrieve_shaderformatinfo();
         float transform_layer_to_depth( uint16_t layer );
 
-        void update_statistics();    // update the stats with of the last completed frame
+        void update_statistics_from_last_completed_frame();
 
         // debug only
         const RenderCommandBuffer* get_render_command_buffer() const;
 
-        void populate_command_base(RenderCommandBase* command);
+        void populate_command_base( RenderCommandBase* command );
+
+        Result create_camera_transformation_buffers();
+        void   upload_camera_transformations( const std::vector<DXSM::Matrix>& camera_transforms );
 
     private:
         bool m_Initialized  = false;
@@ -114,8 +133,9 @@ namespace InnoEngine
         uint16_t m_CurrentLayer      = 0;
         float    m_CurrentLayerDepth = 0.0f;
 
-        uint16_t m_CurrentViewProjectionIndex = 0;
-        uint16_t m_CurrentRenderTargetIndex = 0;
+        CameraIndexType       m_CurrentViewProjectionIndex = 0;
+        ViewPortIndexType     m_CurrentViewPortIndex       = 0;
+        RenderTargetIndexType m_CurrentRenderTargetIndex   = 0;
 
         class PipelineProcessor;
         Own<PipelineProcessor> m_pipelineProcessor = nullptr;
@@ -126,5 +146,9 @@ namespace InnoEngine
         SDL_GPUTexture* m_DepthTexture = nullptr;
 
         DoubleBuffered<RenderStatistics> m_Statistics;
+        Viewport                         m_FullscreenDefaultViewport;
+
+        SDL_GPUTransferBuffer* m_CameraMatrixTransferBuffer = nullptr;
+        SDL_GPUBuffer*         m_CameraMatrixStorageBuffer  = nullptr;
     };
 }    // namespace InnoEngine

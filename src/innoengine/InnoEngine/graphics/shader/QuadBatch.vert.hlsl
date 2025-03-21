@@ -7,10 +7,11 @@ struct QuadData
     float4 Color;    
     float Rotation;
     float Depth;
-    float2 pad;
+    uint CameraIndex;
+    float pad;
 };
 
-StructuredBuffer<QuadData> DataBuffer : register(t0, space0);
+StructuredBuffer<QuadData> DataBuffer : register(t1, space0);
 
 struct Output
 {
@@ -40,7 +41,7 @@ Output main(uint id : SV_VertexID)
     float4 coord_with_depth = float4(coord + quad.Position, float(quad.Depth), 1.0f);
                 
     Output output;
-    output.Position = transform_coordinates_2D(coord_with_depth);
+    output.Position = transform_coordinates_2D(coord_with_depth, quad.CameraIndex);
     output.Color = quad.Color;
     return output;
 }

@@ -44,9 +44,14 @@ struct spvUnsafeArray
     }
 };
 
-struct type_FrameMatrices
+struct CameraData
 {
     float4x4 ViewProjectionMatrix;
+};
+
+struct type_StructuredBuffer_CameraData
+{
+    CameraData _m0[1];
 };
 
 struct LineData
@@ -57,7 +62,7 @@ struct LineData
     float Thickness;
     float Fade;
     float Depth;
-    float pad;
+    uint CameraIndex;
 };
 
 struct type_StructuredBuffer_LineData
@@ -65,9 +70,9 @@ struct type_StructuredBuffer_LineData
     LineData _m0[1];
 };
 
-constant float _45 = {};
+constant float _48 = {};
 
-constant spvUnsafeArray<uint, 6> _46 = spvUnsafeArray<uint, 6>({ 0u, 1u, 2u, 3u, 2u, 1u });
+constant spvUnsafeArray<uint, 6> _49 = spvUnsafeArray<uint, 6>({ 0u, 1u, 2u, 3u, 2u, 1u });
 
 struct main0_out
 {
@@ -77,53 +82,53 @@ struct main0_out
     float4 gl_Position [[position]];
 };
 
-vertex main0_out main0(constant type_FrameMatrices& FrameMatrices [[buffer(0)]], const device type_StructuredBuffer_LineData& DataBuffer [[buffer(1)]], uint gl_VertexIndex [[vertex_id]])
+vertex main0_out main0(const device type_StructuredBuffer_CameraData& CameraDataBuffer [[buffer(0)]], const device type_StructuredBuffer_LineData& DataBuffer [[buffer(1)]], uint gl_VertexIndex [[vertex_id]])
 {
     main0_out out = {};
-    uint _54 = gl_VertexIndex / 6u;
-    float _74 = DataBuffer._m0[_54].Thickness * 0.5;
-    float2 _77 = fast::normalize(cross(float3(DataBuffer._m0[_54].End - DataBuffer._m0[_54].Start, 0.0), float3(0.0, 0.0, 1.0)).xy);
-    float _103;
-    float4 _104;
-    switch (_46[gl_VertexIndex % 6u])
+    uint _52 = gl_VertexIndex / 6u;
+    float _69 = DataBuffer._m0[_52].Thickness * 0.5;
+    float2 _72 = fast::normalize(cross(float3(DataBuffer._m0[_52].End - DataBuffer._m0[_52].Start, 0.0), float3(0.0, 0.0, 1.0)).xy);
+    float _98;
+    float4 _99;
+    switch (_49[gl_VertexIndex % 6u])
     {
         case 0u:
         {
-            _103 = 1.0;
-            _104 = float4(DataBuffer._m0[_54].Start + (_77 * _74), DataBuffer._m0[_54].Depth, 1.0);
+            _98 = 1.0;
+            _99 = float4(DataBuffer._m0[_52].Start + (_72 * _69), DataBuffer._m0[_52].Depth, 1.0);
             break;
         }
         case 1u:
         {
-            _103 = 1.0;
-            _104 = float4(DataBuffer._m0[_54].End + (_77 * _74), DataBuffer._m0[_54].Depth, 1.0);
+            _98 = 1.0;
+            _99 = float4(DataBuffer._m0[_52].End + (_72 * _69), DataBuffer._m0[_52].Depth, 1.0);
             break;
         }
         case 2u:
         {
-            _103 = -1.0;
-            _104 = float4(DataBuffer._m0[_54].Start - (_77 * _74), DataBuffer._m0[_54].Depth, 1.0);
+            _98 = -1.0;
+            _99 = float4(DataBuffer._m0[_52].Start - (_72 * _69), DataBuffer._m0[_52].Depth, 1.0);
             break;
         }
         case 3u:
         {
-            _103 = -1.0;
-            _104 = float4(DataBuffer._m0[_54].End - (_77 * _74), DataBuffer._m0[_54].Depth, 1.0);
+            _98 = -1.0;
+            _99 = float4(DataBuffer._m0[_52].End - (_72 * _69), DataBuffer._m0[_52].Depth, 1.0);
             break;
         }
         default:
         {
-            _103 = _45;
-            _104 = float4(0.0);
+            _98 = _48;
+            _99 = float4(0.0);
             break;
         }
     }
-    float4 _107 = FrameMatrices.ViewProjectionMatrix * _104;
-    _107.z = _104.z;
-    out.gl_Position = _107;
-    out.out_var_TEXCOORD0 = DataBuffer._m0[_54].Color;
-    out.out_var_TEXCOORD1 = _103;
-    out.out_var_TEXCOORD2 = DataBuffer._m0[_54].Fade;
+    float4 _102 = CameraDataBuffer._m0[DataBuffer._m0[_52].CameraIndex].ViewProjectionMatrix * _99;
+    _102.z = _99.z;
+    out.gl_Position = _102;
+    out.out_var_TEXCOORD0 = DataBuffer._m0[_52].Color;
+    out.out_var_TEXCOORD1 = _98;
+    out.out_var_TEXCOORD2 = DataBuffer._m0[_52].Fade;
     return out;
 }
 

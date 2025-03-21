@@ -32,5 +32,8 @@ float4 main(Input input) : SV_Target0
     float sd = median(msd.r, msd.g, msd.b);
     float screenPxDistance = screenPxRange(input) * (sd - 0.5);
     float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
+    if (opacity == 0.0f)
+        discard;
+    
     return lerp(float4(input.Color.rgb, 0.0f), input.Color, opacity);
 }

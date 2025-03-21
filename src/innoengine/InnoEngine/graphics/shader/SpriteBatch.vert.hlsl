@@ -9,9 +9,11 @@ struct SpriteData
     float2 OriginOffset;
     float Depth;
     float Rotation;
+    uint CameraIndex;
+    float3 pad;
 };
 
-StructuredBuffer<SpriteData> DataBuffer : register(t0, space0);
+StructuredBuffer<SpriteData> DataBuffer : register(t1, space0);
 
 
 struct Output
@@ -51,7 +53,7 @@ Output main(uint id : SV_VertexID)
     };
             
     Output output;
-    output.Position = transform_coordinates_2D(coord_with_depth);
+    output.Position = transform_coordinates_2D(coord_with_depth, sprite.CameraIndex);
     output.TexCoord = texcoord[vert];
     output.Color = sprite.Color;
     return output;

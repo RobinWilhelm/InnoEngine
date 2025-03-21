@@ -8,6 +8,8 @@
 #include "InnoEngine/utility/StringArena.h"
 #include "InnoEngine/graphics/GPUBatchBuffer.h"
 
+#include "InnoEngine/graphics/Viewport.h"
+
 namespace InnoEngine
 {
     class AssetManager;
@@ -18,9 +20,9 @@ namespace InnoEngine
     public:
         struct BatchData
         {
-            FrameBufferIndex FontFBIndex       = -1;
-            uint16_t         ViewMatrixIndex   = 0;
-            uint16_t         RenderTargetIndex = 0;
+            FrameBufferIndex      FontFBIndex       = -1;
+            ViewPortIndexType     ViewPortIndex     = 0;
+            RenderTargetIndexType RenderTargetIndex = 0;
         };
 
         struct Command : RenderCommandBase
@@ -40,7 +42,8 @@ namespace InnoEngine
             DXSM::Vector4 SourceRect      = {};
             DXSM::Color   ForegroundColor = {};
             float         Depth           = 0.0f;
-            float         pad[ 3 ];
+            uint32_t      CameraIndex     = 0;
+            float         pad[ 2 ];
         };
 
         using CommandList = std::vector<Command>;
@@ -51,10 +54,9 @@ namespace InnoEngine
 
         Result   initialize( GPURenderer* renderer, AssetManager* assetmanager );
         void     prepare_render( const CommandList& command_list, const FontList& texture_list, const StringArena& string_buffer );
-        uint32_t swapchain_render( const std::vector<DXSM::Matrix>& view_projections_list,
-                                   const FontList&                  texture_list,
-                                   SDL_GPUCommandBuffer*            gpu_cmd_buf,
-                                   SDL_GPURenderPass*               render_pass );
+        uint32_t swapchain_render( const std::vector<Viewport>& viewport_list,
+                                   const FontList&              texture_list,
+                                   SDL_GPURenderPass*           render_pass );
 
     private:
         void sort_commands( const CommandList& command_list );

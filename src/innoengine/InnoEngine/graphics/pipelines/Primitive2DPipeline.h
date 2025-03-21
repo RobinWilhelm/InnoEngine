@@ -4,6 +4,8 @@
 #include "InnoEngine/graphics/GPUDeviceRef.h"
 #include "InnoEngine/graphics/GPUBatchBuffer.h"
 
+#include "InnoEngine/graphics/Viewport.h"
+
 namespace InnoEngine
 {
     class GPURenderer;
@@ -17,8 +19,8 @@ namespace InnoEngine
     public:
         struct BatchData
         {
-            uint16_t ViewMatrixIndex   = 0;
-            uint16_t RenderTargetIndex = 0;
+            RenderTargetIndexType RenderTargetIndex = 0;
+            ViewPortIndexType     ViewPortIndex     = 0;
         };
 
         struct QuadCommand : RenderCommandBase
@@ -36,7 +38,8 @@ namespace InnoEngine
             DXSM::Color   Color;
             float         Rotation;
             float         Depth;
-            float         pad[ 2 ];
+            uint32_t      CameraIndex;
+            float         pad[ 1 ];
         };
 
         struct LineCommand : RenderCommandBase
@@ -56,7 +59,7 @@ namespace InnoEngine
             float         Thickness;
             float         EdgeFade;
             float         Depth;
-            float         pad;
+            uint32_t      CameraIndex;
         };
 
         struct CircleCommand : RenderCommandBase
@@ -76,7 +79,8 @@ namespace InnoEngine
             float         Thickness;
             float         Fade;
             float         Depth;
-            float         pad[ 2 ];
+            uint32_t      CameraIndex;
+            float         pad[ 1 ];
         };
 
         using QuadCommandList   = std::vector<QuadCommand>;
@@ -93,9 +97,8 @@ namespace InnoEngine
         void     prepare_render( const QuadCommandList&   quad_command_list,
                                  const LineCommandList&   line_command_list,
                                  const CircleCommandList& circle_command_list );
-        uint32_t swapchain_render( const std::vector<DXSM::Matrix>& view_projections_list,
-                                   SDL_GPUCommandBuffer*            gpu_cmd_buf,
-                                   SDL_GPURenderPass*               render_pass );
+        uint32_t swapchain_render( const std::vector<Viewport>& viewport_list,
+                                   SDL_GPURenderPass*           render_pass );
 
         void sort_quad_commands( const QuadCommandList& quad_command_list );
         void sort_line_commands( const LineCommandList& quad_command_list );

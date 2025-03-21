@@ -4,15 +4,17 @@
 #include "InnoEngine/graphics/Font.h"
 #include "InnoEngine/graphics/Texture2D.h"
 #include "InnoEngine/graphics/Sprite.h"
+#include "InnoEngine/graphics/Camera.h"
+
 
 namespace IE = InnoEngine;
 
 constexpr int sprite_count = 1000000;
 
-class DemoLayer : public IE::Layer
+class Demoscene : public IE::Layer
 {
 public:
-    DemoLayer();
+    Demoscene();
 
     // Inherited via Layer
     void update( double deltaTime ) override;
@@ -35,4 +37,6 @@ private:
     float       m_color_h = 0;
     float       m_color_s = 1.0;
     float       m_color_v = 1.0;
+
+    IE::Ref<IE::Camera> m_UICamera;
 };

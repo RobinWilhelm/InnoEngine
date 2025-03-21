@@ -17,11 +17,17 @@ struct main0_in
 fragment main0_out main0(main0_in in [[stage_in]], texture2d<float> msdf_texture [[texture(0)]], sampler Sampler [[sampler(0)]])
 {
     main0_out out = {};
-    float4 _37 = msdf_texture.sample(Sampler, in.in_var_TEXCOORD0);
-    float _38 = _37.x;
-    float _39 = _37.y;
-    uint2 _45 = uint2(msdf_texture.get_width(), msdf_texture.get_height());
-    out.out_var_SV_Target0 = mix(float4(in.in_var_TEXCOORD1.xyz, 0.0), in.in_var_TEXCOORD1, float4(fast::clamp((precise::max(0.5 * dot(float2(2.0) / float2(float(_45.x), float(_45.y)), float2(1.0) / fwidth(in.in_var_TEXCOORD0)), 1.0) * (precise::max(precise::min(_38, _39), precise::min(precise::max(_38, _39), _37.z)) - 0.5)) + 0.5, 0.0, 1.0)));
+    float4 _38 = msdf_texture.sample(Sampler, in.in_var_TEXCOORD0);
+    float _39 = _38.x;
+    float _40 = _38.y;
+    uint2 _46 = uint2(msdf_texture.get_width(), msdf_texture.get_height());
+    float2 _53 = fwidth(in.in_var_TEXCOORD0);
+    float _61 = fast::clamp((precise::max(0.5 * dot(float2(2.0) / float2(float(_46.x), float(_46.y)), float2(1.0) / _53), 1.0) * (precise::max(precise::min(_39, _40), precise::min(precise::max(_39, _40), _38.z)) - 0.5)) + 0.5, 0.0, 1.0);
+    if (_61 == 0.0)
+    {
+        discard_fragment();
+    }
+    out.out_var_SV_Target0 = mix(float4(in.in_var_TEXCOORD1.xyz, 0.0), in.in_var_TEXCOORD1, float4(_61));
     return out;
 }
 

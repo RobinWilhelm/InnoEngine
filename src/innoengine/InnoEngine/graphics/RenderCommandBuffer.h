@@ -8,6 +8,7 @@
 #include "InnoEngine/graphics/pipelines/Primitive2DPipeline.h"
 
 #include "InnoEngine/utility/StringArena.h"
+#include "InnoEngine/graphics/Viewport.h"
 
 #include "DirectXMath.h"
 #include "Directxtk/SimpleMath.h"
@@ -19,9 +20,11 @@ namespace InnoEngine
 {
     struct RenderCommandBuffer
     {
-        bool         Clear;
-        DXSM::Color  ClearColor;
-        std::vector<DXSM::Matrix> ViewProjectionMatrices;
+        bool                        Clear;
+        DXSM::Color                 ClearColor;
+        std::vector<DXSM::Matrix>   ViewProjectionMatrices;
+        std::vector<Viewport>       ViewPorts;
+        std::vector<Ref<Texture2D>> RenderTargets;
 
         TextureList TextureRegister;    // hold a reference to all texture objects we are going to use this frame
 
@@ -39,7 +42,7 @@ namespace InnoEngine
         RenderCommandBuffer();
         RenderCommandBuffer& operator=( RenderCommandBuffer& other );
 
-        void         clear();
+        void clear();
     };
 
 }    // namespace InnoEngine

@@ -44,9 +44,14 @@ struct spvUnsafeArray
     }
 };
 
-struct type_FrameMatrices
+struct CameraData
 {
     float4x4 ViewProjectionMatrix;
+};
+
+struct type_StructuredBuffer_CameraData
+{
+    CameraData _m0[1];
 };
 
 struct CircleData
@@ -57,7 +62,8 @@ struct CircleData
     float Thickness;
     float Fade;
     float Depth;
-    float2 pad;
+    uint CameraIndex;
+    float pad;
 };
 
 struct type_StructuredBuffer_CircleData
@@ -65,8 +71,8 @@ struct type_StructuredBuffer_CircleData
     CircleData _m0[1];
 };
 
-constant spvUnsafeArray<uint, 6> _48 = spvUnsafeArray<uint, 6>({ 0u, 1u, 2u, 3u, 2u, 1u });
-constant spvUnsafeArray<float2, 4> _52 = spvUnsafeArray<float2, 4>({ float2(0.0), float2(1.0, 0.0), float2(0.0, 1.0), float2(1.0) });
+constant spvUnsafeArray<uint, 6> _50 = spvUnsafeArray<uint, 6>({ 0u, 1u, 2u, 3u, 2u, 1u });
+constant spvUnsafeArray<float2, 4> _54 = spvUnsafeArray<float2, 4>({ float2(0.0), float2(1.0, 0.0), float2(0.0, 1.0), float2(1.0) });
 
 struct main0_out
 {
@@ -77,18 +83,18 @@ struct main0_out
     float4 gl_Position [[position]];
 };
 
-vertex main0_out main0(constant type_FrameMatrices& FrameMatrices [[buffer(0)]], const device type_StructuredBuffer_CircleData& DataBuffer [[buffer(1)]], uint gl_VertexIndex [[vertex_id]])
+vertex main0_out main0(const device type_StructuredBuffer_CameraData& CameraDataBuffer [[buffer(0)]], const device type_StructuredBuffer_CircleData& DataBuffer [[buffer(1)]], uint gl_VertexIndex [[vertex_id]])
 {
     main0_out out = {};
-    uint _59 = gl_VertexIndex / 6u;
-    uint _60 = gl_VertexIndex % 6u;
-    float4 _85 = FrameMatrices.ViewProjectionMatrix * float4(((_52[_48[_60]] * DataBuffer._m0[_59].Radius) * 2.0) + DataBuffer._m0[_59].Position, DataBuffer._m0[_59].Depth, 1.0);
-    _85.z = DataBuffer._m0[_59].Depth;
-    out.gl_Position = _85;
-    out.out_var_TEXCOORD1 = DataBuffer._m0[_59].Color;
-    out.out_var_TEXCOORD2 = (_52[_48[_60]] * 2.0) - float2(1.0);
-    out.out_var_TEXCOORD3 = DataBuffer._m0[_59].Thickness;
-    out.out_var_TEXCOORD4 = DataBuffer._m0[_59].Fade;
+    uint _62 = gl_VertexIndex / 6u;
+    uint _63 = gl_VertexIndex % 6u;
+    float4 _90 = CameraDataBuffer._m0[DataBuffer._m0[_62].CameraIndex].ViewProjectionMatrix * float4(((_54[_50[_63]] * DataBuffer._m0[_62].Radius) * 2.0) + DataBuffer._m0[_62].Position, DataBuffer._m0[_62].Depth, 1.0);
+    _90.z = DataBuffer._m0[_62].Depth;
+    out.gl_Position = _90;
+    out.out_var_TEXCOORD1 = DataBuffer._m0[_62].Color;
+    out.out_var_TEXCOORD2 = (_54[_50[_63]] * 2.0) - float2(1.0);
+    out.out_var_TEXCOORD3 = DataBuffer._m0[_62].Thickness;
+    out.out_var_TEXCOORD4 = DataBuffer._m0[_62].Fade;
     return out;
 }
 

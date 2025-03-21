@@ -8,10 +8,11 @@ struct CircleData
     float Thickness;
     float Fade;  
     float Depth;
-    float2 pad;
+    uint CameraIndex;
+    float pad;
 };
 
-StructuredBuffer<CircleData> DataBuffer : register(t0, space0);
+StructuredBuffer<CircleData> DataBuffer : register(t1, space0);
 
 struct Output
 {
@@ -29,7 +30,7 @@ Output main(uint id : SV_VertexID)
     const CircleData circle_data = DataBuffer[circle_index];
     const float2 vertex_base_coords = QuadVertices[vert];
      
-    float4 position = transform_coordinates_2D(float4(vertex_base_coords * circle_data.Radius * 2 + circle_data.Position, circle_data.Depth, 1.0f));
+    float4 position = transform_coordinates_2D(float4(vertex_base_coords * circle_data.Radius * 2 + circle_data.Position, circle_data.Depth, 1.0f), circle_data.CameraIndex);
      
     Output output;    
     output.Position = position;

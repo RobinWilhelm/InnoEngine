@@ -22,6 +22,6 @@ namespace InnoEngine
 
     private:
         float m_MovementSpeed = 800.0f;
-        float m_ZoomSpeed = 100.0f;
+        float m_ZoomSpeed     = 10.0f;
     };
 }    // namespace InnoEngine

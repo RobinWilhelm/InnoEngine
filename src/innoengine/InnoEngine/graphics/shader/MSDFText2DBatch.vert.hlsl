@@ -7,10 +7,11 @@ struct MSDFSpriteData
     float4 SourceRect;
     float4 ForegroundColor; // text color
     float Depth;
-    float3 pad;
+    uint CameraIndex;
+    float2 pad;
 };
 
-StructuredBuffer<MSDFSpriteData> DataBuffer : register(t0, space0);
+StructuredBuffer<MSDFSpriteData> DataBuffer : register(t1, space0);
 
 struct Output
 {
@@ -38,7 +39,7 @@ Output main(uint id : SV_VertexID)
     };
             
     Output output;
-    output.Position         = transform_coordinates_2D(coordWithDepth);
+    output.Position         = transform_coordinates_2D(coordWithDepth, sprite.CameraIndex);
     output.TexCoord         = texcoord[vert];
     output.Color            = sprite.ForegroundColor;
     return output;

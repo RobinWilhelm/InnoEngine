@@ -93,11 +93,16 @@ namespace InnoEngine
 #pragma warning( pop )
     };
 
+    using CameraIndexType       = uint8_t;
+    using ViewPortIndexType     = uint8_t;
+    using RenderTargetIndexType = uint16_t;
+
     struct RenderCommandBase
     {
-        float    Depth             = 0;
-        uint16_t RenderTargetIndex = 0;
-        uint16_t ViewMatrixIndex   = 0;
+        float                 Depth             = 0;
+        CameraIndexType       CameraIndex       = 0;
+        ViewPortIndexType     ViewPortIndex     = 0;
+        RenderTargetIndexType RenderTargetIndex = 0;
     };
 
 }    // namespace InnoEngine

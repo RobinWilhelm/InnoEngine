@@ -143,30 +143,34 @@ namespace InnoEngine
         const msdfgen::FontMetrics*     metrics             = nullptr;
 
         // each command represents one string
-        FrameBufferIndex current_texture = -1;
+        BatchData* current = nullptr;
         for ( const Command* command : m_SortedCommands ) {
 
             // check if have to switch to a new batch
             // reasons might be: change in texture, batch is full
-            if ( m_GPUBatch->current_batch_full() || current_texture != command->FontFBIndex || m_GPUBatch->get_current_batch_remaining_size() < command->StringLength ) {
-                BatchData* batch_data   = m_GPUBatch->upload_and_add_batch( copy_pass );
-                batch_data->FontFBIndex = command->FontFBIndex;
+            if ( m_GPUBatch->current_batch_full() ||
+                 current == nullptr ||
+                 current->RenderTargetIndex != command->RenderTargetIndex ||
+                 current->ViewPortIndex != command->ViewPortIndex ||
+                 current->FontFBIndex != command->FontFBIndex ||
+                 m_GPUBatch->get_current_batch_remaining_size() < command->StringLength ) {
+
+                current                    = m_GPUBatch->upload_and_add_batch( copy_pass );
+                current->RenderTargetIndex = command->RenderTargetIndex;
+                current->ViewPortIndex     = command->ViewPortIndex;
+                current->FontFBIndex       = command->FontFBIndex;
 
                 // font change?
-                if ( current_texture != command->FontFBIndex ) {
-                    font          = font_list[ command->FontFBIndex ];
-                    msdf_data     = font->get_msdf_data();
-                    font_geometry = &msdf_data->FontGeo;
-                    metrics       = &font_geometry->getMetrics();
+                font          = font_list[ command->FontFBIndex ];
+                msdf_data     = font->get_msdf_data();
+                font_geometry = &msdf_data->FontGeo;
+                metrics       = &font_geometry->getMetrics();
 
-                    texel_width  = 1.0f / font->get_atlas_texture()->width();
-                    texel_height = 1.0f / font->get_atlas_texture()->height();
+                texel_width  = 1.0f / font->get_atlas_texture()->width();
+                texel_height = 1.0f / font->get_atlas_texture()->height();
 
-                    space_glyph_advance = msdf_data->get_glyph( ' ' )->getAdvance();
-                    scale               = 1.0 / ( metrics->ascenderY - metrics->descenderY ) * command->FontSize;
-
-                    current_texture = command->FontFBIndex;
-                }
+                space_glyph_advance = msdf_data->get_glyph( ' ' )->getAdvance();
+                scale               = 1.0 / ( metrics->ascenderY - metrics->descenderY ) * command->FontSize;
             }
 
             double x = static_cast<double>( command->Position.x );
@@ -224,8 +228,9 @@ namespace InnoEngine
                 buffer_data->Size.x     = static_cast<float>( ( pr - pl ) * scale );
                 buffer_data->Size.y     = static_cast<float>( ( ( pb - pt ) * scale ) );
 
-                buffer_data->ForegroundColor  = command->ForegroundColor;
-                buffer_data->Depth            = command->Depth;
+                buffer_data->ForegroundColor = command->ForegroundColor;
+                buffer_data->Depth           = command->Depth;
+                buffer_data->CameraIndex     = command->CameraIndex;
 
                 if ( i < command->StringLength - 1 ) {
                     double advance       = glyph->getAdvance();
@@ -246,24 +251,37 @@ namespace InnoEngine
         }
     }
 
-    uint32_t Font2DPipeline::swapchain_render( const std::vector<DXSM::Matrix>& view_projections_list, const FontList& font_list, SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass )
+    uint32_t Font2DPipeline::swapchain_render( const std::vector<Viewport>& viewport_list, const FontList& font_list,SDL_GPURenderPass* render_pass )
     {
         IE_ASSERT( m_Device != nullptr );
-        IE_ASSERT( gpu_cmd_buf != nullptr && render_pass != nullptr );
+        IE_ASSERT( render_pass != nullptr );
 
         SDL_BindGPUGraphicsPipeline( render_pass, m_Pipeline );
         SDL_BindGPUVertexBuffers( render_pass, 0, nullptr, 0 );
 
-        uint32_t draw_calls = 0;
+        FrameBufferIndex current_font     = -1;
+        //int32_t          current_camera   = -1;
+        int32_t          current_viewport = -1;
+        // RenderTargetIndexType current_rendertarget = 0;
+
+        uint32_t         draw_calls = 0;
         for ( const auto& batch_data : m_GPUBatch->get_batchlist() ) {
-            SDL_PushGPUVertexUniformData( gpu_cmd_buf, 0, &view_projections_list[ batch_data.CustomData.ViewMatrixIndex ], sizeof( DXSM::Matrix ) );
-            SDL_BindGPUVertexStorageBuffers( render_pass, 0, &batch_data.GPUBuffer, 1 );
+            if ( batch_data.CustomData.ViewPortIndex != current_viewport ) {
+                const auto& vp = viewport_list[ batch_data.CustomData.ViewPortIndex ];
+                SDL_GPUViewport viewport       = { vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth };
+                SDL_SetGPUViewport( render_pass, &viewport );
+                current_viewport = batch_data.CustomData.ViewPortIndex;
+            }
 
-            SDL_GPUTextureSamplerBinding texture_sampler_binding = {};
-            texture_sampler_binding.sampler                      = m_FontSampler;
-            texture_sampler_binding.texture                      = font_list[ batch_data.CustomData.FontFBIndex ]->get_atlas_texture()->get_sdltexture();
-            SDL_BindGPUFragmentSamplers( render_pass, 0, &texture_sampler_binding, 1 );
+            if ( batch_data.CustomData.FontFBIndex != current_font ) {
+                SDL_GPUTextureSamplerBinding texture_sampler_binding = {};
+                texture_sampler_binding.sampler                      = m_FontSampler;
+                texture_sampler_binding.texture                      = font_list[ batch_data.CustomData.FontFBIndex ]->get_atlas_texture()->get_sdltexture();
+                SDL_BindGPUFragmentSamplers( render_pass, 0, &texture_sampler_binding, 1 );
+                current_font = batch_data.CustomData.FontFBIndex;
+            }
 
+            SDL_BindGPUVertexStorageBuffers( render_pass, 1, &batch_data.GPUBuffer, 1 );
             SDL_DrawGPUPrimitives( render_pass, batch_data.Count * 6, 1, 0, 0 );
             ++draw_calls;
         }
@@ -285,10 +303,10 @@ namespace InnoEngine
             if ( a->RenderTargetIndex > b->RenderTargetIndex )
                 return true;
 
-            if ( a->FontFBIndex < b->FontFBIndex )
+            if ( a->ViewPortIndex > b->ViewPortIndex )
                 return true;
 
-            if ( a->ViewMatrixIndex > b->ViewMatrixIndex )
+            if ( a->FontFBIndex > b->FontFBIndex )
                 return true;
 
             if ( a->Depth > b->Depth )

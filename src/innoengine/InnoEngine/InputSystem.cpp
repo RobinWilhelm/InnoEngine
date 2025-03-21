@@ -18,7 +18,7 @@ namespace InnoEngine
             keystate.DoubleClicked = false;
         }
 
-        m_ProducerInputData.MouseWheel = {};
+        m_ProducerInputData.MouseWheel    = {};
         m_ProducerInputData.MouseMovement = {};
     }
 
@@ -84,6 +84,16 @@ namespace InnoEngine
     MouseButtonState InputSystem::get_mouse_button_state( uint8_t mouse_button ) const
     {
         return m_ConsumerInputData.MouseButtonStates[ mouse_button ];
+    }
+
+    DXSM::Vector2 InputSystem::get_mouse_position() const
+    {
+        return m_ConsumerInputData.MousePos;
+    }
+
+    DXSM::Vector2 InputSystem::get_mouse_movement() const
+    {
+        return m_ConsumerInputData.MouseMovement;
     }
 
     const DXSM::Vector2 InputSystem::get_mouse_wheel_scroll() const

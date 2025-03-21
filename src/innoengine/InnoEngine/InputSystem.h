@@ -37,6 +37,8 @@ namespace InnoEngine
 
         bool             is_mouse_button_down( uint8_t mouse_button ) const;
         MouseButtonState get_mouse_button_state( uint8_t mouse_button ) const;
+        DXSM::Vector2    get_mouse_position() const;
+        DXSM::Vector2    get_mouse_movement() const;
 
         const DXSM::Vector2 get_mouse_wheel_scroll() const;
 

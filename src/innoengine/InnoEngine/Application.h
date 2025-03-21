@@ -1,9 +1,10 @@
 #pragma once
 #include "SDL3/SDL_events.h"
 
-#include "BaseTypes.h"
+#include "InnoEngine/BaseTypes.h"
 #include "InnoEngine/graphics/Window.h"
 #include "InnoEngine/utility/Profiler.h"
+#include "InnoEngine/graphics/Viewport.h"
 
 #include <memory>
 #include <string>
@@ -66,7 +67,7 @@ namespace InnoEngine
         float get_timing( ProfilePoint element );
         void  push_layer( Layer* layer );
 
-        void set_camera_controller( Ref<CameraController> camera_controller );
+        void            set_camera_controller( Ref<CameraController> camera_controller );
 
     private:
         virtual void   on_init_assets( AssetManager* assetmanager ) = 0;
@@ -108,8 +109,8 @@ namespace InnoEngine
         std::mutex              m_AsyncMutex;
         std::condition_variable m_AsyncThreadWaiting;
         std::condition_variable m_MainThreadWaiting;
-        bool                    m_AsyncThreadFinished = true;
-        bool                    m_SyncComplete        = false;
+        bool                    m_AsyncThreadFinished = false;
+        bool                    m_SyncComplete        = true;
 
         // buffered events for async handling
         DoubleBuffered<std::vector<SDL_Event>> m_EventBuffer;

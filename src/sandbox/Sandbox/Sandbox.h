@@ -14,5 +14,5 @@ public:
     void       on_shutdown() override;
 
 private:
-    IE::Own<DemoLayer> m_demoScene;
+    IE::Own<Demoscene> m_demoScene;
 };

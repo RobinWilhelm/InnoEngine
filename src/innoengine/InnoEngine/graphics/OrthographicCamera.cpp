@@ -10,7 +10,10 @@ namespace InnoEngine
     {
         Own<OrthographicCamera> pOrthoCamera( new OrthographicCamera() );
         pOrthoCamera->m_ViewPortSize = view_port_size;
+        pOrthoCamera->m_View         = DXSM::Matrix::CreateLookAt( { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } );
+        pOrthoCamera->m_View.Invert();
         pOrthoCamera->set_position( { view_port_size.x / 2, view_port_size.y / 2, 1.0f } );
+        pOrthoCamera->update();
         return pOrthoCamera;
     }
 
@@ -23,8 +26,6 @@ namespace InnoEngine
                                                                       m_Position.y - ( m_ViewPortSize.y / 2 * m_Position.z ),
                                                                       1.0f,
                                                                       0.0f );
-            m_View       = DXSM::Matrix::CreateLookAt( { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } );
-            m_View.Invert();
             m_ViewProjection = m_Projection * m_View;
             m_Dirty          = false;
         }

@@ -56,6 +56,7 @@ namespace InnoEngine
                 for ( const auto& event : m_EventBuffer.get_consumer_data() )
                     handle_event( event );
 
+                m_CameraController->update(m_FrameTimingInfo.DeltaTime);
                 update_layers();
                 m_Camera->update();
                 render_layers();
@@ -155,13 +156,14 @@ namespace InnoEngine
             m_Profiler->start( ProfilePoint::MainThreadTotal );
 
             poll_events();
+           
 
             if ( m_MultiThreaded == false ) {
                 update_profiledata();
                 m_InputSystem->synchronize();
-                m_CameraController->update( m_FrameTimingInfo.DeltaTime );
-                m_Camera->update();
+                m_CameraController->update(m_FrameTimingInfo.DeltaTime);
                 update_layers();
+                m_Camera->update();
                 render_layers();
                 m_Renderer->synchronize();
                 m_Renderer->render();

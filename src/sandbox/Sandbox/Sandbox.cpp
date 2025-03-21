@@ -15,7 +15,7 @@ void Sandbox::on_init_assets( IE::AssetManager* assetmanager )
 
 IE::Result Sandbox::on_init()
 {
-    m_demoScene = std::make_unique<DemoLayer>();
+    m_demoScene = std::make_unique<Demoscene>();
     push_layer( m_demoScene.get() );
     return IE::Result::Success;
 }

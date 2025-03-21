@@ -8,10 +8,10 @@ struct LineData
     float Thickness;
     float Fade;
     float Depth;
-    float pad;
+    uint CameraIndex;
 };
 
-StructuredBuffer<LineData> DataBuffer : register(t0, space0);
+StructuredBuffer<LineData> DataBuffer : register(t1, space0);
 
 struct Output
 {
@@ -59,6 +59,6 @@ Output main(uint id : SV_VertexID)
             break;
     }                
     
-    output.Position = transform_coordinates_2D(position);   
+    output.Position = transform_coordinates_2D(position, line_data.CameraIndex);   
     return output;
 }
