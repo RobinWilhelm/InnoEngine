@@ -23,6 +23,7 @@ namespace InnoEngine
     constexpr uint64_t DoubleClickTimeNS = 500000;    // 0.5 seconds
 
     class InputSystem
+
     {
         InputSystem() = default;
 

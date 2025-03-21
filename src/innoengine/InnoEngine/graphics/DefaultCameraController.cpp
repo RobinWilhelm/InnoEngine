@@ -11,38 +11,85 @@ namespace InnoEngine
         return Ref<DefaultCameraController>( new DefaultCameraController( camera ) );
     }
 
+    bool DefaultCameraController::handle_event( const SDL_Event& event )
+    {
+        bool handled = false;
+        switch ( event.type ) {
+        case SDL_EVENT_KEY_DOWN:
+        case SDL_EVENT_KEY_UP:
+        {
+            if ( event.key.scancode == SDL_SCANCODE_W ) {
+                m_KeydownW = event.key.down;
+                return true;
+            }
+
+            if ( event.key.scancode == SDL_SCANCODE_A ) {
+                m_KeydownA = event.key.down;
+                return true;
+            }
+
+            if ( event.key.scancode == SDL_SCANCODE_S ) {
+                m_KeydownS = event.key.down;
+                return true;
+            }
+
+            if ( event.key.scancode == SDL_SCANCODE_D ) {
+                m_KeydownD = event.key.down;
+                return true;
+            }
+            break;
+        }
+        case SDL_EVENT_MOUSE_MOTION:
+        {
+            m_MouseMove = { event.motion.xrel, event.motion.yrel };
+            return true;
+        }
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case SDL_EVENT_MOUSE_BUTTON_UP:
+        {
+            if ( event.button.button == SDL_BUTTON_LEFT ) {
+                m_LeftMouseButtonDown = event.button.down;
+                return true;
+            }
+            break;
+        }
+        case SDL_EVENT_MOUSE_WHEEL:
+        {
+            m_MouseScroll.x = event.wheel.x;
+            m_MouseScroll.y = event.wheel.y;
+            return true;
+        }
+        }
+
+        return handled;
+    }
+
     void DefaultCameraController::update( double delta_time )
     {
-        const InputSystem* input      = CoreAPI::get_inputsystem();
-        DXSM::Vector3      camera_pos = m_Camera->get_position();
+        DXSM::Vector3 camera_pos = m_Camera->get_position();
 
-        if ( input->is_key_down( SDL_SCANCODE_W ) ) {
+        if ( m_KeydownW )
             camera_pos.y -= static_cast<float>( m_MovementSpeed * delta_time * camera_pos.z );
-        }
 
-        if ( input->is_key_down( SDL_SCANCODE_A ) ) {
+        if ( m_KeydownA )
             camera_pos.x -= static_cast<float>( m_MovementSpeed * delta_time * camera_pos.z );
-        }
 
-        if ( input->is_key_down( SDL_SCANCODE_S ) ) {
+        if ( m_KeydownS )
             camera_pos.y += static_cast<float>( m_MovementSpeed * delta_time * camera_pos.z );
-        }
 
-        if ( input->is_key_down( SDL_SCANCODE_D ) ) {
+        if ( m_KeydownD )
             camera_pos.x += static_cast<float>( m_MovementSpeed * delta_time * camera_pos.z );
+
+        if ( m_MouseScroll.y != 0 ) {
+            camera_pos.z    = std::clamp( camera_pos.z - static_cast<float>( camera_pos.z * m_ZoomSpeed * delta_time * m_MouseScroll.y ), 0.01f, 10.0f );
+            m_MouseScroll.y = 0;
         }
 
-        const auto& scroll_data = input->get_mouse_wheel_scroll();
-        if ( scroll_data.y != 0 ) {
-            camera_pos.z = std::clamp( camera_pos.z - static_cast<float>( camera_pos.z * m_ZoomSpeed * delta_time * scroll_data.y ), 0.01f, 10.0f );
+        if ( m_LeftMouseButtonDown ) {
+            camera_pos.x -= m_MouseMove.x * camera_pos.z;
+            camera_pos.y -= m_MouseMove.y * camera_pos.z;
+            m_MouseMove = {};
         }
-
-        if ( input->get_mouse_button_state( SDL_BUTTON_LEFT ).Down ) {
-            const auto& mouse_movement = input->get_mouse_movement();
-            camera_pos.x -= mouse_movement.x * camera_pos.z;
-            camera_pos.y -= mouse_movement.y * camera_pos.z;
-        }
-
         m_Camera->set_position( camera_pos );
     }
 }    // namespace InnoEngine

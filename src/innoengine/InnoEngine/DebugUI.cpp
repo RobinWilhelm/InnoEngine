@@ -182,12 +182,28 @@ namespace InnoEngine
 
     bool DebugUI::handle_event( const SDL_Event& event )
     {
+        ImGui_ImplSDL3_ProcessEvent( &event );
+
         if ( event.type == SDL_EVENT_KEY_DOWN ) {
             if ( event.key.scancode == SDL_SCANCODE_GRAVE )
                 m_open = !m_open;
         }
 
-        return ImGui_ImplSDL3_ProcessEvent( &event );
+        switch ( event.type ) {
+        case SDL_EVENT_MOUSE_MOTION:
+        case SDL_EVENT_MOUSE_WHEEL:
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case SDL_EVENT_MOUSE_BUTTON_UP:
+            if ( ImGui::GetIO().WantCaptureMouse )
+                return true;  
+            break;
+        case SDL_EVENT_TEXT_INPUT:
+        case SDL_EVENT_KEY_DOWN:
+        case SDL_EVENT_KEY_UP:
+            if ( ImGui::GetIO().WantCaptureKeyboard )
+                return true;
+        }
+        return false;
     }
 
     void DebugUI::set_style()

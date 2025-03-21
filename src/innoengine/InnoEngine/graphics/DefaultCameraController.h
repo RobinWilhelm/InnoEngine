@@ -18,9 +18,19 @@ namespace InnoEngine
         [[nodiscard]]
         static auto create( Ref<Camera> camera ) -> Ref<DefaultCameraController>;
 
-        void update( double delta_time ) override;
+        virtual bool handle_event( const SDL_Event& event ) override;
+        virtual void update( double delta_time ) override;
 
     private:
+        bool m_KeydownW = false;
+        bool m_KeydownA = false;
+        bool m_KeydownS = false;
+        bool m_KeydownD = false;
+
+        bool m_LeftMouseButtonDown = false;
+        DXSM::Vector2 m_MouseMove  = {};
+        DXSM::Vector2 m_MouseScroll  = {};
+
         float m_MovementSpeed = 800.0f;
         float m_ZoomSpeed     = 10.0f;
     };

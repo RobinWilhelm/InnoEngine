@@ -56,7 +56,7 @@ namespace InnoEngine
                 for ( const auto& event : m_EventBuffer.get_consumer_data() )
                     handle_event( event );
 
-                m_CameraController->update(m_FrameTimingInfo.DeltaTime);
+                m_CameraController->update( m_FrameTimingInfo.DeltaTime );
                 update_layers();
                 m_Camera->update();
                 render_layers();
@@ -156,12 +156,11 @@ namespace InnoEngine
             m_Profiler->start( ProfilePoint::MainThreadTotal );
 
             poll_events();
-           
 
             if ( m_MultiThreaded == false ) {
                 update_profiledata();
                 m_InputSystem->synchronize();
-                m_CameraController->update(m_FrameTimingInfo.DeltaTime);
+                m_CameraController->update( m_FrameTimingInfo.DeltaTime );
                 update_layers();
                 m_Camera->update();
                 render_layers();
@@ -309,13 +308,18 @@ namespace InnoEngine
     {
         ProfileScoped layer_event( ProfilePoint::LayerEvent );
         // pass events through in reverse order
-        bool          handled = false;
-        if ( m_DebugUIEnabled )
-            handled = m_DebugLayer->handle_event( event );
+        if ( m_DebugUIEnabled ) {
+            if ( m_DebugLayer->handle_event( event ) )
+                return;
+        }
+
+        if ( m_CameraController->handle_event( event ) )
+            return;
 
         auto revIt = m_LayerStack.rbegin();
-        while ( revIt != m_LayerStack.rend() && handled == false ) {
-            handled = ( *revIt )->handle_event( event );
+        while ( revIt != m_LayerStack.rend() ) {
+            if ( ( *revIt )->handle_event( event ) )
+                return;
             ++revIt;
         }
     }

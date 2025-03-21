@@ -73,17 +73,13 @@ void Demoscene::render( float interp_factor, IE::GPURenderer* renderer )
     renderer->register_font( m_testFont );
 
     for ( int i = 0; i < 1000; ++i ) {
-        renderer->add_circle( m_positions[ i ], m_scales[ i ] * 20, 0.02f, m_colors[ i ] );
+        renderer->add_circle( m_positions[ i ], m_scales[ i ] * 20, 0.00f, m_colors[ i ] );
     }
-    renderer->use_layer(1001);
-    renderer->add_text(m_testFont.get(), {600, -600}, 100, "Offscreen Text Text", m_textColor);
+    renderer->use_layer( 10 );
+    renderer->add_text( m_testFont.get(), { 600, -600 }, 100, "Offscreen Text Text", m_textColor );
 
     renderer->use_camera( m_UICamera );
-    renderer->use_layer(1000);
-
-    for ( int i = 0; i < 1000; ++i ) {
-        renderer->add_textured_quad( m_testTexture, m_positions[ i ], { m_scales[ i ], m_scales[ i ] }, m_rotations[ i ], m_colors[ i ] );
-    }
+    renderer->use_next_layer();
 
     float       pos_x = renderer->get_window()->width() / 2;
     float       pos_y = 100;
