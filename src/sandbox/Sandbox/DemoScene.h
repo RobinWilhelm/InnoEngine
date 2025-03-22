@@ -1,3 +1,5 @@
+#pragma once
+#include "InnoEngine/BaseTypes.h"
 #include "InnoEngine/Layer.h"
 #include "InnoEngine/graphics/Renderer.h"
 
@@ -6,15 +8,19 @@
 #include "InnoEngine/graphics/Sprite.h"
 #include "InnoEngine/graphics/Camera.h"
 
+#include "InnoEngine/graphics/Viewport.h"
+#include "InnoEngine/graphics/DefaultCameraController.h"
 
 namespace IE = InnoEngine;
 
 constexpr int sprite_count = 1000000;
 
+class Sandbox;
+
 class Demoscene : public IE::Layer
 {
 public:
-    Demoscene();
+    Demoscene( Sandbox* parent );
 
     // Inherited via Layer
     void update( double deltaTime ) override;
@@ -39,4 +45,8 @@ private:
     float       m_color_v = 1.0;
 
     IE::Ref<IE::Camera> m_UICamera;
+
+    IE::Ref<IE::Camera> m_SceneCamera;
+    IE::Viewport        m_SceneViewport;
+    IE::Ref<IE::DefaultCameraController> m_SceneCameraController;     
 };

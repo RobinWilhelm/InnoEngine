@@ -10,13 +10,13 @@ namespace InnoEngine
         public CameraController
     {
     private:
-        DefaultCameraController( Ref<Camera> camera ) :
-            CameraController( camera )
+        DefaultCameraController( Ref<Camera> camera, Viewport view_port) :
+            CameraController( camera, view_port )
         { }
 
     public:
         [[nodiscard]]
-        static auto create( Ref<Camera> camera ) -> Ref<DefaultCameraController>;
+        static auto create( Ref<Camera> camera, Viewport view_port ) -> Ref<DefaultCameraController>;
 
         virtual bool handle_event( const SDL_Event& event ) override;
         virtual void update( double delta_time ) override;
@@ -27,11 +27,11 @@ namespace InnoEngine
         bool m_KeydownS = false;
         bool m_KeydownD = false;
 
-        bool m_LeftMouseButtonDown = false;
-        DXSM::Vector2 m_MouseMove  = {};
-        DXSM::Vector2 m_MouseScroll  = {};
+        bool          m_LeftMouseButtonDown = false;
+        DXSM::Vector2 m_MouseMove           = {};
+        DXSM::Vector2 m_MouseScroll         = {};
 
-        float m_MovementSpeed = 800.0f;
+        float m_MovementSpeed = 80.0f;
         float m_ZoomSpeed     = 10.0f;
     };
 }    // namespace InnoEngine

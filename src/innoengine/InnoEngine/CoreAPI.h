@@ -6,7 +6,6 @@ namespace InnoEngine
     class Application;
     class AssetManager;
     class GPURenderer;
-    class Camera;
     class Profiler;
     class InputSystem;
 
@@ -46,12 +45,6 @@ namespace InnoEngine
             return get_instance().m_Renderer;
         }
 
-        static Camera* get_camera()
-        {
-            IE_ASSERT( get_instance().m_Camera != nullptr );
-            return get_instance().m_Camera;
-        }
-
         static Profiler* get_profiler()
         {
             IE_ASSERT( get_instance().m_Profiler != nullptr );
@@ -68,7 +61,6 @@ namespace InnoEngine
         Application*  m_App          = nullptr;
         AssetManager* m_AssetManager = nullptr;
         GPURenderer*  m_Renderer     = nullptr;
-        Camera*       m_Camera       = nullptr;
         Profiler*     m_Profiler     = nullptr;
         InputSystem*  m_Input        = nullptr;
     };

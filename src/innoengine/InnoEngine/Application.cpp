@@ -25,7 +25,6 @@ namespace InnoEngine
             m_Renderer->wait_for_gpu_idle();
         m_DebugLayer.reset();
         m_AssetManager.reset();
-        m_Camera.reset();
         m_Renderer.reset();
         m_Window.reset();
 
@@ -56,9 +55,14 @@ namespace InnoEngine
                 for ( const auto& event : m_EventBuffer.get_consumer_data() )
                     handle_event( event );
 
-                m_CameraController->update( m_FrameTimingInfo.DeltaTime );
+                for ( auto& cam_controller : m_CameraControllers )
+                    cam_controller->update( m_FrameTimingInfo.DeltaTime );
+
                 update_layers();
-                m_Camera->update();
+
+                for ( auto& cam : m_Cameras )
+                    cam->update();
+
                 render_layers();
 
                 m_SyncComplete        = false;
@@ -94,7 +98,6 @@ namespace InnoEngine
 
             auto window_optional = Window::create( appParams.WindowParams );
             m_Window             = std::move( window_optional.value() );
-            m_Camera             = OrthographicCamera::create( { static_cast<float>( appParams.WindowParams.width ), static_cast<float>( appParams.WindowParams.height ) } );
 
             auto render_optional = GPURenderer::create();
             m_Renderer           = std::move( render_optional.value() );
@@ -105,7 +108,7 @@ namespace InnoEngine
             auto input_system_opt = InputSystem::create();
             m_InputSystem         = std::move( input_system_opt.value() );
 
-            m_CameraController = DefaultCameraController::create( m_Camera );
+            m_FullscreenDefaultViewport = Viewport( 0, 0, static_cast<float>( m_Window->width() ), static_cast<float>( m_Window->height() ), 0.0f, 1.0f );
 
             on_init_assets( m_AssetManager.get() );
             publish_coreapi();
@@ -160,9 +163,15 @@ namespace InnoEngine
             if ( m_MultiThreaded == false ) {
                 update_profiledata();
                 m_InputSystem->synchronize();
-                m_CameraController->update( m_FrameTimingInfo.DeltaTime );
+
+                for ( auto& cam_controller : m_CameraControllers )
+                    cam_controller->update( m_FrameTimingInfo.DeltaTime );
+
                 update_layers();
-                m_Camera->update();
+
+                for ( auto& cam : m_Cameras )
+                    cam->update();
+
                 render_layers();
                 m_Renderer->synchronize();
                 m_Renderer->render();
@@ -258,9 +267,65 @@ namespace InnoEngine
         m_LayerStack.push_back( layer );
     }
 
-    void Application::set_camera_controller( Ref<CameraController> camera_controller )
+    void Application::register_camera( Ref<Camera> camera )
     {
-        m_CameraController = camera_controller;
+        // check if it is already inserted
+        auto it = m_Cameras.begin();
+        while ( it != m_Cameras.end() ) {
+            if ( ( *it ) == camera ) {
+                IE_LOG_WARNING( "Camera already registered!" );
+                return;
+            }
+            ++it;
+        }
+        m_Cameras.push_back( camera );
+        IE_LOG_DEBUG( "Camera registered" );
+    }
+
+    void Application::unregister_camera( Ref<Camera> camera )
+    {
+        auto it = m_Cameras.begin();
+        while ( it != m_Cameras.end() ) {
+            if ( ( *it ) == camera ) {
+                m_Cameras.erase( it );
+                IE_LOG_DEBUG( "Camera unregistered" );
+                return;
+            }
+            ++it;
+        }
+    }
+
+    void Application::register_cameracontroller( Ref<CameraController> camera_controller )
+    {
+        // check if it is already inserted
+        auto it = m_CameraControllers.begin();
+        while ( it != m_CameraControllers.end() ) {
+            if ( ( *it ) == camera_controller ) {
+                IE_LOG_WARNING( "Camera controller already registered!" );
+                return;
+            }
+            ++it;
+        }
+        m_CameraControllers.push_back( camera_controller );
+        IE_LOG_DEBUG( "Camera controller registered" );
+    }
+
+    void Application::unregister_cameracontroller( Ref<CameraController> camera_controller )
+    {
+        auto it = m_CameraControllers.begin();
+        while ( it != m_CameraControllers.end() ) {
+            if ( ( *it ) == camera_controller ) {
+                m_CameraControllers.erase( it );
+                IE_LOG_DEBUG( "Camera controller unregistered" );
+                return;
+            }
+            ++it;
+        }
+    }
+
+    const Viewport& Application::get_fullscreen_viewport() const
+    {
+        return m_FullscreenDefaultViewport;
     }
 
     void Application::on_synchronize() { }
@@ -313,8 +378,10 @@ namespace InnoEngine
                 return;
         }
 
-        if ( m_CameraController->handle_event( event ) )
-            return;
+        for ( auto& cam_controller : m_CameraControllers ) {
+            if ( cam_controller->handle_event( event ) )
+                return;
+        }
 
         auto revIt = m_LayerStack.rbegin();
         while ( revIt != m_LayerStack.rend() ) {
@@ -369,7 +436,6 @@ namespace InnoEngine
         coreapi.m_App          = this;
         coreapi.m_AssetManager = m_AssetManager.get();
         coreapi.m_Renderer     = m_Renderer.get();
-        coreapi.m_Camera       = m_Camera.get();
         coreapi.m_Profiler     = m_Profiler.get();
         coreapi.m_Input        = m_InputSystem.get();
     }

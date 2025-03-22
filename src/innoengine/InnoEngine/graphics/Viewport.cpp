@@ -4,7 +4,7 @@
 namespace InnoEngine
 {
     Viewport::Viewport( float left, float top, float width, float height ) :
-        LeftOffset( left ), TopOffset( top ), Width( width ), Height( height ), MinDepth( 1.0f ), MaxDepth( 0.0f )
+        LeftOffset( left ), TopOffset( top ), Width( width ), Height( height ), MinDepth( 0.0f ), MaxDepth( 1.0f )
     {
     }
 

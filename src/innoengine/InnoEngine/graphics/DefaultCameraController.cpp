@@ -1,19 +1,20 @@
 #include "InnoEngine/iepch.h"
 #include "InnoEngine/graphics/DefaultCameraController.h"
-#include "InnoEngine/CoreAPI.h"
-#include "InnoEngine/InputSystem.h"
+
 #include "SDL3/SDL_events.h"
 
 namespace InnoEngine
 {
-    auto DefaultCameraController::create( Ref<Camera> camera ) -> Ref<DefaultCameraController>
+    auto DefaultCameraController::create( Ref<Camera> camera, Viewport view_port ) -> Ref<DefaultCameraController>
     {
-        return Ref<DefaultCameraController>( new DefaultCameraController( camera ) );
+        return Ref<DefaultCameraController>( new DefaultCameraController( camera, view_port ) );
     }
 
     bool DefaultCameraController::handle_event( const SDL_Event& event )
     {
-        bool handled = false;
+        if(is_mouse_in_viewport() == false)
+            return false;
+
         switch ( event.type ) {
         case SDL_EVENT_KEY_DOWN:
         case SDL_EVENT_KEY_UP:
@@ -61,7 +62,7 @@ namespace InnoEngine
         }
         }
 
-        return handled;
+        return false;
     }
 
     void DefaultCameraController::update( double delta_time )

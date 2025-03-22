@@ -60,7 +60,11 @@ namespace InnoEngine
     {
         Clear      = false;
         ClearColor = DXSM::Color( 0.0f, 0.0f, 0.0f, 0.0f );
+
+        Viewports.clear();
+        RenderTargets.clear();
         ViewProjectionMatrices.clear();
+
         SpriteRenderCommands.clear();
         QuadRenderCommands.clear();
         LineRenderCommands.clear();

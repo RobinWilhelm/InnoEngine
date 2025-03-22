@@ -16,7 +16,7 @@ namespace InnoEngine
     {
         (void)renderer;
         IE_ASSERT( renderer != nullptr );
-        Own<DebugUI> debugui = Own<DebugUI>( new DebugUI );
+        Own<DebugUI> debugui = Own<DebugUI>( new DebugUI( CoreAPI::get_application() ) );
         // debugui->set_style();
         return debugui;
     }
@@ -165,6 +165,7 @@ namespace InnoEngine
                     ImGui::EndTabItem();
                 }
 
+                /*
                 if ( ImGui::BeginTabItem( "Camera" ) ) {
                     Camera*     camera  = CoreAPI::get_camera();
                     const auto& cam_pos = camera->get_position();
@@ -172,7 +173,7 @@ namespace InnoEngine
                     ImGui::Text( "Position: %.1f %.1f %.1f", cam_pos.x, cam_pos.y, cam_pos.z );
                     ImGui::EndTabItem();
                 }
-
+                  */
                 ImGui::EndTabBar();
             }
         }
@@ -195,7 +196,7 @@ namespace InnoEngine
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
         case SDL_EVENT_MOUSE_BUTTON_UP:
             if ( ImGui::GetIO().WantCaptureMouse )
-                return true;  
+                return true;
             break;
         case SDL_EVENT_TEXT_INPUT:
         case SDL_EVENT_KEY_DOWN:

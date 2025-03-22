@@ -67,7 +67,13 @@ namespace InnoEngine
         float get_timing( ProfilePoint element );
         void  push_layer( Layer* layer );
 
-        void            set_camera_controller( Ref<CameraController> camera_controller );
+        // not threadsafe, only to be called from layers
+        void register_camera( Ref<Camera> camera );
+        void unregister_camera( Ref<Camera> camera );
+        void register_cameracontroller( Ref<CameraController> camera_controller );
+        void unregister_cameracontroller( Ref<CameraController> camera_controller );
+
+        const Viewport& get_fullscreen_viewport() const;
 
     private:
         virtual void   on_init_assets( AssetManager* assetmanager ) = 0;
@@ -98,8 +104,9 @@ namespace InnoEngine
         Own<Profiler>     m_Profiler;
         Own<InputSystem>  m_InputSystem;
 
-        Ref<Camera>           m_Camera;
-        Ref<CameraController> m_CameraController;
+        std::vector<Ref<Camera>>           m_Cameras;
+        std::vector<Ref<CameraController>> m_CameraControllers;
+        Viewport                           m_FullscreenDefaultViewport;
 
         bool             m_InitializationSucceded = false;
         std::atomic_bool m_MustQuit               = false;

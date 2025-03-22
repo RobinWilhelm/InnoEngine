@@ -91,14 +91,14 @@ namespace InnoEngine
             IE_ASSERT( m_Initialized );
             const RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
 
-            stats.SpriteDrawCalls = m_Sprite2DPipeline->swapchain_render( render_cmd_buf.ViewPorts,
+            stats.SpriteDrawCalls = m_Sprite2DPipeline->swapchain_render( render_cmd_buf.Viewports,
                                                                           render_cmd_buf.TextureRegister,
                                                                           render_pass );
 
-            stats.PrimitivesDrawCalls = m_PrimitivePipeline->swapchain_render( render_cmd_buf.ViewPorts,
+            stats.PrimitivesDrawCalls = m_PrimitivePipeline->swapchain_render( render_cmd_buf.Viewports,
                                                                                render_pass );
 
-            stats.FontDrawCalls = m_Font2DPipeline->swapchain_render( render_cmd_buf.ViewPorts,
+            stats.FontDrawCalls = m_Font2DPipeline->swapchain_render( render_cmd_buf.Viewports,
                                                                       render_cmd_buf.FontRegister,
                                                                       render_pass );
 
@@ -228,7 +228,6 @@ namespace InnoEngine
                 return Result::Fail;
             }
 
-            m_FullscreenDefaultViewport = Viewport( 0, 0, static_cast<float>( m_Window->width() ), static_cast<float>( m_Window->height() ), 0.0f, 1.0f );
         }
 
         RETURN_RESULT_IF_FAILED( create_camera_transformation_buffers() );
@@ -322,7 +321,7 @@ namespace InnoEngine
         const auto& render_commands = m_pipelineProcessor->get_command_buffer_for_rendering();
 
         IE_ASSERT( render_commands.ViewProjectionMatrices.size() != 0 );
-        IE_ASSERT( render_commands.ViewPorts.size() != 0 );
+        IE_ASSERT( render_commands.Viewports.size() != 0 );
 
         ProfileScoped profile_rendercommands( ProfilePoint::ProcessRenderCommands );
 
@@ -391,10 +390,7 @@ namespace InnoEngine
         update_statistics_from_last_completed_frame();
         auto& collect_buffer = m_pipelineProcessor->get_command_buffer_for_collecting();
         collect_buffer.clear();
-        collect_buffer.ViewPorts.push_back( m_FullscreenDefaultViewport );
-
         use_layer( 0 );
-        use_default_viewport();
         use_default_rendertarget();
     }
 
@@ -461,17 +457,6 @@ namespace InnoEngine
         m_CurrentViewProjectionIndex = camera_index;
     }
 
-    void GPURenderer::use_default_viewport()
-    {
-        IE_ASSERT( m_pipelineProcessor->get_command_buffer_for_collecting().ViewPorts.size() > 0 );
-        m_CurrentViewPortIndex = 0;
-    }
-
-    const Viewport& GPURenderer::get_default_viewport() const
-    {
-        return m_FullscreenDefaultViewport;
-    }
-
     void GPURenderer::use_default_rendertarget()
     {
         IE_ASSERT( m_Window != nullptr );
@@ -481,15 +466,15 @@ namespace InnoEngine
     uint8_t GPURenderer::use_view_port( const Viewport& view_port )
     {
         auto& render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
-        IE_ASSERT( render_cmd_buf.ViewPorts.size() <= ( std::numeric_limits<uint8_t>::max )() );
-        m_CurrentViewPortIndex = static_cast<uint8_t>( render_cmd_buf.ViewPorts.size() );
-        render_cmd_buf.ViewPorts.push_back( view_port );
+        IE_ASSERT( render_cmd_buf.Viewports.size() <= ( std::numeric_limits<uint8_t>::max )() );
+        m_CurrentViewPortIndex = static_cast<uint8_t>( render_cmd_buf.Viewports.size() );
+        render_cmd_buf.Viewports.push_back( view_port );
         return m_CurrentViewPortIndex;
     }
 
-    void GPURenderer::use_view_port_index( uint8_t view_port_index )
+    void GPURenderer::use_view_port_by_index( uint8_t view_port_index )
     {
-        IE_ASSERT( view_port_index < m_pipelineProcessor->get_command_buffer_for_collecting().ViewPorts.size() );
+        IE_ASSERT( view_port_index < m_pipelineProcessor->get_command_buffer_for_collecting().Viewports.size() );
         m_CurrentViewPortIndex = view_port_index;
     }
 
@@ -740,6 +725,7 @@ namespace InnoEngine
         command->Depth             = m_CurrentLayerDepth;
         command->CameraIndex       = m_CurrentViewProjectionIndex;
         command->RenderTargetIndex = m_CurrentRenderTargetIndex;
+        command->ViewPortIndex     = m_CurrentViewPortIndex;
     }
 
     Result GPURenderer::create_camera_transformation_buffers()

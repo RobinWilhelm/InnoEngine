@@ -23,7 +23,7 @@ namespace InnoEngine
         bool                        Clear;
         DXSM::Color                 ClearColor;
         std::vector<DXSM::Matrix>   ViewProjectionMatrices;
-        std::vector<Viewport>       ViewPorts;
+        std::vector<Viewport>       Viewports;
         std::vector<Ref<Texture2D>> RenderTargets;
 
         TextureList TextureRegister;    // hold a reference to all texture objects we are going to use this frame

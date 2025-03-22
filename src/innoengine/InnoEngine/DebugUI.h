@@ -10,10 +10,12 @@ namespace InnoEngine
 {
     class GPURenderer;
     class ImGuiPipeline;
+    class Application;
 
     class DebugUI : public Layer
     {
-        DebugUI() = default;
+        DebugUI( Application* parent ) :
+            Layer( parent ) { };
 
     public:
         [[nodiscard]]

@@ -83,13 +83,10 @@ namespace InnoEngine
         CameraIndexType use_camera( const Camera* camera );
         void            use_camera_by_index( CameraIndexType camera_index );
 
-        void            use_default_viewport();
-        const Viewport& get_default_viewport() const;
-
         void use_default_rendertarget();
 
         uint8_t use_view_port( const Viewport& view_port );
-        void    use_view_port_index( uint8_t view_port_index );
+        void    use_view_port_by_index( uint8_t view_port_index );
 
         void set_clear_color( DXSM::Color color );    // the color the swapchain texture should be cleared to at the begin of the frame
 
@@ -146,7 +143,6 @@ namespace InnoEngine
         SDL_GPUTexture* m_DepthTexture = nullptr;
 
         DoubleBuffered<RenderStatistics> m_Statistics;
-        Viewport                         m_FullscreenDefaultViewport;
 
         SDL_GPUTransferBuffer* m_CameraMatrixTransferBuffer = nullptr;
         SDL_GPUBuffer*         m_CameraMatrixStorageBuffer  = nullptr;
