@@ -302,7 +302,7 @@ namespace InnoEngine
 
     void GPURenderer::synchronize()
     {
-#ifdef DEBUG_FRAMEBUFFERINDICES
+//#ifdef DEBUG_FRAMEBUFFERINDICES
         // reset the frame indices so they can be checked to catch errors
         auto& render_commands = m_pipelineProcessor->get_command_buffer_for_collecting();
         for ( auto& texture : render_commands.TextureRegister )
@@ -315,7 +315,7 @@ namespace InnoEngine
             render_ctx->m_RenderCommandBufferIndex = InvalidRenderCommandBufferIndex;
             render_ctx->m_RenderCommandBuffer      = nullptr;
         }
-#endif
+//#endif
         m_pipelineProcessor->synchronize();
     }
 
@@ -465,7 +465,7 @@ namespace InnoEngine
             stats.TotalBufferSize += rcmd.VertexBuffer.size() * sizeof( ImDrawVert );
         }
 
-        stats.TotalDrawCalls = stats.SpriteDrawCalls + stats.FontDrawCalls + stats.ImGuiDrawCalls;
+        stats.TotalDrawCalls = stats.SpriteDrawCalls + stats.FontDrawCalls + stats.ImGuiDrawCalls + stats.PrimitivesDrawCalls;
 
         m_Statistics.swap();
         m_Statistics.get_producer_data() = RenderStatistics();

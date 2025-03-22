@@ -99,7 +99,7 @@ void Demoscene::render( float interp_factor, IE::GPURenderer* renderer )
     render_ctx->add_bounding_box( { viewport_bounding_box }, { 0, 0 }, { 1.0f, 1.0f, 1.0f, 1.0f } );
     */
     m_SceneRenderCtx->bind();
-    for ( int i = 0; i < 10000; ++i ) {
+    for ( int i = 0; i < 1000000; ++i ) {
         m_SceneRenderCtx->add_circle( m_positions[ i ], m_scales[ i ] * 20, 0.00f, m_colors[ i ] );
     }
     m_SceneRenderCtx->add_text_centered( m_testFont, { scene_viewport.Width / 2, 100 }, 80, "Lorem ipsum bla bla", m_textColor );
