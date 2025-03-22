@@ -12,7 +12,7 @@ namespace InnoEngine
 
     bool DefaultCameraController::handle_event( const SDL_Event& event )
     {
-        if(is_mouse_in_viewport() == false)
+        if ( is_mouse_in_viewport() == false )
             return false;
 
         switch ( event.type ) {
@@ -42,7 +42,9 @@ namespace InnoEngine
         }
         case SDL_EVENT_MOUSE_MOTION:
         {
-            m_MouseMove = { event.motion.xrel, event.motion.yrel };
+            if ( m_LeftMouseButtonDown ) {
+                m_MouseMove += { event.motion.xrel, event.motion.yrel };
+            }
             return true;
         }
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
@@ -56,8 +58,8 @@ namespace InnoEngine
         }
         case SDL_EVENT_MOUSE_WHEEL:
         {
-            m_MouseScroll.x = event.wheel.x;
-            m_MouseScroll.y = event.wheel.y;
+            m_MouseScroll.x += event.wheel.x;
+            m_MouseScroll.y += event.wheel.y;
             return true;
         }
         }
@@ -82,8 +84,8 @@ namespace InnoEngine
             camera_pos.x += static_cast<float>( m_MovementSpeed * delta_time * camera_pos.z );
 
         if ( m_MouseScroll.y != 0 ) {
-            camera_pos.z    = std::clamp( camera_pos.z - static_cast<float>( camera_pos.z * m_ZoomSpeed * delta_time * m_MouseScroll.y ), 0.01f, 10.0f );
-            m_MouseScroll.y = 0;
+            camera_pos.z  = std::clamp( camera_pos.z - static_cast<float>( camera_pos.z * m_ZoomSpeed * delta_time * m_MouseScroll.y ), 0.01f, 10.0f );
+            m_MouseScroll = {};
         }
 
         if ( m_LeftMouseButtonDown ) {

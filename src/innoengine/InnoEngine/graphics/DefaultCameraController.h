@@ -31,7 +31,7 @@ namespace InnoEngine
         DXSM::Vector2 m_MouseMove           = {};
         DXSM::Vector2 m_MouseScroll         = {};
 
-        float m_MovementSpeed = 80.0f;
+        float m_MovementSpeed = 800.0f;
         float m_ZoomSpeed     = 10.0f;
     };
 }    // namespace InnoEngine

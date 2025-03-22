@@ -55,14 +55,7 @@ namespace InnoEngine
                 for ( const auto& event : m_EventBuffer.get_consumer_data() )
                     handle_event( event );
 
-                for ( auto& cam_controller : m_CameraControllers )
-                    cam_controller->update( m_FrameTimingInfo.DeltaTime );
-
-                update_layers();
-
-                for ( auto& cam : m_Cameras )
-                    cam->update();
-
+                create_update();
                 render_layers();
 
                 m_SyncComplete        = false;
@@ -163,15 +156,7 @@ namespace InnoEngine
             if ( m_MultiThreaded == false ) {
                 update_profiledata();
                 m_InputSystem->synchronize();
-
-                for ( auto& cam_controller : m_CameraControllers )
-                    cam_controller->update( m_FrameTimingInfo.DeltaTime );
-
-                update_layers();
-
-                for ( auto& cam : m_Cameras )
-                    cam->update();
-
+                create_update();
                 render_layers();
                 m_Renderer->synchronize();
                 m_Renderer->render();
@@ -391,7 +376,7 @@ namespace InnoEngine
         }
     }
 
-    void Application::update_layers()
+    void Application::create_update()
     {
         uint64_t current_time = get_tick_count();
         m_FrameTimingInfo.AccumulatedTicks += current_time - m_FrameTimingInfo.CurrentTicks;
@@ -399,35 +384,35 @@ namespace InnoEngine
         if ( m_FrameTimingInfo.FixedSimulationFrequency == 0 ) {
             m_FrameTimingInfo.DeltaTime    = static_cast<double>( current_time - m_FrameTimingInfo.CurrentTicks ) / TicksPerSecond;
             m_FrameTimingInfo.CurrentTicks = current_time;
-
-            ProfileScoped layer_update( ProfilePoint::LayerUpdate );
-            for ( auto layer : m_LayerStack ) {
-                layer->update( m_FrameTimingInfo.DeltaTime );
-            }
-
-            // always last and top most
-            if ( m_DebugUIEnabled )
-                m_DebugLayer->update( m_FrameTimingInfo.DeltaTime );
-
+            update( m_FrameTimingInfo.DeltaTime );
             m_FrameTimingInfo.InterpolationFactor = 0.0f;
         }
         else {
             m_FrameTimingInfo.CurrentTicks = current_time;
             while ( m_FrameTimingInfo.AccumulatedTicks >= m_FrameTimingInfo.DeltaTicks ) {
-
-                ProfileScoped layer_update( ProfilePoint::LayerUpdate );
-                for ( auto layer : m_LayerStack ) {
-                    layer->update( m_FrameTimingInfo.DeltaTime );
-                }
-
-                // always last and top most
-                if ( m_DebugUIEnabled )
-                    m_DebugLayer->update( m_FrameTimingInfo.DeltaTime );
-
+                update( m_FrameTimingInfo.DeltaTime );
                 m_FrameTimingInfo.AccumulatedTicks -= m_FrameTimingInfo.DeltaTicks;
             }
             m_FrameTimingInfo.InterpolationFactor = static_cast<float>( m_FrameTimingInfo.AccumulatedTicks ) / m_FrameTimingInfo.DeltaTicks;
         }
+    }
+
+    void Application::update( double delta_time )
+    {
+        ProfileScoped layer_update( ProfilePoint::LayerUpdate );
+        for ( auto& cam_controller : m_CameraControllers )
+            cam_controller->update( delta_time );
+
+        for ( auto layer : m_LayerStack ) {
+            layer->update( delta_time );
+        }
+
+        // always last and top most
+        if ( m_DebugUIEnabled )
+            m_DebugLayer->update( delta_time );
+
+        for ( auto& cam : m_Cameras )
+            cam->update();
     }
 
     void Application::publish_coreapi()

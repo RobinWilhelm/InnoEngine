@@ -88,7 +88,8 @@ namespace InnoEngine
         void synchronize();
         void poll_events();
         void handle_event( const SDL_Event& event );
-        void update_layers();
+        void create_update();
+        void update( double delta_time );
         void render_layers();
 
         void run_async();
