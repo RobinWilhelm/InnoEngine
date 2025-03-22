@@ -150,15 +150,13 @@ namespace InnoEngine
             // reasons might be: change in texture, batch is full
             if ( m_GPUBatch->current_batch_full() ||
                  current == nullptr ||
-                 current->RenderTargetIndex != command->RenderTargetIndex ||
-                 current->ViewPortIndex != command->ViewPortIndex ||
+                 current->ContextIndex != command->ContextIndex ||
                  current->FontFBIndex != command->FontFBIndex ||
                  m_GPUBatch->get_current_batch_remaining_size() < command->StringLength ) {
 
-                current                    = m_GPUBatch->upload_and_add_batch( copy_pass );
-                current->RenderTargetIndex = command->RenderTargetIndex;
-                current->ViewPortIndex     = command->ViewPortIndex;
-                current->FontFBIndex       = command->FontFBIndex;
+                current               = m_GPUBatch->upload_and_add_batch( copy_pass );
+                current->ContextIndex = command->ContextIndex;
+                current->FontFBIndex  = command->FontFBIndex;
 
                 // font change?
                 font          = font_list[ command->FontFBIndex ];
@@ -230,7 +228,7 @@ namespace InnoEngine
 
                 buffer_data->ForegroundColor = command->ForegroundColor;
                 buffer_data->Depth           = command->Depth;
-                buffer_data->CameraIndex     = command->CameraIndex;
+                buffer_data->ContextIndex    = command->ContextIndex;
 
                 if ( i < command->StringLength - 1 ) {
                     double advance       = glyph->getAdvance();
@@ -251,7 +249,7 @@ namespace InnoEngine
         }
     }
 
-    uint32_t Font2DPipeline::swapchain_render( const std::vector<Viewport>& viewport_list, const FontList& font_list,SDL_GPURenderPass* render_pass )
+    uint32_t Font2DPipeline::swapchain_render( const std::vector<Ref<RenderContext>>& rendercontext_list, const FontList& font_list, SDL_GPURenderPass* render_pass )
     {
         IE_ASSERT( m_Device != nullptr );
         IE_ASSERT( render_pass != nullptr );
@@ -259,18 +257,16 @@ namespace InnoEngine
         SDL_BindGPUGraphicsPipeline( render_pass, m_Pipeline );
         SDL_BindGPUVertexBuffers( render_pass, 0, nullptr, 0 );
 
-        FrameBufferIndex current_font     = -1;
-        //int32_t          current_camera   = -1;
-        int32_t          current_viewport = -1;
-        // RenderTargetIndexType current_rendertarget = 0;
+        RenderCommandBufferIndexType current_font     = InvalidRenderCommandBufferIndex;
+        RenderCommandBufferIndexType current_viewport = InvalidRenderCommandBufferIndex;
 
-        uint32_t         draw_calls = 0;
+        uint32_t draw_calls = 0;
         for ( const auto& batch_data : m_GPUBatch->get_batchlist() ) {
-            if ( batch_data.CustomData.ViewPortIndex != current_viewport ) {
-                const auto& vp = viewport_list[ batch_data.CustomData.ViewPortIndex ];
-                SDL_GPUViewport viewport       = { vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth };
+            if ( batch_data.CustomData.ContextIndex != current_viewport ) {
+                const auto&     vp       = rendercontext_list[ batch_data.CustomData.ContextIndex ]->get_viewport();
+                SDL_GPUViewport viewport = { vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth };
                 SDL_SetGPUViewport( render_pass, &viewport );
-                current_viewport = batch_data.CustomData.ViewPortIndex;
+                current_viewport = batch_data.CustomData.ContextIndex;
             }
 
             if ( batch_data.CustomData.FontFBIndex != current_font ) {
@@ -300,10 +296,7 @@ namespace InnoEngine
         }
 
         std::sort( m_SortedCommands.begin(), m_SortedCommands.end(), []( const Command* a, const Command* b ) {
-            if ( a->RenderTargetIndex > b->RenderTargetIndex )
-                return true;
-
-            if ( a->ViewPortIndex > b->ViewPortIndex )
+            if ( a->ContextIndex > b->ContextIndex )
                 return true;
 
             if ( a->FontFBIndex > b->FontFBIndex )

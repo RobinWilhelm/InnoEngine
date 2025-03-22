@@ -19,7 +19,9 @@ namespace InnoEngine
 
         Clear                  = other.Clear;
         ClearColor             = other.ClearColor;
+        /*
         ViewProjectionMatrices = other.ViewProjectionMatrices;
+        */
 
         SpriteRenderCommands.resize( other.SpriteRenderCommands.size() );
         std::memcpy( static_cast<void*>( SpriteRenderCommands.data() ),
@@ -61,10 +63,12 @@ namespace InnoEngine
         Clear      = false;
         ClearColor = DXSM::Color( 0.0f, 0.0f, 0.0f, 0.0f );
 
+        RenderContextRegister.clear();
+        /*
         Viewports.clear();
         RenderTargets.clear();
         ViewProjectionMatrices.clear();
-
+        */
         SpriteRenderCommands.clear();
         QuadRenderCommands.clear();
         LineRenderCommands.clear();

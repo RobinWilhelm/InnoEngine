@@ -5,6 +5,7 @@
 #include "InnoEngine/graphics/GPUBatchBuffer.h"
 
 #include "InnoEngine/graphics/Viewport.h"
+#include "InnoEngine/graphics/RenderContext.h"
 
 namespace InnoEngine
 {
@@ -19,8 +20,7 @@ namespace InnoEngine
     public:
         struct BatchData
         {
-            RenderTargetIndexType RenderTargetIndex = 0;
-            ViewPortIndexType     ViewPortIndex     = 0;
+            RenderCommandBufferIndexType ContextIndex = InvalidRenderCommandBufferIndex;
         };
 
         struct QuadCommand : RenderCommandBase
@@ -38,7 +38,7 @@ namespace InnoEngine
             DXSM::Color   Color;
             float         Rotation;
             float         Depth;
-            uint32_t      CameraIndex;
+            uint32_t      ContextIndex;
             float         pad[ 1 ];
         };
 
@@ -59,7 +59,7 @@ namespace InnoEngine
             float         Thickness;
             float         EdgeFade;
             float         Depth;
-            uint32_t      CameraIndex;
+            uint32_t      ContextIndex;
         };
 
         struct CircleCommand : RenderCommandBase
@@ -79,7 +79,7 @@ namespace InnoEngine
             float         Thickness;
             float         Fade;
             float         Depth;
-            uint32_t      CameraIndex;
+            uint32_t      ContextIndex;
             float         pad[ 1 ];
         };
 
@@ -97,8 +97,8 @@ namespace InnoEngine
         void     prepare_render( const QuadCommandList&   quad_command_list,
                                  const LineCommandList&   line_command_list,
                                  const CircleCommandList& circle_command_list );
-        uint32_t swapchain_render( const std::vector<Viewport>& viewport_list,
-                                   SDL_GPURenderPass*           render_pass );
+        uint32_t swapchain_render( const std::vector<Ref<RenderContext>>& rendercontext_list,
+                                   SDL_GPURenderPass*                     render_pass );
 
         void sort_quad_commands( const QuadCommandList& quad_command_list );
         void sort_line_commands( const LineCommandList& quad_command_list );

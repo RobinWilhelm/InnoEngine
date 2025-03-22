@@ -1,4 +1,6 @@
 #pragma once
+#include "InnoEngine/graphics/RenderContext.h"
+
 #include "InnoEngine/graphics/Font.h"
 #include "InnoEngine/graphics/Texture2D.h"
 
@@ -8,7 +10,7 @@
 #include "InnoEngine/graphics/pipelines/Primitive2DPipeline.h"
 
 #include "InnoEngine/utility/StringArena.h"
-#include "InnoEngine/graphics/Viewport.h"
+#include "InnoEngine/graphics/Viewport.h"                
 
 #include "DirectXMath.h"
 #include "Directxtk/SimpleMath.h"
@@ -22,9 +24,14 @@ namespace InnoEngine
     {
         bool                        Clear;
         DXSM::Color                 ClearColor;
+
+        std::vector<Ref<RenderContext>> RenderContextRegister;
+
+        /*
         std::vector<DXSM::Matrix>   ViewProjectionMatrices;
         std::vector<Viewport>       Viewports;
         std::vector<Ref<Texture2D>> RenderTargets;
+        */
 
         TextureList TextureRegister;    // hold a reference to all texture objects we are going to use this frame
 

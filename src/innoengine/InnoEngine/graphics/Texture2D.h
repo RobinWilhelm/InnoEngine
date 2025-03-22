@@ -20,8 +20,10 @@ namespace InnoEngine
 
     class Texture2D : public Asset<Texture2D>
     {
-        friend class AssetRepository<Texture2D>;
+        friend class RenderContext;
         friend class GPURenderer;
+        friend class AssetRepository<Texture2D>;
+
         Texture2D() :
             m_Device( CoreAPI::get_gpurenderer()->get_gpudevice() ) { };
 
@@ -71,9 +73,8 @@ namespace InnoEngine
 
         uint32_t m_texelBlockSize = 0;
 
-        FrameBufferIndex m_frameBufferIndex = -1;
+        RenderCommandBufferIndexType m_RenderCommandBufferIndex = InvalidRenderCommandBufferIndex;
     };
-
 
     using TextureList = std::vector<Ref<Texture2D>>;
 }    // namespace InnoEngine

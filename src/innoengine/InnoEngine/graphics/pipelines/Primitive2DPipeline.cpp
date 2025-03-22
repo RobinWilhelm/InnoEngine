@@ -84,22 +84,20 @@ namespace InnoEngine
         for ( const QuadCommand* command : m_SortedQuadCommands ) {
             if ( m_QuadGPUBatch->current_batch_full() ||
                  current == nullptr ||
-                 current->RenderTargetIndex != command->RenderTargetIndex ||
-                 current->ViewPortIndex != command->ViewPortIndex ) {
+                 current->ContextIndex != command->ContextIndex ) {
 
-                current                    = m_QuadGPUBatch->upload_and_add_batch( copy_pass );
-                current->RenderTargetIndex = command->RenderTargetIndex;
-                current->ViewPortIndex     = command->ViewPortIndex;
+                current               = m_QuadGPUBatch->upload_and_add_batch( copy_pass );
+                current->ContextIndex = command->ContextIndex;
             }
 
             QuadStorageBufferLayout* buffer_data = m_QuadGPUBatch->next_data();
 
-            buffer_data->CameraIndex = command->CameraIndex;
-            buffer_data->Color       = command->Color;
-            buffer_data->Depth       = command->Depth;
-            buffer_data->Position    = command->Position;
-            buffer_data->Rotation    = command->Rotation;
-            buffer_data->Size        = command->Size;
+            buffer_data->ContextIndex = command->ContextIndex;
+            buffer_data->Color        = command->Color;
+            buffer_data->Depth        = command->Depth;
+            buffer_data->Position     = command->Position;
+            buffer_data->Rotation     = command->Rotation;
+            buffer_data->Size         = command->Size;
         }
         m_QuadGPUBatch->upload_last( copy_pass );
 
@@ -107,23 +105,21 @@ namespace InnoEngine
         for ( const LineCommand* command : m_SortedLineCommands ) {
             if ( m_LineGPUBatch->current_batch_full() ||
                  current == nullptr ||
-                 current->RenderTargetIndex != command->RenderTargetIndex ||
-                 current->ViewPortIndex != command->ViewPortIndex ) {
+                 current->ContextIndex != command->ContextIndex ) {
 
-                current                    = m_LineGPUBatch->upload_and_add_batch( copy_pass );
-                current->RenderTargetIndex = command->RenderTargetIndex;
-                current->ViewPortIndex     = command->ViewPortIndex;
+                current               = m_LineGPUBatch->upload_and_add_batch( copy_pass );
+                current->ContextIndex = command->ContextIndex;
             }
 
             LineStorageBufferLayout* buffer_data = m_LineGPUBatch->next_data();
 
-            buffer_data->CameraIndex = command->CameraIndex;
-            buffer_data->Color       = command->Color;
-            buffer_data->Thickness   = command->Thickness;
-            buffer_data->EdgeFade    = command->EdgeFade;
-            buffer_data->Start       = command->Start;
-            buffer_data->End         = command->End;
-            buffer_data->Depth       = command->Depth;
+            buffer_data->ContextIndex = command->ContextIndex;
+            buffer_data->Color        = command->Color;
+            buffer_data->Thickness    = command->Thickness;
+            buffer_data->EdgeFade     = command->EdgeFade;
+            buffer_data->Start        = command->Start;
+            buffer_data->End          = command->End;
+            buffer_data->Depth        = command->Depth;
         }
         m_LineGPUBatch->upload_last( copy_pass );
 
@@ -131,22 +127,20 @@ namespace InnoEngine
         for ( const CircleCommand* command : m_SortedCircleCommands ) {
             if ( m_CircleGPUBatch->current_batch_full() ||
                  current == nullptr ||
-                 current->RenderTargetIndex != command->RenderTargetIndex ||
-                 current->ViewPortIndex != command->ViewPortIndex ) {
+                 current->ContextIndex != command->ContextIndex ) {
 
-                current                    = m_CircleGPUBatch->upload_and_add_batch( copy_pass );
-                current->RenderTargetIndex = command->RenderTargetIndex;
-                current->ViewPortIndex     = command->ViewPortIndex;
+                current               = m_CircleGPUBatch->upload_and_add_batch( copy_pass );
+                current->ContextIndex = command->ContextIndex;
             }
             CircleStorageBufferLayout* buffer_data = m_CircleGPUBatch->next_data();
 
-            buffer_data->CameraIndex = command->CameraIndex;
-            buffer_data->Color       = command->Color;
-            buffer_data->Depth       = command->Depth;
-            buffer_data->Position    = command->Position;
-            buffer_data->Fade        = command->Fade;
-            buffer_data->Thickness   = command->Thickness;
-            buffer_data->Radius      = command->Radius;
+            buffer_data->ContextIndex = command->ContextIndex;
+            buffer_data->Color        = command->Color;
+            buffer_data->Depth        = command->Depth;
+            buffer_data->Position     = command->Position;
+            buffer_data->Fade         = command->Fade;
+            buffer_data->Thickness    = command->Thickness;
+            buffer_data->Radius       = command->Radius;
         }
         m_CircleGPUBatch->upload_last( copy_pass );
 
@@ -158,24 +152,23 @@ namespace InnoEngine
         }
     }
 
-    uint32_t Primitive2DPipeline::swapchain_render( const std::vector<Viewport>& viewport_list, SDL_GPURenderPass* render_pass )
+    uint32_t Primitive2DPipeline::swapchain_render( const std::vector<Ref<RenderContext>>& rendercontext_list, SDL_GPURenderPass* render_pass )
     {
         IE_ASSERT( m_Device != nullptr );
         IE_ASSERT( render_pass != nullptr );
         SDL_BindGPUVertexBuffers( render_pass, 0, nullptr, 0 );
 
-        uint32_t draw_calls       = 0;
-        // RenderTargetIndexType current_rendertarget = 0;
-        int32_t  current_viewport = -1;
+        uint32_t                     draw_calls      = 0;
+        RenderCommandBufferIndexType current_context = InvalidRenderCommandBufferIndex;
 
         if ( m_QuadGPUBatch->size() > 0 ) {
             SDL_BindGPUGraphicsPipeline( render_pass, m_QuadPipeline );
             for ( const auto& batch_data : m_QuadGPUBatch->get_batchlist() ) {
-                if ( batch_data.CustomData.ViewPortIndex != current_viewport ) {
-                    const auto&     vp = viewport_list[ batch_data.CustomData.ViewPortIndex ];
+                if ( batch_data.CustomData.ContextIndex != current_context ) {
+                    const auto&     vp = rendercontext_list[ batch_data.CustomData.ContextIndex ]->get_viewport();
                     SDL_GPUViewport viewport( vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth );
                     SDL_SetGPUViewport( render_pass, &viewport );
-                    current_viewport = batch_data.CustomData.ViewPortIndex;
+                    current_context = batch_data.CustomData.ContextIndex;
                 }
 
                 SDL_BindGPUVertexStorageBuffers( render_pass, 1, &batch_data.GPUBuffer, 1 );
@@ -187,13 +180,12 @@ namespace InnoEngine
         if ( m_LineGPUBatch->size() > 0 ) {
             SDL_BindGPUGraphicsPipeline( render_pass, m_LinePipeline );
             for ( const auto& batch_data : m_LineGPUBatch->get_batchlist() ) {
-                if ( batch_data.CustomData.ViewPortIndex != current_viewport ) {
-                    const auto&     vp = viewport_list[ batch_data.CustomData.ViewPortIndex ];
+                if ( batch_data.CustomData.ContextIndex != current_context ) {
+                    const auto&     vp = rendercontext_list[ batch_data.CustomData.ContextIndex ]->get_viewport();
                     SDL_GPUViewport viewport( vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth );
                     SDL_SetGPUViewport( render_pass, &viewport );
-                    current_viewport = batch_data.CustomData.ViewPortIndex;
+                    current_context = batch_data.CustomData.ContextIndex;
                 }
-
                 SDL_BindGPUVertexStorageBuffers( render_pass, 1, &batch_data.GPUBuffer, 1 );
                 SDL_DrawGPUPrimitives( render_pass, batch_data.Count * 6, 1, 0, 0 );
                 ++draw_calls;
@@ -203,11 +195,11 @@ namespace InnoEngine
         if ( m_CircleGPUBatch->size() > 0 ) {
             SDL_BindGPUGraphicsPipeline( render_pass, m_CirclePipeline );
             for ( const auto& batch_data : m_CircleGPUBatch->get_batchlist() ) {
-                if ( batch_data.CustomData.ViewPortIndex != current_viewport ) {
-                    const auto&     vp = viewport_list[ batch_data.CustomData.ViewPortIndex ];
+                if ( batch_data.CustomData.ContextIndex != current_context ) {
+                    const auto&     vp = rendercontext_list[ batch_data.CustomData.ContextIndex ]->get_viewport();
                     SDL_GPUViewport viewport( vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth );
                     SDL_SetGPUViewport( render_pass, &viewport );
-                    current_viewport = batch_data.CustomData.ViewPortIndex;
+                    current_context = batch_data.CustomData.ContextIndex;
                 }
 
                 SDL_BindGPUVertexStorageBuffers( render_pass, 1, &batch_data.GPUBuffer, 1 );
@@ -231,10 +223,7 @@ namespace InnoEngine
         }
 
         std::sort( m_SortedQuadCommands.begin(), m_SortedQuadCommands.end(), []( const QuadCommand* a, const QuadCommand* b ) {
-            if ( a->RenderTargetIndex > b->RenderTargetIndex )
-                return true;
-
-            if ( a->ViewPortIndex > b->ViewPortIndex )
+            if ( a->ContextIndex > b->ContextIndex )
                 return true;
 
             if ( a->Depth > b->Depth )
@@ -255,10 +244,7 @@ namespace InnoEngine
         }
 
         std::sort( m_SortedLineCommands.begin(), m_SortedLineCommands.end(), []( const LineCommand* a, const LineCommand* b ) {
-            if ( a->RenderTargetIndex > b->RenderTargetIndex )
-                return true;
-
-            if ( a->ViewPortIndex > b->ViewPortIndex )
+            if ( a->ContextIndex > b->ContextIndex )
                 return true;
 
             if ( a->Depth > b->Depth )
@@ -279,10 +265,7 @@ namespace InnoEngine
             m_SortedCircleCommands[ i ] = &circle_command_list[ i ];
         }
         std::sort( m_SortedCircleCommands.begin(), m_SortedCircleCommands.end(), []( const CircleCommand* a, const CircleCommand* b ) {
-            if ( a->RenderTargetIndex > b->RenderTargetIndex )
-                return true;
-
-            if ( a->ViewPortIndex > b->ViewPortIndex )
+            if ( a->ContextIndex > b->ContextIndex )
                 return true;
 
             if ( a->Depth > b->Depth )

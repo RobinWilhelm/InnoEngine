@@ -24,6 +24,7 @@ namespace InnoEngine
     class Font;
     class Texture2D;
     struct RenderCommandBuffer;
+    class RenderContext;
 
     struct RenderStatistics
     {
@@ -76,63 +77,25 @@ namespace InnoEngine
         void register_sprite( Sprite& sprite );
         void register_font( Ref<Font> font );
 
-        uint16_t use_next_layer();
-        void     use_layer( uint16_t layer );
-
-        CameraIndexType use_camera( const Ref<Camera> camera );
-        CameraIndexType use_camera( const Camera* camera );
-        void            use_camera_by_index( CameraIndexType camera_index );
-
-        void use_default_rendertarget();
-
-        uint8_t use_view_port( const Viewport& view_port );
-        void    use_view_port_by_index( uint8_t view_port_index );
-
         void set_clear_color( DXSM::Color color );    // the color the swapchain texture should be cleared to at the begin of the frame
-
-        void add_sprite( const Sprite& sprite );
-        void add_pixel( const DXSM::Vector2& position, const DXSM::Color& color );
-        void add_quad( const DXSM::Vector2& position, const DXSM::Vector2& size, float rotation, const DXSM::Color& color );
-        void add_line( const DXSM::Vector2& start, const DXSM::Vector2& end, float thickness, float edge_fade, const DXSM::Color& color );
-        void add_lines( const std::vector<DXSM::Vector2>& points, float thickness, float edge_fade, const DXSM::Color& color, bool loop );
-        void add_circle( const DXSM::Vector2& position, float radius, float edge_fade, const DXSM::Color& color );
-        void add_circle( const DXSM::Vector2& position, float radius, float thickness, float edge_fade, const DXSM::Color& color );
-
-        void add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector2& position );
-        void add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color );
-        void add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector4& source_rect, const DXSM::Vector2& position );
-        void add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector4& source_rect, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color );
-
-        void add_text( const Font* font, const DXSM::Vector2& position, uint32_t text_size, std::string_view text, const DXSM::Color& color );
-        void add_text_centered( const Font* font, const DXSM::Vector2& position, uint32_t text_size, std::string_view text, const DXSM::Color& color );    // recalculates text size every time
-        void add_imgui_draw_data( ImDrawData* draw_data );
-
         void add_bounding_box( const DXSM::Vector4& aabb, const DXSM::Vector2& position, const DXSM::Color& color );
 
+        void bind_rendercontext( Ref<RenderContext> render_ctx );
+
     private:
-        void  retrieve_shaderformatinfo();
-        float transform_layer_to_depth( uint16_t layer );
+        void  retrieve_shaderformatinfo();;
 
         void update_statistics_from_last_completed_frame();
 
         // debug only
-        const RenderCommandBuffer* get_render_command_buffer() const;
-
-        void populate_command_base( RenderCommandBase* command );
+        RenderCommandBuffer* get_render_command_buffer() const;
 
         Result create_camera_transformation_buffers();
-        void   upload_camera_transformations( const std::vector<DXSM::Matrix>& camera_transforms );
+        void   upload_camera_transformations( const std::vector<Ref<RenderContext>>& registered_rendercontexts );
 
     private:
         bool m_Initialized  = false;
         bool m_vsyncEnabled = true;
-
-        uint16_t m_CurrentLayer      = 0;
-        float    m_CurrentLayerDepth = 0.0f;
-
-        CameraIndexType       m_CurrentViewProjectionIndex = 0;
-        ViewPortIndexType     m_CurrentViewPortIndex       = 0;
-        RenderTargetIndexType m_CurrentRenderTargetIndex   = 0;
 
         class PipelineProcessor;
         Own<PipelineProcessor> m_pipelineProcessor = nullptr;

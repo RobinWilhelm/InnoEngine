@@ -14,6 +14,7 @@
 #include "InnoEngine/graphics/Window.h"
 #include "InnoEngine/InputSystem.h"
 #include "InnoEngine/graphics/DefaultCameraController.h"
+#include "InnoEngine/graphics/RenderContext.h"
 
 namespace InnoEngine
 {
@@ -102,6 +103,10 @@ namespace InnoEngine
             m_InputSystem         = std::move( input_system_opt.value() );
 
             m_FullscreenDefaultViewport = Viewport( 0, 0, static_cast<float>( m_Window->width() ), static_cast<float>( m_Window->height() ), 0.0f, 1.0f );
+
+            m_DefaultCamera = OrthographicCamera::create( { m_FullscreenDefaultViewport.Width, m_FullscreenDefaultViewport.Height } );
+            register_camera( m_DefaultCamera );
+            m_DefaultRenderContext = RenderContext::create( m_Renderer.get(), m_DefaultCamera, m_FullscreenDefaultViewport );
 
             on_init_assets( m_AssetManager.get() );
             publish_coreapi();
@@ -311,6 +316,11 @@ namespace InnoEngine
     const Viewport& Application::get_fullscreen_viewport() const
     {
         return m_FullscreenDefaultViewport;
+    }
+
+    Ref<RenderContext> Application::get_default_rendercontext() const
+    {
+        return m_DefaultRenderContext;
     }
 
     void Application::on_synchronize() { }

@@ -91,14 +91,14 @@ namespace InnoEngine
             IE_ASSERT( m_Initialized );
             const RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
 
-            stats.SpriteDrawCalls = m_Sprite2DPipeline->swapchain_render( render_cmd_buf.Viewports,
+            stats.SpriteDrawCalls = m_Sprite2DPipeline->swapchain_render( render_cmd_buf.RenderContextRegister,
                                                                           render_cmd_buf.TextureRegister,
                                                                           render_pass );
 
-            stats.PrimitivesDrawCalls = m_PrimitivePipeline->swapchain_render( render_cmd_buf.Viewports,
+            stats.PrimitivesDrawCalls = m_PrimitivePipeline->swapchain_render( render_cmd_buf.RenderContextRegister,
                                                                                render_pass );
 
-            stats.FontDrawCalls = m_Font2DPipeline->swapchain_render( render_cmd_buf.Viewports,
+            stats.FontDrawCalls = m_Font2DPipeline->swapchain_render( render_cmd_buf.RenderContextRegister,
                                                                       render_cmd_buf.FontRegister,
                                                                       render_pass );
 
@@ -227,7 +227,6 @@ namespace InnoEngine
                 IE_LOG_ERROR( "Failed to create depth texture: {}", SDL_GetError() );
                 return Result::Fail;
             }
-
         }
 
         RETURN_RESULT_IF_FAILED( create_camera_transformation_buffers() );
@@ -305,32 +304,37 @@ namespace InnoEngine
     {
 #ifdef DEBUG_FRAMEBUFFERINDICES
         // reset the frame indices so they can be checked to catch errors
-        auto& render_commands = m_pipelineProcessor->get_command_buffer_for_rendering();
+        auto& render_commands = m_pipelineProcessor->get_command_buffer_for_collecting();
         for ( auto& texture : render_commands.TextureRegister )
-            texture->m_frameBufferIndex = -1;
+            texture->m_RenderCommandBufferIndex = InvalidRenderCommandBufferIndex;
 
         for ( auto& font : render_commands.FontRegister )
-            font->m_frameBufferIndex = -1;
+            font->m_RenderCommandBufferIndex = InvalidRenderCommandBufferIndex;
+
+        for ( auto& render_ctx : render_commands.RenderContextRegister ) {
+            render_ctx->m_RenderCommandBufferIndex = InvalidRenderCommandBufferIndex;
+            render_ctx->m_RenderCommandBuffer      = nullptr;
+        }
 #endif
         m_pipelineProcessor->synchronize();
     }
 
     void GPURenderer::render()
     {
+        ProfileScoped profile_rendercommands( ProfilePoint::ProcessRenderCommands );
+
         IE_ASSERT( m_Initialized );
         const auto& render_commands = m_pipelineProcessor->get_command_buffer_for_rendering();
 
-        IE_ASSERT( render_commands.ViewProjectionMatrices.size() != 0 );
-        IE_ASSERT( render_commands.Viewports.size() != 0 );
+        IE_ASSERT( render_commands.RenderContextRegister.size() < 256 );
 
-        ProfileScoped profile_rendercommands( ProfilePoint::ProcessRenderCommands );
-
-        // dont render when minimized
-        if ( m_Window && SDL_GetWindowFlags( m_Window->get_sdlwindow() ) & SDL_WINDOW_MINIMIZED ) {
+        // dont render when minimized or when no render data is available
+        if ( render_commands.RenderContextRegister.size() == 0 ||
+             ( m_Window && SDL_GetWindowFlags( m_Window->get_sdlwindow() ) & SDL_WINDOW_MINIMIZED ) ) {
             return;
         }
 
-        upload_camera_transformations( render_commands.ViewProjectionMatrices );
+        upload_camera_transformations( render_commands.RenderContextRegister );
 
         m_pipelineProcessor->prepare();
 
@@ -390,40 +394,12 @@ namespace InnoEngine
         update_statistics_from_last_completed_frame();
         auto& collect_buffer = m_pipelineProcessor->get_command_buffer_for_collecting();
         collect_buffer.clear();
-        use_layer( 0 );
-        use_default_rendertarget();
+        RenderContext::use_specific_depth_layer( 0 );
     }
 
     void GPURenderer::end_collection()
     {
         // nothing yet but probably need to switch between multiple collecting commandbuffers in the future
-    }
-
-    void GPURenderer::register_texture( Ref<Texture2D> texture )
-    {
-        IE_ASSERT( texture != nullptr );
-
-        auto& render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
-        render_cmd_buf.TextureRegister.push_back( texture );
-        texture->m_frameBufferIndex = static_cast<FrameBufferIndex>( render_cmd_buf.TextureRegister.size() - 1 );
-    }
-
-    void GPURenderer::register_sprite( Sprite& sprite )
-    {
-        IE_ASSERT( sprite.m_texture != nullptr );
-
-        auto& render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
-        render_cmd_buf.TextureRegister.push_back( sprite.m_texture );
-        sprite.m_texture->m_frameBufferIndex = static_cast<FrameBufferIndex>( render_cmd_buf.TextureRegister.size() - 1 );
-    }
-
-    void GPURenderer::register_font( Ref<Font> font )
-    {
-        IE_ASSERT( font != nullptr && font->m_Initialized );
-
-        auto& render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
-        render_cmd_buf.FontRegister.push_back( font );
-        font->m_frameBufferIndex = static_cast<FrameBufferIndex>( render_cmd_buf.FontRegister.size() - 1 );
     }
 
     void GPURenderer::set_clear_color( DXSM::Color color )
@@ -433,219 +409,7 @@ namespace InnoEngine
         render_cmd_buf.ClearColor = color;
     }
 
-    CameraIndexType GPURenderer::use_camera( const Ref<Camera> camera )
-    {
-        auto& render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
-        IE_ASSERT( render_cmd_buf.ViewProjectionMatrices.size() <= ( std::numeric_limits<uint8_t>::max )() );
-        m_CurrentViewProjectionIndex = static_cast<uint8_t>( render_cmd_buf.ViewProjectionMatrices.size() );
-        render_cmd_buf.ViewProjectionMatrices.push_back( camera->get_viewprojectionmatrix() );
-        return m_CurrentViewProjectionIndex;
-    }
-
-    CameraIndexType GPURenderer::use_camera( const Camera* camera )
-    {
-        auto& render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
-        IE_ASSERT( render_cmd_buf.ViewProjectionMatrices.size() <= ( std::numeric_limits<uint8_t>::max )() );
-        m_CurrentViewProjectionIndex = static_cast<uint8_t>( render_cmd_buf.ViewProjectionMatrices.size() );
-        render_cmd_buf.ViewProjectionMatrices.push_back( camera->get_viewprojectionmatrix() );
-        return m_CurrentViewProjectionIndex;
-    }
-
-    void GPURenderer::use_camera_by_index( CameraIndexType camera_index )
-    {
-        IE_ASSERT( camera_index < m_pipelineProcessor->get_command_buffer_for_collecting().ViewProjectionMatrices.size() );
-        m_CurrentViewProjectionIndex = camera_index;
-    }
-
-    void GPURenderer::use_default_rendertarget()
-    {
-        IE_ASSERT( m_Window != nullptr );
-        m_CurrentRenderTargetIndex = 0;
-    }
-
-    uint8_t GPURenderer::use_view_port( const Viewport& view_port )
-    {
-        auto& render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
-        IE_ASSERT( render_cmd_buf.Viewports.size() <= ( std::numeric_limits<uint8_t>::max )() );
-        m_CurrentViewPortIndex = static_cast<uint8_t>( render_cmd_buf.Viewports.size() );
-        render_cmd_buf.Viewports.push_back( view_port );
-        return m_CurrentViewPortIndex;
-    }
-
-    void GPURenderer::use_view_port_by_index( uint8_t view_port_index )
-    {
-        IE_ASSERT( view_port_index < m_pipelineProcessor->get_command_buffer_for_collecting().Viewports.size() );
-        m_CurrentViewPortIndex = view_port_index;
-    }
-
-    void GPURenderer::add_sprite( const Sprite& sprite )
-    {
-        IE_ASSERT( sprite.m_texture != nullptr && sprite.m_texture->m_frameBufferIndex >= 0 );
-
-        RenderCommandBuffer&       render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
-        Sprite2DPipeline::Command& cmd            = render_cmd_buf.SpriteRenderCommands.emplace_back();
-
-        populate_command_base( &cmd );
-        cmd.TextureIndex = sprite.m_texture->m_frameBufferIndex;
-        cmd.Position     = sprite.m_position;
-        cmd.Size         = { sprite.m_scale.x * sprite.m_texture->m_width, sprite.m_scale.y * sprite.m_texture->m_height };
-        cmd.OriginOffset = sprite.m_originOffset * cmd.Size;
-        cmd.SourceRect   = sprite.m_sourceRect;
-        cmd.Color        = sprite.m_color;
-        cmd.Rotation     = DirectX::XMConvertToRadians( sprite.m_rotationDegrees );
-    }
-
-    void GPURenderer::add_pixel( const DXSM::Vector2& position, const DXSM::Color& color )
-    {
-        add_quad( position,
-                  { 1.0f, 1.0f },
-                  0.0f,
-                  color );
-    }
-
-    void GPURenderer::add_quad( const DXSM::Vector2& position, const DXSM::Vector2& size, float rotation, const DXSM::Color& color )
-    {
-        RenderCommandBuffer&              render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
-        Primitive2DPipeline::QuadCommand& cmd            = render_cmd_buf.QuadRenderCommands.emplace_back();
-
-        populate_command_base( &cmd );
-        cmd.Position = position;
-        cmd.Size     = size;
-        cmd.Rotation = DirectX::XMConvertToRadians( rotation );
-        cmd.Color    = color;
-    }
-
-    void GPURenderer::add_line( const DXSM::Vector2& start, const DXSM::Vector2& end, float thickness, float edge_fade, const DXSM::Color& color )
-    {
-        RenderCommandBuffer&              render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
-        Primitive2DPipeline::LineCommand& cmd            = render_cmd_buf.LineRenderCommands.emplace_back();
-
-        populate_command_base( &cmd );
-        cmd.Start     = start;
-        cmd.End       = end;
-        cmd.Color     = color;
-        cmd.Thickness = thickness;
-        cmd.EdgeFade  = edge_fade;
-    }
-
-    void GPURenderer::add_lines( const std::vector<DXSM::Vector2>& points, float thickness, float edge_fade, const DXSM::Color& color, bool loop )
-    {
-        uint32_t point_amount = static_cast<uint32_t>( points.size() );
-        if ( point_amount == 1 )
-            return;
-
-        RenderCommandBuffer& render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
-
-        for ( size_t i = 0; i < point_amount; ++i ) {
-            if ( i + 1 < point_amount ) {
-                Primitive2DPipeline::LineCommand& cmd = render_cmd_buf.LineRenderCommands.emplace_back();
-                populate_command_base( &cmd );
-                cmd.Start     = points[ i ];
-                cmd.End       = points[ i + 1 ];
-                cmd.Color     = color;
-                cmd.Thickness = thickness;
-                cmd.EdgeFade  = edge_fade;
-            }
-            else if ( loop ) {
-                Primitive2DPipeline::LineCommand& cmd = render_cmd_buf.LineRenderCommands.emplace_back();
-                populate_command_base( &cmd );
-                cmd.Start     = points[ i ];
-                cmd.End       = points[ 0 ];
-                cmd.Color     = color;
-                cmd.Thickness = thickness;
-                cmd.EdgeFade  = edge_fade;
-            }
-        }
-    }
-
-    void GPURenderer::add_circle( const DXSM::Vector2& position, float radius, float edge_fade, const DXSM::Color& color )
-    {
-        add_circle( position, radius, radius, edge_fade, color );
-    }
-
-    void GPURenderer::add_circle( const DXSM::Vector2& position, float radius, float thickness, float edge_fade, const DXSM::Color& color )
-    {
-        RenderCommandBuffer&                render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
-        Primitive2DPipeline::CircleCommand& cmd            = render_cmd_buf.CircleRenderCommands.emplace_back();
-
-        populate_command_base( &cmd );
-        cmd.Position.x = position.x - radius;
-        cmd.Position.y = position.y - radius;
-        cmd.Color      = color;
-        cmd.Radius     = radius;
-        cmd.Fade       = edge_fade;
-        cmd.Thickness  = thickness / radius;
-    }
-
-    void GPURenderer::add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector2& position )
-    {
-        add_textured_quad( texture,
-                           position,
-                           { 1.0f, 1.0f },
-                           0.0f,
-                           { 1.0f, 1.0f, 1.0f, 1.0f } );
-    }
-
-    void GPURenderer::add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color )
-    {
-        add_textured_quad( texture,
-                           { 0.0f, 0.0f, 1.0f, 1.0f },
-                           position,
-                           scale,
-                           rotation,
-                           color );
-    }
-
-    void GPURenderer::add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector4& source_rect, const DXSM::Vector2& position )
-    {
-        add_textured_quad( texture,
-                           source_rect,
-                           position,
-                           { 1.0f, 1.0f },
-                           0.0f,
-                           { 1.0f, 1.0f, 1.0f, 1.0f } );
-    }
-
-    void GPURenderer::add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector4& source_rect, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color )
-    {
-        IE_ASSERT( texture != nullptr && texture->m_frameBufferIndex >= 0 );
-
-        RenderCommandBuffer&       render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
-        Sprite2DPipeline::Command& cmd            = render_cmd_buf.SpriteRenderCommands.emplace_back();
-
-        populate_command_base( &cmd );
-        cmd.TextureIndex = texture->m_frameBufferIndex;
-        cmd.Position     = position;
-        cmd.Size         = { scale.x * texture->m_width, scale.y * texture->m_height };
-        cmd.OriginOffset = cmd.Size * 0.5f;
-        cmd.SourceRect   = source_rect;
-        cmd.Color        = color;
-        cmd.Rotation     = DirectX::XMConvertToRadians( rotation );
-    }
-
-    void GPURenderer::add_imgui_draw_data( ImDrawData* draw_data )
-    {
-        IE_ASSERT( draw_data != nullptr );
-
-        RenderCommandBuffer&        render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
-        ImGuiPipeline::CommandData& cmd            = render_cmd_buf.ImGuiCommandBuffer;
-
-        cmd.FrameBufferScale = draw_data->FramebufferScale;
-        cmd.TotalIndexCount  = draw_data->TotalIdxCount;
-        cmd.TotalVertexCount = draw_data->TotalVtxCount;
-        cmd.DisplayPos       = draw_data->DisplayPos;
-        cmd.DisplaySize      = draw_data->DisplaySize;
-
-        cmd.RenderCommandLists.reserve( draw_data->CmdListsCount );
-        for ( int n = 0; n < draw_data->CmdListsCount; n++ ) {
-            const ImDrawList* drawList   = draw_data->CmdLists[ n ];
-            auto&             renderList = cmd.RenderCommandLists.emplace_back();
-            renderList.CommandBuffer     = drawList->CmdBuffer;
-            renderList.VertexBuffer      = drawList->VtxBuffer;
-            renderList.IndexBuffer       = drawList->IdxBuffer;
-        }
-    }
-
+    /*
     void GPURenderer::add_bounding_box( const DXSM::Vector4& aabb, const DXSM::Vector2& position, const DXSM::Color& color )
     {
         float line_width = 2;
@@ -658,22 +422,14 @@ namespace InnoEngine
         };
         add_lines( points, line_width, 0.0f, color, true );
     }
+    */
 
-    uint16_t GPURenderer::use_next_layer()
+    void GPURenderer::bind_rendercontext( Ref<RenderContext> render_ctx )
     {
-        m_CurrentLayerDepth = transform_layer_to_depth( ++m_CurrentLayer );
-        return m_CurrentLayer;
-    }
-
-    void GPURenderer::use_layer( uint16_t layer )
-    {
-        m_CurrentLayer      = layer;
-        m_CurrentLayerDepth = transform_layer_to_depth( m_CurrentLayer );
-    }
-
-    float GPURenderer::transform_layer_to_depth( uint16_t layer )
-    {
-        return layer == 0 ? 0.0f : static_cast<float>( layer ) / 65536.0f;
+        IE_ASSERT( render_ctx != nullptr && render_ctx->m_RenderCommandBufferIndex == -1 && render_ctx->m_RenderCommandBuffer == nullptr );
+        render_ctx->m_RenderCommandBuffer      = &m_pipelineProcessor->get_command_buffer_for_collecting();
+        render_ctx->m_RenderCommandBufferIndex = static_cast<uint32_t>( m_pipelineProcessor->get_command_buffer_for_collecting().RenderContextRegister.size() );
+        m_pipelineProcessor->get_command_buffer_for_collecting().RenderContextRegister.push_back( render_ctx );
     }
 
     void GPURenderer::update_statistics_from_last_completed_frame()
@@ -715,17 +471,9 @@ namespace InnoEngine
         m_Statistics.get_producer_data() = RenderStatistics();
     }
 
-    const RenderCommandBuffer* GPURenderer::get_render_command_buffer() const
+    RenderCommandBuffer* GPURenderer::get_render_command_buffer() const
     {
         return &m_pipelineProcessor->get_command_buffer_for_collecting();
-    }
-
-    void GPURenderer::populate_command_base( RenderCommandBase* command )
-    {
-        command->Depth             = m_CurrentLayerDepth;
-        command->CameraIndex       = m_CurrentViewProjectionIndex;
-        command->RenderTargetIndex = m_CurrentRenderTargetIndex;
-        command->ViewPortIndex     = m_CurrentViewPortIndex;
     }
 
     Result GPURenderer::create_camera_transformation_buffers()
@@ -753,20 +501,23 @@ namespace InnoEngine
         return Result::Success;
     }
 
-    void GPURenderer::upload_camera_transformations( const std::vector<DXSM::Matrix>& camera_transforms )
+    void GPURenderer::upload_camera_transformations( const std::vector<Ref<RenderContext>>& registered_rendercontexts )
     {
         IE_ASSERT( m_sdlGPUDevice != nullptr );
         IE_ASSERT( m_CameraMatrixTransferBuffer != nullptr );
         IE_ASSERT( m_CameraMatrixStorageBuffer != nullptr );
 
         DXSM::Matrix* buffer_data = static_cast<DXSM::Matrix*>( SDL_MapGPUTransferBuffer( m_sdlGPUDevice, m_CameraMatrixTransferBuffer, true ) );
-        std::memcpy( buffer_data, camera_transforms.data(), sizeof( DXSM::Matrix ) * camera_transforms.size() );
+        for ( const auto render_ctx : registered_rendercontexts ) {
+            *buffer_data = render_ctx->get_camera()->get_viewprojectionmatrix();
+            ++buffer_data;
+        }
 
         SDL_UnmapGPUTransferBuffer( m_sdlGPUDevice, m_CameraMatrixTransferBuffer );
         SDL_GPUTransferBufferLocation tranferBufferLocation { .transfer_buffer = m_CameraMatrixTransferBuffer, .offset = 0 };
         SDL_GPUBufferRegion           bufferRegion { .buffer = m_CameraMatrixStorageBuffer,
                                                      .offset = 0,
-                                                     .size   = static_cast<uint32_t>( camera_transforms.size() * sizeof( DXSM::Matrix ) ) };
+                                                     .size   = static_cast<uint32_t>( registered_rendercontexts.size() * sizeof( DXSM::Matrix ) ) };
 
         SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_sdlGPUDevice );
         if ( gpu_copy_cmd_buf == nullptr ) {
@@ -782,30 +533,6 @@ namespace InnoEngine
             IE_LOG_ERROR( "SDL_SubmitGPUCommandBuffer failed: {}", SDL_GetError() );
             return;
         }
-    }
-
-    void GPURenderer::add_text( const Font* font, const DXSM::Vector2& position, uint32_t size, std::string_view text, const DXSM::Color& color )
-    {
-        IE_ASSERT( font != nullptr && font->m_frameBufferIndex >= 0 );
-
-        RenderCommandBuffer&     render_cmd_buf = m_pipelineProcessor->get_command_buffer_for_collecting();
-        Font2DPipeline::Command& cmd            = render_cmd_buf.FontRenderCommands.emplace_back();
-
-        populate_command_base( &cmd );
-        cmd.FontFBIndex     = font->m_frameBufferIndex;
-        cmd.StringIndex     = render_cmd_buf.StringBuffer.insert( text );
-        cmd.StringLength    = static_cast<uint32_t>( text.size() );
-        cmd.Position        = position;
-        cmd.FontSize        = size;
-        cmd.ForegroundColor = color;
-    }
-
-    void GPURenderer::add_text_centered( const Font* font, const DXSM::Vector2& position, uint32_t text_size, std::string_view text, const DXSM::Color& color )
-    {
-        DXSM::Vector4 aabb        = font->get_aabb( text_size, text );
-        float         text_width  = aabb.z - aabb.x;
-        float         text_height = aabb.y - aabb.w;
-        add_text( font, { position.x - text_width / 2, position.y - text_height / 2 }, text_size, text, color );
     }
 
     void GPURenderer::retrieve_shaderformatinfo()

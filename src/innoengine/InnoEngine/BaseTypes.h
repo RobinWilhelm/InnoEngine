@@ -62,8 +62,6 @@ namespace InnoEngine
 
     constexpr uint64_t TicksPerSecond = 1'000'000'000;
 
-    using FrameBufferIndex = int32_t;
-
     template <typename T>
     class DoubleBuffered
     {
@@ -93,16 +91,17 @@ namespace InnoEngine
 #pragma warning( pop )
     };
 
-    using CameraIndexType       = uint8_t;
-    using ViewPortIndexType     = uint8_t;
-    using RenderTargetIndexType = uint16_t;
+    using RenderCommandBufferIndexType                                     = uint32_t;
+    constexpr RenderCommandBufferIndexType InvalidRenderCommandBufferIndex = ( std::numeric_limits<uint32_t>::max )();
 
     struct RenderCommandBase
     {
-        float                 Depth             = 0;
+        float                        Depth        = 0;
+        /*
         CameraIndexType       CameraIndex       = 0;
         ViewPortIndexType     ViewPortIndex     = 0;
         RenderTargetIndexType RenderTargetIndex = 0;
+        */
+        RenderCommandBufferIndexType ContextIndex = InvalidRenderCommandBufferIndex;
     };
-
 }    // namespace InnoEngine

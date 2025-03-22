@@ -20,7 +20,7 @@ namespace InnoEngine
 
     class Sprite
     {
-        friend class GPURenderer;
+        friend class RenderContext;
 
     public:
         Sprite() = default;
@@ -43,8 +43,6 @@ namespace InnoEngine
         void set_color( const DXSM::Color& ForegroundColor );
         void set_rotation( float degrees );
         void set_scale( const DXSM::Vector2&& scale );
-
-        void render();
 
     private:
         GPURenderer*   m_Renderer        = nullptr;

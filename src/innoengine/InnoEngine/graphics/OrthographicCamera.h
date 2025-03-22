@@ -12,7 +12,7 @@ namespace InnoEngine
 
     public:
         [[nodiscard]]
-        static auto create( const DXSM::Vector2& view_port_size ) -> Own<OrthographicCamera>;
+        static auto create( const DXSM::Vector2& view_port_size ) -> Ref<OrthographicCamera>;
 
         virtual void update(  ) override;
 

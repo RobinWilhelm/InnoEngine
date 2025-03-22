@@ -6,6 +6,7 @@
 #include "InnoEngine/AssetManager.h"
 #include "InnoEngine/graphics/Renderer.h"
 #include "InnoEngine/graphics/Window.h"
+#include "InnoEngine/graphics/RenderContext.h"
 
 #include "InnoEngine/Asset.h"
 #include "InnoEngine/graphics/Sprite.h"
@@ -136,20 +137,17 @@ namespace InnoEngine
 
         for ( const Command* command : m_SortedCommands ) {
             if ( current == nullptr || m_GPUBatch->current_batch_full() ||
-                 current->TextureIndex != command->TextureIndex ||
-                 current->ViewPortIndex != command->ViewPortIndex ||
-                 current->RenderTargetIndex != command->RenderTargetIndex ) {
+                 current->ContextIndex != command->ContextIndex ||
+                 current->TextureIndex != command->TextureIndex ) {
 
-                current = m_GPUBatch->upload_and_add_batch( copy_pass );
-
-                current->TextureIndex      = command->TextureIndex;
-                current->RenderTargetIndex = command->RenderTargetIndex;
-                current->ViewPortIndex     = command->ViewPortIndex;
+                current               = m_GPUBatch->upload_and_add_batch( copy_pass );
+                current->ContextIndex = command->ContextIndex;
+                current->TextureIndex = command->TextureIndex;
             }
 
             StructuredBufferLayout* buffer_data = m_GPUBatch->next_data();
 
-            buffer_data->CameraIndex  = command->CameraIndex;
+            buffer_data->ContextIndex = command->ContextIndex;
             buffer_data->Color        = command->Color;
             buffer_data->Position     = command->Position;
             buffer_data->OriginOffset = command->OriginOffset;
@@ -168,9 +166,9 @@ namespace InnoEngine
         }
     }
 
-    uint32_t Sprite2DPipeline::swapchain_render( const std::vector<Viewport>& viewport_list,
-                                                 const TextureList&           texture_list,
-                                                 SDL_GPURenderPass*           render_pass )
+    uint32_t Sprite2DPipeline::swapchain_render( const std::vector<Ref<RenderContext>>& rendercontext_list,
+                                                 const TextureList&                     texture_list,
+                                                 SDL_GPURenderPass*                     render_pass )
     {
         IE_ASSERT( m_Device != nullptr );
         IE_ASSERT( render_pass != nullptr );
@@ -181,17 +179,18 @@ namespace InnoEngine
         SDL_BindGPUGraphicsPipeline( render_pass, m_Pipeline );
         SDL_BindGPUVertexBuffers( render_pass, 0, nullptr, 0 );
 
-        uint32_t         draw_calls       = 0;
+        uint32_t                     draw_calls      = 0;
         // RenderTargetIndexType current_rendertarget = 0;
-        int32_t          current_viewport = -1;
-        FrameBufferIndex current_texture  = -1;
+        RenderCommandBufferIndexType current_context = InvalidRenderCommandBufferIndex;
+        RenderCommandBufferIndexType current_texture = InvalidRenderCommandBufferIndex;
 
         for ( const auto& batch_data : m_GPUBatch->get_batchlist() ) {
-            if ( batch_data.CustomData.ViewPortIndex != current_viewport ) {
-                const auto&     vp = viewport_list[ batch_data.CustomData.ViewPortIndex ];
+
+            if ( batch_data.CustomData.ContextIndex != current_context ) {
+                const auto&     vp = rendercontext_list[ batch_data.CustomData.ContextIndex ]->get_viewport();
                 SDL_GPUViewport viewport( vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth );
                 SDL_SetGPUViewport( render_pass, &viewport );
-                current_viewport = batch_data.CustomData.ViewPortIndex;
+                current_context = batch_data.CustomData.ContextIndex;
             }
 
             if ( batch_data.CustomData.TextureIndex != current_texture ) {
@@ -222,10 +221,7 @@ namespace InnoEngine
         }
 
         std::sort( m_SortedCommands.begin(), m_SortedCommands.end(), []( const Command* a, const Command* b ) {
-            if ( a->RenderTargetIndex > b->RenderTargetIndex )
-                return true;
-
-            if ( a->ViewPortIndex > b->ViewPortIndex )
+            if ( a->ContextIndex > b->ContextIndex )
                 return true;
 
             if ( a->TextureIndex > b->TextureIndex )

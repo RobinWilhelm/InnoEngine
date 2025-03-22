@@ -20,6 +20,7 @@ namespace InnoEngine
     class Layer;
     class InputSystem;
     class CameraController;
+    class RenderContext;
 
     struct FrameTimingInfo
     {
@@ -73,7 +74,9 @@ namespace InnoEngine
         void register_cameracontroller( Ref<CameraController> camera_controller );
         void unregister_cameracontroller( Ref<CameraController> camera_controller );
 
-        const Viewport& get_fullscreen_viewport() const;
+        const Viewport&    get_fullscreen_viewport() const;
+        Ref<Camera>        get_default_camera() const;
+        Ref<RenderContext> get_default_rendercontext() const;
 
     private:
         virtual void   on_init_assets( AssetManager* assetmanager ) = 0;
@@ -108,6 +111,8 @@ namespace InnoEngine
         std::vector<Ref<Camera>>           m_Cameras;
         std::vector<Ref<CameraController>> m_CameraControllers;
         Viewport                           m_FullscreenDefaultViewport;
+        Ref<Camera>                        m_DefaultCamera;
+        Ref<RenderContext>                 m_DefaultRenderContext;
 
         bool             m_InitializationSucceded = false;
         std::atomic_bool m_MustQuit               = false;

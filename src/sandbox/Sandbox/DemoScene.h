@@ -10,6 +10,7 @@
 
 #include "InnoEngine/graphics/Viewport.h"
 #include "InnoEngine/graphics/DefaultCameraController.h"
+#include "InnoEngine/graphics/RenderContext.h"
 
 namespace IE = InnoEngine;
 
@@ -44,9 +45,5 @@ private:
     float       m_color_s = 1.0;
     float       m_color_v = 1.0;
 
-    IE::Ref<IE::Camera> m_UICamera;
-
-    IE::Ref<IE::Camera> m_SceneCamera;
-    IE::Viewport        m_SceneViewport;
-    IE::Ref<IE::DefaultCameraController> m_SceneCameraController;     
+    IE::Ref<IE::RenderContext> m_SceneRenderCtx;
 };

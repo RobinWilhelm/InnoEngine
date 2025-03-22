@@ -38,14 +38,6 @@ namespace InnoEngine
         return FontSize / m_msdfData->Scale * m_msdfData->Range;
     }
 
-    void Font::render( float x, float y, uint32_t size, std::string_view text, DXSM::Color ForegroundColor )
-    {
-        IE_ASSERT( m_atlasTexture != nullptr && m_frameBufferIndex >= 0 );
-        static GPURenderer* renderer = CoreAPI::get_gpurenderer();
-        IE_ASSERT( renderer != nullptr );
-        renderer->add_text( this, { x, y }, size, text, ForegroundColor );
-    }
-
     DXSM::Vector4 Font::get_aabb( uint32_t size, std::string_view text ) const
     {
         DXSM::Vector4 aabb( std::numeric_limits<float>::max(), std::numeric_limits<float>::min(),

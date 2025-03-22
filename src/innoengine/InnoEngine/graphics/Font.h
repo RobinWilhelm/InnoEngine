@@ -12,8 +12,10 @@ namespace InnoEngine
 
     class Font : public Asset<Font>
     {
+        friend class RenderContext;
         friend class GPURenderer;
         friend class AssetRepository<Font>;
+
         Font();
 
     public:
@@ -25,9 +27,7 @@ namespace InnoEngine
 
         float calculate_screen_pix_range( float FontSize ) const;
 
-        void render( float x, float y, uint32_t size, std::string_view text, DXSM::Color ForegroundColor = { 1.0f, 1.0f, 1.0f, 1.0f } );
-
-        // returns the bounding box of the given text 
+        // returns the bounding box of the given text
         // x == left; y == bottom; z == right; w == top
         DXSM::Vector4 get_aabb( uint32_t size, std::string_view text ) const;
 
@@ -42,7 +42,7 @@ namespace InnoEngine
 
         bool m_Initialized = false;
 
-        FrameBufferIndex m_frameBufferIndex = -1;
+        RenderCommandBufferIndexType m_RenderCommandBufferIndex = InvalidRenderCommandBufferIndex;
     };
 
     using FontList = std::vector<Ref<Font>>;

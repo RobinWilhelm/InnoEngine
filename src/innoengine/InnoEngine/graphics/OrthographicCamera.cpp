@@ -6,9 +6,9 @@
 
 namespace InnoEngine
 {
-    auto OrthographicCamera::create( const DXSM::Vector2& view_port_size ) -> Own<OrthographicCamera>
+    auto OrthographicCamera::create( const DXSM::Vector2& view_port_size ) -> Ref<OrthographicCamera>
     {
-        Own<OrthographicCamera> pOrthoCamera( new OrthographicCamera() );
+        Ref<OrthographicCamera> pOrthoCamera( new OrthographicCamera() );
         pOrthoCamera->m_ViewPortSize = view_port_size;
         pOrthoCamera->m_View         = DXSM::Matrix::CreateLookAt( { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } );
         pOrthoCamera->m_View.Invert();

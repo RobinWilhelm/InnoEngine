@@ -20,14 +20,13 @@ namespace InnoEngine
     public:
         struct BatchData
         {
-            uint16_t         RenderTargetIndex = 0;
-            uint8_t          ViewPortIndex     = 0;
-            FrameBufferIndex TextureIndex      = -1;
+            RenderCommandBufferIndexType ContextIndex = InvalidRenderCommandBufferIndex;
+            RenderCommandBufferIndexType TextureIndex = InvalidRenderCommandBufferIndex;
         };
 
         struct Command : RenderCommandBase
         {
-            FrameBufferIndex TextureIndex;
+            RenderCommandBufferIndexType TextureIndex;
 
             DXSM::Vector4 SourceRect;
             DXSM::Color   Color;
@@ -46,7 +45,7 @@ namespace InnoEngine
             DXSM::Vector2 OriginOffset;    // for rotation, in texels
             float         Depth;
             float         Rotation;    // in radians
-            uint32_t      CameraIndex;
+            uint32_t      ContextIndex;
             float         pad[ 3 ];
         };
 
@@ -58,9 +57,9 @@ namespace InnoEngine
 
         Result   initialize( GPURenderer* renderer, AssetManager* assetmanager );
         void     prepare_render( const CommandList& command_list );
-        uint32_t swapchain_render( const std::vector<Viewport>& viewport_list,
-                                   const TextureList&           texture_list,
-                                   SDL_GPURenderPass*           renderPass );
+        uint32_t swapchain_render( const std::vector<Ref<RenderContext>>& rendercontext_list,
+                                   const TextureList&                texture_list,
+                                   SDL_GPURenderPass*                renderPass );
 
     private:
         void sort_commands( const CommandList& command_list );

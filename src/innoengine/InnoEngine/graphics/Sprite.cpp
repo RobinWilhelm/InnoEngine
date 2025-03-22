@@ -70,12 +70,4 @@ namespace InnoEngine
     {
         m_scale = scale;
     }
-
-    void Sprite::render()
-    {
-        IE_ASSERT( m_texture != nullptr );
-        static GPURenderer* renderer = CoreAPI::get_gpurenderer();
-        IE_ASSERT( renderer != nullptr );
-        renderer->add_sprite( *this );
-    }
 }    // namespace InnoEngine

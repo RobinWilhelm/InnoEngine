@@ -354,6 +354,6 @@ namespace InnoEngine
     {
         (void)renderer;
         ImGui::Render();
-        renderer->add_imgui_draw_data( ImGui::GetDrawData() );
+        m_Parent->get_default_rendercontext()->add_imgui_draw_data( ImGui::GetDrawData() );
     }
 }    // namespace InnoEngine

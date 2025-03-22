@@ -7,8 +7,9 @@
 #include "InnoEngine/graphics/Font.h"
 #include "InnoEngine/utility/StringArena.h"
 #include "InnoEngine/graphics/GPUBatchBuffer.h"
-
+#include "InnoEngine/graphics/RenderContext.h"
 #include "InnoEngine/graphics/Viewport.h"
+
 
 namespace InnoEngine
 {
@@ -20,19 +21,18 @@ namespace InnoEngine
     public:
         struct BatchData
         {
-            FrameBufferIndex      FontFBIndex       = -1;
-            ViewPortIndexType     ViewPortIndex     = 0;
-            RenderTargetIndexType RenderTargetIndex = 0;
+            RenderCommandBufferIndexType FontFBIndex  = InvalidRenderCommandBufferIndex;
+            RenderCommandBufferIndexType ContextIndex = InvalidRenderCommandBufferIndex;
         };
 
         struct Command : RenderCommandBase
         {
-            FrameBufferIndex FontFBIndex     = -1;
-            StringArenaIndex StringIndex     = 0;
-            uint32_t         StringLength    = 0;
-            uint32_t         FontSize        = 0;
-            DXSM::Vector2    Position        = {};
-            DXSM::Color      ForegroundColor = {};
+            RenderCommandBufferIndexType FontFBIndex     = InvalidRenderCommandBufferIndex;
+            StringArenaIndex             StringIndex     = 0;
+            uint32_t                     StringLength    = 0;
+            uint32_t                     FontSize        = 0;
+            DXSM::Vector2                Position        = {};
+            DXSM::Color                  ForegroundColor = {};
         };
 
         struct StructuredBufferLayout
@@ -42,7 +42,7 @@ namespace InnoEngine
             DXSM::Vector4 SourceRect      = {};
             DXSM::Color   ForegroundColor = {};
             float         Depth           = 0.0f;
-            uint32_t      CameraIndex     = 0;
+            uint32_t      ContextIndex    = InvalidRenderCommandBufferIndex;
             float         pad[ 2 ];
         };
 
@@ -54,9 +54,9 @@ namespace InnoEngine
 
         Result   initialize( GPURenderer* renderer, AssetManager* assetmanager );
         void     prepare_render( const CommandList& command_list, const FontList& texture_list, const StringArena& string_buffer );
-        uint32_t swapchain_render( const std::vector<Viewport>& viewport_list,
-                                   const FontList&              texture_list,
-                                   SDL_GPURenderPass*           render_pass );
+        uint32_t swapchain_render( const std::vector<Ref<RenderContext>>& rendercontext_list,
+                                   const FontList&                        texture_list,
+                                   SDL_GPURenderPass*                     render_pass );
 
     private:
         void sort_commands( const CommandList& command_list );
