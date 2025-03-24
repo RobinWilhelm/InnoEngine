@@ -35,12 +35,15 @@ namespace InnoEngine
     void Application::render_layers()
     {
         ProfileScoped render_layers( ProfilePoint::LayerRender );
+        m_Renderer->begin_collection();
         for ( auto layer : m_LayerStack )
             layer->render( m_FrameTimingInfo.InterpolationFactor, m_Renderer.get() );
 
         // always last and top most
         if ( m_DebugUIEnabled )
             m_DebugLayer->render( m_FrameTimingInfo.InterpolationFactor, m_Renderer.get() );
+
+        m_Renderer->end_collection();
     }
 
     void Application::run_async()
@@ -106,7 +109,6 @@ namespace InnoEngine
 
             m_DefaultCamera = OrthographicCamera::create( { m_FullscreenDefaultViewport.Width, m_FullscreenDefaultViewport.Height } );
             register_camera( m_DefaultCamera );
-            m_DefaultRenderContext = RenderContext::create( m_Renderer.get(), m_DefaultCamera, m_FullscreenDefaultViewport );
 
             on_init_assets( m_AssetManager.get() );
             publish_coreapi();
@@ -162,6 +164,7 @@ namespace InnoEngine
                 update_profiledata();
                 m_InputSystem->synchronize();
                 create_update();
+
                 render_layers();
                 m_Renderer->synchronize();
                 m_Renderer->render();
@@ -318,9 +321,9 @@ namespace InnoEngine
         return m_FullscreenDefaultViewport;
     }
 
-    Ref<RenderContext> Application::get_default_rendercontext() const
+    Ref<Camera> Application::get_default_camera() const
     {
-        return m_DefaultRenderContext;
+        return m_DefaultCamera;
     }
 
     void Application::on_synchronize() { }

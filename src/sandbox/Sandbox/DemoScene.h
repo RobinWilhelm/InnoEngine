@@ -45,5 +45,6 @@ private:
     float       m_color_s = 1.0;
     float       m_color_v = 1.0;
 
-    IE::Ref<IE::RenderContext> m_SceneRenderCtx;
+    IE::Ref<IE::Camera> m_SceneCamera;
+    IE::Viewport        m_SceneViewport;
 };

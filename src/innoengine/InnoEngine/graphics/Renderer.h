@@ -71,19 +71,13 @@ namespace InnoEngine
         void begin_collection();
         void end_collection();
 
-        // Important: needs to be externally synchronized when adding rendercommands from multiple threads
-        // currently the commands are only synchronized between update and main thread once per frame
-        void register_texture( Ref<Texture2D> texture );
-        void register_sprite( Sprite& sprite );
-        void register_font( Ref<Font> font );
+        const RenderContext* aquire_rendercontext( Ref<Camera> camera, const Viewport& view_port );
 
         void set_clear_color( DXSM::Color color );    // the color the swapchain texture should be cleared to at the begin of the frame
-        void add_bounding_box( const DXSM::Vector4& aabb, const DXSM::Vector2& position, const DXSM::Color& color );
-
-        void bind_rendercontext( Ref<RenderContext> render_ctx );
+        void add_imgui_draw_data( ImDrawData* draw_data );
 
     private:
-        void  retrieve_shaderformatinfo();;
+        void retrieve_shaderformatinfo();
 
         void update_statistics_from_last_completed_frame();
 

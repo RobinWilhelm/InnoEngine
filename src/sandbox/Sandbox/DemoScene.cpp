@@ -42,14 +42,12 @@ Demoscene::Demoscene( Sandbox* parent ) :
     DXSM::Vector2 viewport_size( 1280, 720 );
     IE::Window*   window = IE::CoreAPI::get_gpurenderer()->get_window();
 
-    auto scene_camera   = IE::OrthographicCamera::create( { viewport_size.x, viewport_size.y } );
-    auto scene_viewport = IE::Viewport( window->width() / 2.0f - viewport_size.x / 2, 50, viewport_size.x, viewport_size.y );
-    m_Parent->register_camera( scene_camera );
+    m_SceneCamera   = IE::OrthographicCamera::create( { viewport_size.x, viewport_size.y } );
+    m_SceneViewport = IE::Viewport( window->width() / 2.0f - viewport_size.x / 2, 50, viewport_size.x, viewport_size.y );
+    m_Parent->register_camera( m_SceneCamera );
 
-    auto scene_camera_controller = IE::DefaultCameraController::create( scene_camera, scene_viewport );
+    auto scene_camera_controller = IE::DefaultCameraController::create( m_SceneCamera, m_SceneViewport );
     m_Parent->register_cameracontroller( scene_camera_controller );
-
-    m_SceneRenderCtx = IE::RenderContext::create( parent->get_renderer(), scene_camera, scene_viewport );
 }
 
 void Demoscene::update( double delta_time )
@@ -77,34 +75,16 @@ void Demoscene::update( double delta_time )
 void Demoscene::render( float interp_factor, IE::GPURenderer* renderer )
 {
     (void)interp_factor;
-    renderer->begin_collection();
     renderer->set_clear_color( { 0.0f, 0.0f, 0.0f, 1.0f } );
 
-    static auto render_ctx = m_Parent->get_default_rendercontext();
-    render_ctx->bind();
+    auto ui_ctx = renderer->aquire_rendercontext( m_Parent->get_default_camera(), m_Parent->get_fullscreen_viewport() );
+    ui_ctx->add_text_centered( m_testFont, { 1920 / 2.0f, 50.0f }, 40, "InnoEngine Demoscene", m_textColor );
 
-    render_ctx->add_text_centered( m_testFont, { 1920 / 2.0f, 50.0f }, 40, "InnoEngine Demoscene", m_textColor );
-
-    auto                 scene_viewport = m_SceneRenderCtx->get_viewport();
-    static DXSM::Vector4 viewport_bounding_box( scene_viewport.LeftOffset,
-                                                scene_viewport.TopOffset + scene_viewport.Height,
-                                                scene_viewport.LeftOffset + scene_viewport.Width,
-                                                scene_viewport.TopOffset );
-
-    render_ctx->add_quad( { scene_viewport.LeftOffset + scene_viewport.Width / 2, scene_viewport.TopOffset + scene_viewport.Height / 2 },
-                          { scene_viewport.Width, scene_viewport.Height },
-                          0.0f,
-                          { 0.0f, 1.0f, 0.0f, 1.0f } );
-    /*
-    render_ctx->add_bounding_box( { viewport_bounding_box }, { 0, 0 }, { 1.0f, 1.0f, 1.0f, 1.0f } );
-    */
-    m_SceneRenderCtx->bind();
-    for ( int i = 0; i < 1000000; ++i ) {
-        m_SceneRenderCtx->add_circle( m_positions[ i ], m_scales[ i ] * 20, 0.00f, m_colors[ i ] );
+    auto scene_ctx = renderer->aquire_rendercontext( m_SceneCamera, m_SceneViewport );
+    scene_ctx->add_background_clear( { 0.0f, 0.3f, 0.0f, 1.0f } );
+    for ( int i = 0; i < 10000; ++i ) {
+        scene_ctx->add_text( m_testFont, m_positions[ i ], m_scales[ i ] * 20, "Hello there!", m_colors[ i ] );
     }
-    m_SceneRenderCtx->add_text_centered( m_testFont, { scene_viewport.Width / 2, 100 }, 80, "Lorem ipsum bla bla", m_textColor );
-
-    renderer->end_collection();
 }
 
 bool Demoscene::handle_event( const SDL_Event& event )

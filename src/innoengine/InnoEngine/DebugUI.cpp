@@ -353,7 +353,7 @@ namespace InnoEngine
     void DebugUI::imgui_end_frame( GPURenderer* renderer )
     {
         (void)renderer;
-        ImGui::Render();
-        m_Parent->get_default_rendercontext()->add_imgui_draw_data( ImGui::GetDrawData() );
+        ImGui::Render();         
+        renderer->add_imgui_draw_data( ImGui::GetDrawData() );
     }
 }    // namespace InnoEngine

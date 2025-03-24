@@ -302,8 +302,8 @@ namespace InnoEngine
 
     void GPURenderer::synchronize()
     {
-//#ifdef DEBUG_FRAMEBUFFERINDICES
-        // reset the frame indices so they can be checked to catch errors
+        // #ifdef DEBUG_FRAMEBUFFERINDICES
+        //  reset the frame indices so they can be checked to catch errors
         auto& render_commands = m_pipelineProcessor->get_command_buffer_for_collecting();
         for ( auto& texture : render_commands.TextureRegister )
             texture->m_RenderCommandBufferIndex = InvalidRenderCommandBufferIndex;
@@ -315,7 +315,7 @@ namespace InnoEngine
             render_ctx->m_RenderCommandBufferIndex = InvalidRenderCommandBufferIndex;
             render_ctx->m_RenderCommandBuffer      = nullptr;
         }
-//#endif
+        // #endif
         m_pipelineProcessor->synchronize();
     }
 
@@ -409,6 +409,36 @@ namespace InnoEngine
         render_cmd_buf.ClearColor = color;
     }
 
+    void GPURenderer::add_imgui_draw_data( ImDrawData* draw_data )
+    {
+        IE_ASSERT( draw_data != nullptr );
+
+        ImGuiPipeline::CommandData& cmd = m_pipelineProcessor->get_command_buffer_for_collecting().ImGuiCommandBuffer;
+        cmd.FrameBufferScale            = draw_data->FramebufferScale;
+        cmd.TotalIndexCount             = draw_data->TotalIdxCount;
+        cmd.TotalVertexCount            = draw_data->TotalVtxCount;
+        cmd.DisplayPos                  = draw_data->DisplayPos;
+        cmd.DisplaySize                 = draw_data->DisplaySize;
+
+        cmd.RenderCommandLists.reserve( draw_data->CmdListsCount );
+        for ( int n = 0; n < draw_data->CmdListsCount; n++ ) {
+            const ImDrawList* drawList   = draw_data->CmdLists[ n ];
+            auto&             renderList = cmd.RenderCommandLists.emplace_back();
+            renderList.CommandBuffer     = drawList->CmdBuffer;
+            renderList.VertexBuffer      = drawList->VtxBuffer;
+            renderList.IndexBuffer       = drawList->IdxBuffer;
+        }
+    }
+
+    const RenderContext* GPURenderer::aquire_rendercontext( Ref<Camera> camera, const Viewport& view_port )
+    {
+        Ref<RenderContext> render_ctx          = RenderContext::create( this, camera, view_port );
+        render_ctx->m_RenderCommandBuffer      = &m_pipelineProcessor->get_command_buffer_for_collecting();
+        render_ctx->m_RenderCommandBufferIndex = static_cast<uint32_t>( m_pipelineProcessor->get_command_buffer_for_collecting().RenderContextRegister.size() );
+        m_pipelineProcessor->get_command_buffer_for_collecting().RenderContextRegister.push_back( render_ctx );
+        return render_ctx.get();
+    }
+
     /*
     void GPURenderer::add_bounding_box( const DXSM::Vector4& aabb, const DXSM::Vector2& position, const DXSM::Color& color )
     {
@@ -423,15 +453,6 @@ namespace InnoEngine
         add_lines( points, line_width, 0.0f, color, true );
     }
     */
-
-    void GPURenderer::bind_rendercontext( Ref<RenderContext> render_ctx )
-    {
-        IE_ASSERT( render_ctx != nullptr && render_ctx->m_RenderCommandBufferIndex == -1 && render_ctx->m_RenderCommandBuffer == nullptr );
-        render_ctx->m_RenderCommandBuffer      = &m_pipelineProcessor->get_command_buffer_for_collecting();
-        render_ctx->m_RenderCommandBufferIndex = static_cast<uint32_t>( m_pipelineProcessor->get_command_buffer_for_collecting().RenderContextRegister.size() );
-        m_pipelineProcessor->get_command_buffer_for_collecting().RenderContextRegister.push_back( render_ctx );
-    }
-
     void GPURenderer::update_statistics_from_last_completed_frame()
     {
         const auto& render_commands = m_pipelineProcessor->get_command_buffer_for_rendering();

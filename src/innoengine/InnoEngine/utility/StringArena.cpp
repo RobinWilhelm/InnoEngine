@@ -19,19 +19,19 @@ namespace InnoEngine
         if ( this == &other )
             return *this;
 
-        if(other.m_size > m_size)
-            m_data = std::make_unique<char[]>(other.m_size);
+        if ( other.m_size > m_size )
+            m_data = std::make_unique<char[]>( other.m_size );
 
-        std::memcpy(static_cast<void*>(&m_data[0]), static_cast<void*>(&other.m_data[0]), other.m_size);
-        m_currentIdx       = other.m_currentIdx;
-        m_size             = other.m_size;
-        m_growFactor       = other.m_growFactor;
+        std::memcpy( static_cast<void*>( &m_data[ 0 ] ), static_cast<void*>( &other.m_data[ 0 ] ), other.m_size );
+        m_currentIdx = other.m_currentIdx;
+        m_size       = other.m_size;
+        m_growFactor = other.m_growFactor;
         return *this;
     }
 
     StringArenaIndex StringArena::insert( std::string_view string )
     {
-        if ( m_currentIdx + string.size() > m_size ) {
+        if ( m_currentIdx + string.size() + 1 > m_size ) {
             IE_ASSERT( static_cast<uint64_t>( m_size ) * m_growFactor <= ( std::numeric_limits<uint32_t>::max )() );
             grow( static_cast<uint32_t>( m_size * m_growFactor ) );
         }
@@ -40,7 +40,7 @@ namespace InnoEngine
         m_data[ m_currentIdx + string.size() ] = '\0';
 
         StringArenaIndex string_begin_idx = m_currentIdx;
-        m_currentIdx += static_cast<uint32_t>( string.size() ) + 1;
+        m_currentIdx += static_cast<uint32_t>( string.size() );
         return string_begin_idx;
     }
 
@@ -54,14 +54,14 @@ namespace InnoEngine
         IE_ASSERT( new_size > m_size );
         Own<char[]> new_data = std::make_unique<char[]>( new_size );
 
-        std::memcpy( &new_data[ 0 ], &m_data[ 0 ], m_currentIdx );
+        std::memcpy( &new_data[ 0 ], &m_data[ 0 ], m_size );
         m_data = std::move( new_data );
         m_size = new_size;
     }
 
-    const char* StringArena::get_string(StringArenaIndex index) const
+    const char* StringArena::get_string( StringArenaIndex index ) const
     {
-        return &m_data[index];
+        return &m_data[ index ];
     }
 
     size_t StringArena::size() const
