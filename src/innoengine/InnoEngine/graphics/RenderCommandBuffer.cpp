@@ -5,23 +5,23 @@ namespace InnoEngine
 {
     RenderCommandBuffer::RenderCommandBuffer()
     {
-        SpriteRenderCommands.reserve( 20000 );
-        QuadRenderCommands.reserve( 20000 );
-        LineRenderCommands.reserve( 20000 );
-        CircleRenderCommands.reserve( 20000 );
-        FontRenderCommands.reserve( 20000 );
+        RenderContextCommands.resize( 256 );
+        for ( auto& render_ctx_cmd : RenderContextCommands ) {
+            render_ctx_cmd.FontRegister    = &FontRegister;
+            render_ctx_cmd.StringBuffer    = &StringBuffer;
+            render_ctx_cmd.TextureRegister = &TextureRegister;
+        }
     }
 
+    /*
     RenderCommandBuffer& RenderCommandBuffer::operator=( RenderCommandBuffer& other )
     {
         if ( this == &other )
             return *this;
 
-        Clear                  = other.Clear;
-        ClearColor             = other.ClearColor;
-        /*
-        ViewProjectionMatrices = other.ViewProjectionMatrices;
-        */
+        Clear      = other.Clear;
+        ClearColor = other.ClearColor;
+
 
         SpriteRenderCommands.resize( other.SpriteRenderCommands.size() );
         std::memcpy( static_cast<void*>( SpriteRenderCommands.data() ),
@@ -57,25 +57,25 @@ namespace InnoEngine
 
         return *this;
     }
+    */
 
     void RenderCommandBuffer::clear()
     {
         Clear      = false;
         ClearColor = DXSM::Color( 0.0f, 0.0f, 0.0f, 0.0f );
 
-        RenderContextRegister.clear();
-        /*
-        Viewports.clear();
-        RenderTargets.clear();
-        ViewProjectionMatrices.clear();
-        */
-        SpriteRenderCommands.clear();
-        QuadRenderCommands.clear();
-        LineRenderCommands.clear();
-        CircleRenderCommands.clear();
+        RenderContextList.clear();
+
+        // clear the commands but not the rendercontexts itself
+        for ( auto& render_ctx_cmds : RenderContextCommands ) {
+            render_ctx_cmds.CircleRenderCommands.clear();
+            render_ctx_cmds.SpriteRenderCommands.clear();
+            render_ctx_cmds.QuadRenderCommands.clear();
+            render_ctx_cmds.LineRenderCommands.clear();
+            render_ctx_cmds.FontRenderCommands.clear();
+        }
         ImGuiCommandBuffer.RenderCommandLists.clear();
 
-        FontRenderCommands.clear();
         StringBuffer.clear();
 
         FontRegister.clear();

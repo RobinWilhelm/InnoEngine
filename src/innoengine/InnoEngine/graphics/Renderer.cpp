@@ -68,43 +68,53 @@ namespace InnoEngine
             return Result::Success;
         }
 
-        void prepare()
+        void prepare( RenderContext* render_ctx )
         {
             IE_ASSERT( m_Initialized );
             const RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
 
-            m_Sprite2DPipeline->prepare_render( render_cmd_buf.SpriteRenderCommands );
+            m_Sprite2DPipeline->prepare_render( render_ctx->m_RenderCommandBuffer->SpriteRenderCommands );
 
-            m_PrimitivePipeline->prepare_render( render_cmd_buf.QuadRenderCommands,
-                                                 render_cmd_buf.LineRenderCommands,
-                                                 render_cmd_buf.CircleRenderCommands );
+            m_PrimitivePipeline->prepare_render( render_ctx->m_RenderCommandBuffer->QuadRenderCommands,
+                                                 render_ctx->m_RenderCommandBuffer->LineRenderCommands,
+                                                 render_ctx->m_RenderCommandBuffer->CircleRenderCommands );
 
-            m_Font2DPipeline->prepare_render( render_cmd_buf.FontRenderCommands,
+            m_Font2DPipeline->prepare_render( render_ctx->m_RenderCommandBuffer->FontRenderCommands,
                                               render_cmd_buf.FontRegister,
                                               render_cmd_buf.StringBuffer );
+        }
 
+        void render( const RenderContext* render_ctx, SDL_GPURenderPass* render_pass, RenderStatistics& stats )
+        {
+            IE_ASSERT( m_Initialized );
+            const RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
+
+            stats.SpriteDrawCalls += m_Sprite2DPipeline->swapchain_render( render_ctx,
+                                                                           render_cmd_buf.TextureRegister,
+                                                                           render_pass );
+
+            stats.PrimitivesDrawCalls += m_PrimitivePipeline->swapchain_render( render_ctx,
+                                                                                render_pass );
+
+            stats.FontDrawCalls += m_Font2DPipeline->swapchain_render( render_ctx,
+                                                                       render_cmd_buf.FontRegister,
+                                                                       render_pass );
+        }
+
+        void prepare_imgui()
+        {
+            IE_ASSERT( m_Initialized );
+            const RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
             m_ImGuiPipeline->prepare_render( render_cmd_buf.ImGuiCommandBuffer );
         }
 
-        void render( SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass, RenderStatistics& stats )
+        void render_imgui( SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass, RenderStatistics& stats )
         {
             IE_ASSERT( m_Initialized );
             const RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
-
-            stats.SpriteDrawCalls = m_Sprite2DPipeline->swapchain_render( render_cmd_buf.RenderContextRegister,
-                                                                          render_cmd_buf.TextureRegister,
-                                                                          render_pass );
-
-            stats.PrimitivesDrawCalls = m_PrimitivePipeline->swapchain_render( render_cmd_buf.RenderContextRegister,
-                                                                               render_pass );
-
-            stats.FontDrawCalls = m_Font2DPipeline->swapchain_render( render_cmd_buf.RenderContextRegister,
-                                                                      render_cmd_buf.FontRegister,
-                                                                      render_pass );
-
-            stats.ImGuiDrawCalls = m_ImGuiPipeline->swapchain_render( render_cmd_buf.ImGuiCommandBuffer,
-                                                                      gpu_cmd_buf,
-                                                                      render_pass );
+            stats.ImGuiDrawCalls += m_ImGuiPipeline->swapchain_render( render_cmd_buf.ImGuiCommandBuffer,
+                                                                       gpu_cmd_buf,
+                                                                       render_pass );
         }
 
         RenderCommandBuffer& get_command_buffer_for_collecting()
@@ -195,6 +205,7 @@ namespace InnoEngine
 
         renderer->m_pipelineProcessor = std::make_unique<PipelineProcessor>();
         renderer->retrieve_shaderformatinfo();
+        renderer->m_RenderContextCache.reserve( 256 );
         return renderer;
     }
 
@@ -302,21 +313,23 @@ namespace InnoEngine
 
     void GPURenderer::synchronize()
     {
-        // #ifdef DEBUG_FRAMEBUFFERINDICES
-        //  reset the frame indices so they can be checked to catch errors
-        auto& render_commands = m_pipelineProcessor->get_command_buffer_for_collecting();
-        for ( auto& texture : render_commands.TextureRegister )
+        auto& collect_buffer = m_pipelineProcessor->get_command_buffer_for_collecting();
+        for ( auto& texture : collect_buffer.TextureRegister ) {
             texture->m_RenderCommandBufferIndex = InvalidRenderCommandBufferIndex;
-
-        for ( auto& font : render_commands.FontRegister )
-            font->m_RenderCommandBufferIndex = InvalidRenderCommandBufferIndex;
-
-        for ( auto& render_ctx : render_commands.RenderContextRegister ) {
-            render_ctx->m_RenderCommandBufferIndex = InvalidRenderCommandBufferIndex;
-            render_ctx->m_RenderCommandBuffer      = nullptr;
         }
-        // #endif
+
+        for ( auto& font : collect_buffer.FontRegister ) {
+            font->m_RenderCommandBufferIndex = InvalidRenderCommandBufferIndex;
+        }
+
         m_pipelineProcessor->synchronize();
+        // now we can add the new render contexts
+        std::unique_lock<std::mutex> ulock( m_RenderContextRegisterMutex );
+        for ( auto specs : m_RenderContextRegisterQueue ) {
+            m_RenderContextCache.emplace_back( RenderContext::create( this, specs ) );
+        }
+        m_RenderContextRegisterQueue.clear();
+        IE_ASSERT( m_RenderContextCache.size() <= 256 );    // need to make camera storage buffer resizable if there are more than 256 cameras
     }
 
     void GPURenderer::render()
@@ -326,17 +339,15 @@ namespace InnoEngine
         IE_ASSERT( m_Initialized );
         const auto& render_commands = m_pipelineProcessor->get_command_buffer_for_rendering();
 
-        IE_ASSERT( render_commands.RenderContextRegister.size() < 256 );
+        IE_ASSERT( m_RenderContextCache.size() <= 256 );
 
         // dont render when minimized or when no render data is available
-        if ( render_commands.RenderContextRegister.size() == 0 ||
+        if ( m_RenderContextCache.size() == 0 ||
              ( m_Window && SDL_GetWindowFlags( m_Window->get_sdlwindow() ) & SDL_WINDOW_MINIMIZED ) ) {
             return;
         }
 
-        upload_camera_transformations( render_commands.RenderContextRegister );
-
-        m_pipelineProcessor->prepare();
+        upload_camera_transformations( m_RenderContextCache );
 
         SDL_GPUCommandBuffer* gpu_cmd_buf = SDL_AcquireGPUCommandBuffer( m_sdlGPUDevice );
         if ( gpu_cmd_buf == nullptr ) {
@@ -344,14 +355,29 @@ namespace InnoEngine
             return;
         }
 
-        // TODO: custom rendertarget pass
-        { }
+        // custom rendertarget passes
+        for ( const auto& render_ctx : render_commands.RenderContextList ) {
+            if ( render_ctx->m_Specs.ColorTarget == nullptr || render_ctx->m_RenderCommandBuffer == nullptr ) {
+                continue;
+            }
 
-        // Main swapchain pass
-        // only works when a window is associated
-        if ( has_window() ) {
+            m_pipelineProcessor->prepare( render_ctx.get() );
+
+            SDL_GPUColorTargetInfo color_target = {};
+            color_target.texture                = render_ctx->m_Specs.ColorTarget->get_sdltexture();
+            color_target.clear_color            = { render_ctx->m_CustomColorTargetClearColor.R(), render_ctx->m_CustomColorTargetClearColor.G(), render_ctx->m_CustomColorTargetClearColor.B(), render_ctx->m_CustomColorTargetClearColor.A() };
+            color_target.load_op                = render_ctx->m_ClearCustomColorTarget ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
+            color_target.store_op               = SDL_GPU_STOREOP_STORE;
+
+            SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass( gpu_cmd_buf, &color_target, 1, nullptr );
+            SDL_BindGPUVertexStorageBuffers( render_pass, 0, &m_CameraMatrixStorageBuffer, 1 );
+            m_pipelineProcessor->render( render_ctx.get(), render_pass, m_Statistics.get_producer_data() );
+            SDL_EndGPURenderPass( render_pass );
+        }
+
+        // main swapchain pass
+        if ( has_window() ) {    // only works when a window is associated
             SDL_GPUTexture* swapchainTexture;
-
             {
                 ProfileScoped gpu_swapchain_wait( ProfilePoint::GPUSwapChainWait );
                 if ( !SDL_WaitAndAcquireGPUSwapchainTexture( gpu_cmd_buf, m_Window->get_sdlwindow(), &swapchainTexture, nullptr, nullptr ) ) {
@@ -362,23 +388,53 @@ namespace InnoEngine
             }
 
             if ( swapchainTexture != nullptr ) {
+                SDL_GPUDepthStencilTargetInfo depth_stencil_first = {};
+                depth_stencil_first.texture                       = m_DepthTexture;
+                depth_stencil_first.clear_depth                   = 0;
+                depth_stencil_first.load_op                       = SDL_GPU_LOADOP_CLEAR;
+                depth_stencil_first.store_op                      = SDL_GPU_STOREOP_STORE;
+
+                SDL_GPUColorTargetInfo color_target_first = {};
+                color_target_first.texture                = swapchainTexture;
+                color_target_first.clear_color            = { render_commands.ClearColor.R(), render_commands.ClearColor.G(), render_commands.ClearColor.B(), render_commands.ClearColor.A() };
+                color_target_first.load_op                = render_commands.Clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
+                color_target_first.store_op               = SDL_GPU_STOREOP_STORE;
+
                 SDL_GPUDepthStencilTargetInfo depth_stencil = {};
                 depth_stencil.texture                       = m_DepthTexture;
-                depth_stencil.clear_depth                   = 0;
-                depth_stencil.load_op                       = SDL_GPU_LOADOP_CLEAR;
+                depth_stencil.load_op                       = SDL_GPU_LOADOP_LOAD;
                 depth_stencil.store_op                      = SDL_GPU_STOREOP_STORE;
 
                 SDL_GPUColorTargetInfo color_target = {};
                 color_target.texture                = swapchainTexture;
-                color_target.clear_color            = { render_commands.ClearColor.R(), render_commands.ClearColor.G(), render_commands.ClearColor.B(), render_commands.ClearColor.A() };
-                color_target.load_op                = render_commands.Clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
+                color_target.load_op                = SDL_GPU_LOADOP_LOAD;
                 color_target.store_op               = SDL_GPU_STOREOP_STORE;
 
-                SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass( gpu_cmd_buf, &color_target, 1, &depth_stencil );
+                bool first_pass = true;
 
-                SDL_BindGPUVertexStorageBuffers( render_pass, 0, &m_CameraMatrixStorageBuffer, 1 );
+                for ( const auto& render_ctx : render_commands.RenderContextList) {
+                    if ( render_ctx->m_Specs.ColorTarget != nullptr || render_ctx->m_RenderCommandBuffer == nullptr )
+                        continue;
 
-                m_pipelineProcessor->render( gpu_cmd_buf, render_pass, m_Statistics.get_producer_data() );
+                    m_pipelineProcessor->prepare( render_ctx.get() );
+                    SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass( gpu_cmd_buf,
+                                                                             first_pass ? &color_target_first : &color_target,
+                                                                             1,
+                                                                             first_pass ? &depth_stencil_first : &depth_stencil );
+
+                    SDL_BindGPUVertexStorageBuffers( render_pass, 0, &m_CameraMatrixStorageBuffer, 1 );
+                    m_pipelineProcessor->render( render_ctx.get(), render_pass, m_Statistics.get_producer_data() );
+                    SDL_EndGPURenderPass( render_pass );
+
+                    first_pass = false;
+                }
+
+                SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass( gpu_cmd_buf,
+                                                                         first_pass ? &color_target_first : &color_target,
+                                                                         1,
+                                                                         nullptr );
+                m_pipelineProcessor->prepare_imgui();
+                m_pipelineProcessor->render_imgui( gpu_cmd_buf, render_pass, m_Statistics.get_producer_data() );
                 SDL_EndGPURenderPass( render_pass );
             }
         }
@@ -394,12 +450,41 @@ namespace InnoEngine
         update_statistics_from_last_completed_frame();
         auto& collect_buffer = m_pipelineProcessor->get_command_buffer_for_collecting();
         collect_buffer.clear();
+
+        for ( auto& render_ctx : m_RenderContextCache ) {
+            render_ctx->m_RenderCommandBufferIndex = InvalidRenderCommandBufferIndex;
+            render_ctx->m_RenderCommandBuffer      = nullptr;
+        }
+
         RenderContext::use_specific_depth_layer( 0 );
     }
 
     void GPURenderer::end_collection()
     {
         // nothing yet but probably need to switch between multiple collecting commandbuffers in the future
+    }
+
+    RenderContextHandle GPURenderer::create_rendercontext( RenderContextSpecifications specs )
+    {
+        std::unique_lock<std::mutex> ulock( m_RenderContextRegisterMutex );
+        size_t                       queued_amount = m_RenderContextRegisterQueue.size();
+        m_RenderContextRegisterQueue.push_back( specs );
+        return static_cast<RenderContextHandle>( m_RenderContextCache.size() + queued_amount );
+    }
+
+    const RenderContext* GPURenderer::acquire_rendercontext( RenderContextHandle handle )
+    {
+        if ( handle >= m_RenderContextCache.size() )
+            return nullptr;
+
+        auto& cmd_buffer = m_pipelineProcessor->get_command_buffer_for_collecting();
+
+        Ref<RenderContext> render_ctx          = m_RenderContextCache[ handle ];
+        render_ctx->m_RenderCommandBufferIndex = handle;
+        render_ctx->m_RenderCommandBuffer      = &cmd_buffer.RenderContextCommands[ handle ];
+
+        cmd_buffer.RenderContextList.push_back( render_ctx );
+        return render_ctx.get();
     }
 
     void GPURenderer::set_clear_color( DXSM::Color color )
@@ -430,15 +515,6 @@ namespace InnoEngine
         }
     }
 
-    const RenderContext* GPURenderer::aquire_rendercontext( Ref<Camera> camera, const Viewport& view_port )
-    {
-        Ref<RenderContext> render_ctx          = RenderContext::create( this, camera, view_port );
-        render_ctx->m_RenderCommandBuffer      = &m_pipelineProcessor->get_command_buffer_for_collecting();
-        render_ctx->m_RenderCommandBufferIndex = static_cast<uint32_t>( m_pipelineProcessor->get_command_buffer_for_collecting().RenderContextRegister.size() );
-        m_pipelineProcessor->get_command_buffer_for_collecting().RenderContextRegister.push_back( render_ctx );
-        return render_ctx.get();
-    }
-
     /*
     void GPURenderer::add_bounding_box( const DXSM::Vector4& aabb, const DXSM::Vector2& position, const DXSM::Color& color )
     {
@@ -462,21 +538,25 @@ namespace InnoEngine
         stats.TotalBufferSize += sizeof( DXSM::Matrix );
         stats.TotalBufferSize += render_commands.TextureRegister.size() * sizeof( Ref<Texture2D> );
 
-        stats.TotalCommands += render_commands.SpriteRenderCommands.size();
-        stats.TotalBufferSize += render_commands.SpriteRenderCommands.size() * sizeof( Sprite2DPipeline::Command );
+        for ( const auto& ctx_cmd : render_commands.RenderContextCommands ) {
 
-        stats.TotalCommands += render_commands.QuadRenderCommands.size();
-        stats.TotalBufferSize += render_commands.QuadRenderCommands.size() * sizeof( Primitive2DPipeline::QuadCommand );
+            stats.TotalCommands += ctx_cmd.SpriteRenderCommands.size();
+            stats.TotalBufferSize += ctx_cmd.SpriteRenderCommands.size() * sizeof( Sprite2DPipeline::Command );
 
-        stats.TotalCommands += render_commands.LineRenderCommands.size();
-        stats.TotalBufferSize += render_commands.LineRenderCommands.size() * sizeof( Primitive2DPipeline::LineCommand );
+            stats.TotalCommands += ctx_cmd.QuadRenderCommands.size();
+            stats.TotalBufferSize += ctx_cmd.QuadRenderCommands.size() * sizeof( Primitive2DPipeline::QuadCommand );
 
-        stats.TotalCommands += render_commands.CircleRenderCommands.size();
-        stats.TotalBufferSize += render_commands.CircleRenderCommands.size() * sizeof( Primitive2DPipeline::CircleCommand );
+            stats.TotalCommands += ctx_cmd.LineRenderCommands.size();
+            stats.TotalBufferSize += ctx_cmd.LineRenderCommands.size() * sizeof( Primitive2DPipeline::LineCommand );
+
+            stats.TotalCommands += ctx_cmd.CircleRenderCommands.size();
+            stats.TotalBufferSize += ctx_cmd.CircleRenderCommands.size() * sizeof( Primitive2DPipeline::CircleCommand );
+
+            stats.TotalCommands += ctx_cmd.FontRenderCommands.size();
+            stats.TotalBufferSize += ctx_cmd.FontRenderCommands.size() * sizeof( Font2DPipeline::Command );
+        }
 
         stats.TotalBufferSize += render_commands.FontRegister.size() * sizeof( Ref<Font> );
-        stats.TotalCommands += render_commands.FontRenderCommands.size();
-        stats.TotalBufferSize += render_commands.FontRenderCommands.size() * sizeof( Font2DPipeline::Command );
         stats.TotalBufferSize += render_commands.StringBuffer.size();
 
         for ( const auto& rcmd : render_commands.ImGuiCommandBuffer.RenderCommandLists ) {

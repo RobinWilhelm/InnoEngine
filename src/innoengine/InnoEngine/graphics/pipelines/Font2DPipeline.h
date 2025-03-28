@@ -10,7 +10,6 @@
 #include "InnoEngine/graphics/RenderContext.h"
 #include "InnoEngine/graphics/Viewport.h"
 
-
 namespace InnoEngine
 {
     class AssetManager;
@@ -54,9 +53,9 @@ namespace InnoEngine
 
         Result   initialize( GPURenderer* renderer, AssetManager* assetmanager );
         void     prepare_render( const CommandList& command_list, const FontList& texture_list, const StringArena& string_buffer );
-        uint32_t swapchain_render( const std::vector<Ref<RenderContext>>& rendercontext_list,
-                                   const FontList&                        texture_list,
-                                   SDL_GPURenderPass*                     render_pass );
+        uint32_t swapchain_render( const RenderContext* render_ctx,
+                                   const FontList&      texture_list,
+                                   SDL_GPURenderPass*   render_pass );
 
     private:
         void sort_commands( const CommandList& command_list );

@@ -62,15 +62,15 @@ namespace InnoEngine
                                               const CircleCommandList& circle_command_list )
     {
         IE_ASSERT( m_Device != nullptr );
-        if ( quad_command_list.size() == 0 && line_command_list.size() == 0 && circle_command_list.size() == 0 )
-            return;
-
         sort_quad_commands( quad_command_list );
         sort_line_commands( line_command_list );
         sort_circle_commands( circle_command_list );
         m_QuadGPUBatch->clear();
         m_LineGPUBatch->clear();
         m_CircleGPUBatch->clear();
+
+        if (quad_command_list.size() == 0 && line_command_list.size() == 0 && circle_command_list.size() == 0)
+            return;
 
         SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_Device );
         if ( gpu_copy_cmd_buf == nullptr ) {
@@ -152,25 +152,22 @@ namespace InnoEngine
         }
     }
 
-    uint32_t Primitive2DPipeline::swapchain_render( const std::vector<Ref<RenderContext>>& rendercontext_list, SDL_GPURenderPass* render_pass )
+    uint32_t Primitive2DPipeline::swapchain_render( const RenderContext* render_ctx, SDL_GPURenderPass* render_pass )
     {
         IE_ASSERT( m_Device != nullptr );
         IE_ASSERT( render_pass != nullptr );
+
         SDL_BindGPUVertexBuffers( render_pass, 0, nullptr, 0 );
 
-        uint32_t                     draw_calls      = 0;
-        RenderCommandBufferIndexType current_context = InvalidRenderCommandBufferIndex;
+        const auto&     vp = render_ctx->get_viewport();
+        SDL_GPUViewport viewport( vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth );
+        SDL_SetGPUViewport( render_pass, &viewport );
+
+        uint32_t draw_calls = 0;
 
         if ( m_QuadGPUBatch->size() > 0 ) {
             SDL_BindGPUGraphicsPipeline( render_pass, m_QuadPipeline );
             for ( const auto& batch_data : m_QuadGPUBatch->get_batchlist() ) {
-                if ( batch_data.CustomData.ContextIndex != current_context ) {
-                    const auto&     vp = rendercontext_list[ batch_data.CustomData.ContextIndex ]->get_viewport();
-                    SDL_GPUViewport viewport( vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth );
-                    SDL_SetGPUViewport( render_pass, &viewport );
-                    current_context = batch_data.CustomData.ContextIndex;
-                }
-
                 SDL_BindGPUVertexStorageBuffers( render_pass, 1, &batch_data.GPUBuffer, 1 );
                 SDL_DrawGPUPrimitives( render_pass, batch_data.Count * 6, 1, 0, 0 );
                 ++draw_calls;
@@ -180,12 +177,6 @@ namespace InnoEngine
         if ( m_LineGPUBatch->size() > 0 ) {
             SDL_BindGPUGraphicsPipeline( render_pass, m_LinePipeline );
             for ( const auto& batch_data : m_LineGPUBatch->get_batchlist() ) {
-                if ( batch_data.CustomData.ContextIndex != current_context ) {
-                    const auto&     vp = rendercontext_list[ batch_data.CustomData.ContextIndex ]->get_viewport();
-                    SDL_GPUViewport viewport( vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth );
-                    SDL_SetGPUViewport( render_pass, &viewport );
-                    current_context = batch_data.CustomData.ContextIndex;
-                }
                 SDL_BindGPUVertexStorageBuffers( render_pass, 1, &batch_data.GPUBuffer, 1 );
                 SDL_DrawGPUPrimitives( render_pass, batch_data.Count * 6, 1, 0, 0 );
                 ++draw_calls;
@@ -195,13 +186,6 @@ namespace InnoEngine
         if ( m_CircleGPUBatch->size() > 0 ) {
             SDL_BindGPUGraphicsPipeline( render_pass, m_CirclePipeline );
             for ( const auto& batch_data : m_CircleGPUBatch->get_batchlist() ) {
-                if ( batch_data.CustomData.ContextIndex != current_context ) {
-                    const auto&     vp = rendercontext_list[ batch_data.CustomData.ContextIndex ]->get_viewport();
-                    SDL_GPUViewport viewport( vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth );
-                    SDL_SetGPUViewport( render_pass, &viewport );
-                    current_context = batch_data.CustomData.ContextIndex;
-                }
-
                 SDL_BindGPUVertexStorageBuffers( render_pass, 1, &batch_data.GPUBuffer, 1 );
                 SDL_DrawGPUPrimitives( render_pass, batch_data.Count * 6, 1, 0, 0 );
                 ++draw_calls;

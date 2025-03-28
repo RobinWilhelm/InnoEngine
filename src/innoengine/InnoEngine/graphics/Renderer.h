@@ -8,12 +8,12 @@
 #include "InnoEngine/BaseTypes.h"
 #include "InnoEngine/graphics/GPUDeviceRef.h"
 
-#include "InnoEngine/graphics/Viewport.h"
-#include "InnoEngine/graphics/Camera.h"
+#include "InnoEngine/graphics/RenderContext.h"
 
 #include <string>
 #include <atomic>
 #include <optional>
+#include <vector>
 
 namespace InnoEngine
 {
@@ -71,7 +71,8 @@ namespace InnoEngine
         void begin_collection();
         void end_collection();
 
-        const RenderContext* aquire_rendercontext( Ref<Camera> camera, const Viewport& view_port );
+        RenderContextHandle  create_rendercontext( RenderContextSpecifications specs );
+        const RenderContext* acquire_rendercontext( RenderContextHandle handle );
 
         void set_clear_color( DXSM::Color color );    // the color the swapchain texture should be cleared to at the begin of the frame
         void add_imgui_draw_data( ImDrawData* draw_data );
@@ -100,6 +101,10 @@ namespace InnoEngine
         SDL_GPUTexture* m_DepthTexture = nullptr;
 
         DoubleBuffered<RenderStatistics> m_Statistics;
+
+        std::mutex                               m_RenderContextRegisterMutex;
+        std::vector<RenderContextSpecifications> m_RenderContextRegisterQueue;
+        std::vector<Ref<RenderContext>>          m_RenderContextCache;
 
         SDL_GPUTransferBuffer* m_CameraMatrixTransferBuffer = nullptr;
         SDL_GPUBuffer*         m_CameraMatrixStorageBuffer  = nullptr;

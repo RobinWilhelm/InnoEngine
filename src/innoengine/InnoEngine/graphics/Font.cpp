@@ -24,7 +24,7 @@ namespace InnoEngine
 
     Ref<Texture2D> Font::get_atlas_texture() const
     {
-        return m_atlasTexture;
+        return m_AtlasTexture;
     }
 
     Ref<MSDFData> Font::get_msdf_data() const
@@ -87,19 +87,19 @@ namespace InnoEngine
             double pl, pb, pr, pt;
             glyph->getQuadPlaneBounds( pl, pb, pr, pt );
             float left = static_cast<float>( x + pl * scale );
-            if (left < aabb.x )
+            if ( left < aabb.x )
                 aabb.x = left;
 
-            float bottom = static_cast<float>( y + ( pb * scale ) * -1);
-            if (bottom > aabb.y )
+            float bottom = static_cast<float>( y + ( pb * scale ) * -1 );
+            if ( bottom > aabb.y )
                 aabb.y = bottom;
 
             float right = static_cast<float>( x + pr * scale );
-            if (right > aabb.z )
+            if ( right > aabb.z )
                 aabb.z = right;
 
             float top = static_cast<float>( y + ( pt * scale ) * -1 );
-            if (top < aabb.w )
+            if ( top < aabb.w )
                 aabb.w = top;
 
             if ( i < text.length() - 1 ) {
@@ -109,8 +109,8 @@ namespace InnoEngine
                 x += scale * advance;
             }
         }
-        //aabb.z += aabb.x;
-        //aabb.w += aabb.y;
+        // aabb.z += aabb.x;
+        // aabb.w += aabb.y;
         return aabb;
     }
 
@@ -187,9 +187,17 @@ namespace InnoEngine
 
         // The atlas bitmap can now be retrieved via atlasStorage as a BitmapConstRef.
         // The glyphs array (or fontGeometry) contains positioning data for typesetting text.
-        auto bmp       = static_cast<msdfgen::BitmapConstRef<byte, 3>>( generator.atlasStorage() );
-        m_atlasTexture = Texture2D::create( width, height, TextureFormat::RGBX, SDL_GPU_TEXTUREUSAGE_SAMPLER | SDL_GPU_TEXTUREUSAGE_COLOR_TARGET, true ).value();
-        Result res     = m_atlasTexture->load_data( bmp.pixels, bmp.width * bmp.height, SDL_PIXELFORMAT_RGB24 );
+        auto bmp = static_cast<msdfgen::BitmapConstRef<byte, 3>>( generator.atlasStorage() );
+
+        TextureSpecifications specs;
+        specs.Width        = width;
+        specs.Height       = height;
+        specs.Format       = TextureFormat::RGBX;
+        specs.EnableMipmap = true;
+        specs.RenderTarget = true;
+
+        m_AtlasTexture = Texture2D::create( specs ).value();
+        Result res     = m_AtlasTexture->load_data( bmp.pixels, bmp.width * bmp.height, SDL_PIXELFORMAT_RGB24 );
 
         // Cleanup
         msdfgen::destroyFont( font );

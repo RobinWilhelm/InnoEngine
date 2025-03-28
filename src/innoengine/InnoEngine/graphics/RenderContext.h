@@ -6,21 +6,28 @@
 
 namespace InnoEngine
 {
+    class Font;
+    class Texture2D;
     class GPURenderer;
-    struct RenderCommandBuffer;
+    struct RenderContextCommands;
 
-    class RenderContext : public std::enable_shared_from_this<RenderContext>
+    struct RenderContextSpecifications
+    {
+        Ref<Texture2D> ColorTarget;
+        Ref<Camera>    Camera;
+        Viewport       Viewport;
+    };
+
+    class RenderContext
     {
         friend class GPURenderer;
         RenderContext() = default;
-        static auto create( GPURenderer* renderer, Ref<Camera> camera, const Viewport& view_port ) -> Ref<RenderContext>;
+        static auto create( GPURenderer* renderer, const RenderContextSpecifications& spec ) -> Ref<RenderContext>;
 
     public:
         Ref<Camera>     get_camera() const;
         const Viewport& get_viewport() const;
-        void            set_viewport( const Viewport& viewport );
 
-        void add_background_clear( const DXSM::Color& color ) const;
         void add_sprite( const Sprite& sprite ) const;
         void add_pixel( const DXSM::Vector2& position, const DXSM::Color& color ) const;
         void add_quad( Origin origin, const DXSM::Vector2& position, const DXSM::Vector2& size, float rotation, const DXSM::Color& color ) const;
@@ -47,17 +54,21 @@ namespace InnoEngine
         void         populate_command_base( RenderCommandBase* cmd_base ) const;
         static float transform_layer_to_depth( uint16_t layer );
 
-        const DXSM::Vector2 origin_transform( Origin origin, const DXSM::Vector2& position, const DXSM::Vector2& size) const;
+        const DXSM::Vector2 origin_transform( Origin origin, const DXSM::Vector2& position, const DXSM::Vector2& size ) const;
 
     private:
-        GPURenderer* m_Renderer = nullptr;
-        Ref<Camera>  m_Camera;
-        Viewport     m_Viewport;
+        GPURenderer*                m_Renderer = nullptr;
+        RenderContextSpecifications m_Specs    = {};
 
         RenderCommandBufferIndexType m_RenderCommandBufferIndex = InvalidRenderCommandBufferIndex;
-        RenderCommandBuffer*         m_RenderCommandBuffer      = nullptr;    // instance owned by GPURenderer
+        RenderContextCommands*  m_RenderCommandBuffer      = nullptr;    // instance owned by GPURenderer
+
+        DXSM::Color m_CustomColorTargetClearColor = {};
+        bool        m_ClearCustomColorTarget      = false;
 
         static uint16_t m_CurrentDepthLayer;
         static float    m_CurrentLayerDepth;
     };
+
+    using RenderContextHandle = uint32_t; 
 }    // namespace InnoEngine

@@ -4,9 +4,7 @@
 #include "InnoEngine/graphics/Renderer.h"
 #include "InnoEngine/AssetManager.h"
 #include "InnoEngine/graphics/Shader.h"
-
 #include "InnoEngine/graphics/Window.h"
-
 #include "InnoEngine/graphics/RenderCommandBuffer.h"
 
 #include "InnoEngine/graphics/Font.h"
@@ -117,14 +115,11 @@ namespace InnoEngine
     void Font2DPipeline::prepare_render( const CommandList& command_list, const FontList& font_list, const StringArena& string_buffer )
     {
         IE_ASSERT( m_Device != nullptr );
-
-        if ( command_list.size() == 0 )
-            return;
-
         sort_commands( command_list );
         m_GPUBatch->clear();
 
-        SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_Device );
+        if (command_list.size() == 0)
+            return;                   SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_Device );
         if ( gpu_copy_cmd_buf == nullptr ) {
             IE_LOG_ERROR( "AcquireGPUCommandBuffer failed: {}", SDL_GetError() );
             return;
@@ -164,8 +159,8 @@ namespace InnoEngine
                 font_geometry = &msdf_data->FontGeo;
                 metrics       = &font_geometry->getMetrics();
 
-                texel_width  = 1.0f / font->get_atlas_texture()->width();
-                texel_height = 1.0f / font->get_atlas_texture()->height();
+                texel_width  = 1.0f / font->get_atlas_texture()->get_specs().Width;
+                texel_height = 1.0f / font->get_atlas_texture()->get_specs().Width;
 
                 space_glyph_advance = msdf_data->get_glyph( ' ' )->getAdvance();
                 scale               = 1.0 / ( metrics->ascenderY - metrics->descenderY ) * command->FontSize;
@@ -249,7 +244,7 @@ namespace InnoEngine
         }
     }
 
-    uint32_t Font2DPipeline::swapchain_render( const std::vector<Ref<RenderContext>>& rendercontext_list, const FontList& font_list, SDL_GPURenderPass* render_pass )
+    uint32_t Font2DPipeline::swapchain_render( const RenderContext* render_ctx, const FontList& font_list, SDL_GPURenderPass* render_pass )
     {
         IE_ASSERT( m_Device != nullptr );
         IE_ASSERT( render_pass != nullptr );
@@ -257,18 +252,14 @@ namespace InnoEngine
         SDL_BindGPUGraphicsPipeline( render_pass, m_Pipeline );
         SDL_BindGPUVertexBuffers( render_pass, 0, nullptr, 0 );
 
-        RenderCommandBufferIndexType current_font     = InvalidRenderCommandBufferIndex;
-        RenderCommandBufferIndexType current_viewport = InvalidRenderCommandBufferIndex;
+        const auto&     vp       = render_ctx->get_viewport();
+        SDL_GPUViewport viewport = { vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth };
+        SDL_SetGPUViewport( render_pass, &viewport );
+
+        RenderCommandBufferIndexType current_font = InvalidRenderCommandBufferIndex;
 
         uint32_t draw_calls = 0;
         for ( const auto& batch_data : m_GPUBatch->get_batchlist() ) {
-            if ( batch_data.CustomData.ContextIndex != current_viewport ) {
-                const auto&     vp       = rendercontext_list[ batch_data.CustomData.ContextIndex ]->get_viewport();
-                SDL_GPUViewport viewport = { vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth };
-                SDL_SetGPUViewport( render_pass, &viewport );
-                current_viewport = batch_data.CustomData.ContextIndex;
-            }
-
             if ( batch_data.CustomData.FontFBIndex != current_font ) {
                 SDL_GPUTextureSamplerBinding texture_sampler_binding = {};
                 texture_sampler_binding.sampler                      = m_FontSampler;

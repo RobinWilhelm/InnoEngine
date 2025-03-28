@@ -57,9 +57,9 @@ namespace InnoEngine
 
         Result   initialize( GPURenderer* renderer, AssetManager* assetmanager );
         void     prepare_render( const CommandList& command_list );
-        uint32_t swapchain_render( const std::vector<Ref<RenderContext>>& rendercontext_list,
-                                   const TextureList&                texture_list,
-                                   SDL_GPURenderPass*                renderPass );
+        uint32_t swapchain_render( const RenderContext* render_ctx,
+                                   const TextureList& texture_list,
+                                   SDL_GPURenderPass* renderPass );
 
     private:
         void sort_commands( const CommandList& command_list );

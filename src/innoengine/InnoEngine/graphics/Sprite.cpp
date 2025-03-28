@@ -7,19 +7,14 @@
 
 namespace InnoEngine
 {
-    SDL_PixelFormat Sprite::get_format() const
-    {
-        return m_texture->get_format();
-    }
-
     int Sprite::width() const
     {
-        return m_texture->width();
+        return m_texture->get_specs().Width;
     }
 
     int Sprite::height() const
     {
-        return m_texture->height();
+        return m_texture->get_specs().Height;
     }
 
     void Sprite::set_texture( const Ref<Texture2D> texture, const DXSM::Vector4& source_rect )

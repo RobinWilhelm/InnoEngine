@@ -12,37 +12,23 @@ namespace InnoEngine
     uint16_t RenderContext::m_CurrentDepthLayer = 0;
     float    RenderContext::m_CurrentLayerDepth = 0.0f;
 
-    auto RenderContext::create( GPURenderer* renderer, Ref<Camera> camera, const Viewport& view_port ) -> Ref<RenderContext>
+    auto RenderContext::create( GPURenderer* renderer, const RenderContextSpecifications& specs ) -> Ref<RenderContext>
     {
+        IE_ASSERT( renderer != nullptr );
         Ref<RenderContext> render_ctx = Ref<RenderContext>( new RenderContext() );
         render_ctx->m_Renderer        = renderer;
-        render_ctx->m_Camera          = camera;
-        render_ctx->m_Viewport        = view_port;
+        render_ctx->m_Specs           = specs;
         return render_ctx;
     }
 
     Ref<Camera> RenderContext::get_camera() const
     {
-        return m_Camera;
+        return m_Specs.Camera;
     }
 
     const Viewport& RenderContext::get_viewport() const
     {
-        return m_Viewport;
-    }
-
-    void RenderContext::set_viewport( const Viewport& viewport )
-    {
-        m_Viewport = viewport;
-    }
-
-    void RenderContext::add_background_clear( const DXSM::Color& color ) const
-    {
-        IE_ASSERT( m_RenderCommandBuffer != nullptr && m_RenderCommandBufferIndex != InvalidRenderCommandBufferIndex );
-
-        const RenderContext* render_ctx = CoreAPI::get_gpurenderer()->aquire_rendercontext( CoreAPI::get_application()->get_default_camera(), CoreAPI::get_application()->get_fullscreen_viewport() );
-        render_ctx->add_quad( Origin::TopLeft, { m_Viewport.LeftOffset, m_Viewport.TopOffset }, { m_Viewport.Width, m_Viewport.Height }, 0.0f, color );
-        next_depth_layer();
+        return m_Specs.Viewport;
     }
 
     void RenderContext::add_sprite( const Sprite& sprite ) const
@@ -57,7 +43,7 @@ namespace InnoEngine
         populate_command_base( &cmd );
         cmd.TextureIndex = sprite.m_texture->m_RenderCommandBufferIndex;
         cmd.Position     = sprite.m_position;
-        cmd.Size         = { sprite.m_scale.x * sprite.m_texture->m_width, sprite.m_scale.y * sprite.m_texture->m_height };
+        cmd.Size         = { sprite.m_scale.x * sprite.m_texture->m_Specs.Width, sprite.m_scale.y * sprite.m_texture->m_Specs.Height };
         cmd.OriginOffset = sprite.m_originOffset * cmd.Size;
         cmd.SourceRect   = sprite.m_sourceRect;
         cmd.Rotation     = DirectX::XMConvertToRadians( sprite.m_rotationDegrees );
@@ -169,7 +155,7 @@ namespace InnoEngine
         Sprite2DPipeline::Command& cmd = m_RenderCommandBuffer->SpriteRenderCommands.emplace_back();
         populate_command_base( &cmd );
         cmd.TextureIndex = texture->m_RenderCommandBufferIndex;
-        cmd.Size         = { scale.x * texture->m_width, scale.y * texture->m_height };
+        cmd.Size         = { scale.x * texture->m_Specs.Width, scale.y * texture->m_Specs.Height };
         cmd.Position     = origin_transform( origin, position, cmd.Size );
         cmd.OriginOffset = cmd.Size * 0.5f;
         cmd.SourceRect   = source_rect;
@@ -188,7 +174,7 @@ namespace InnoEngine
         Font2DPipeline::Command& cmd = m_RenderCommandBuffer->FontRenderCommands.emplace_back();
         populate_command_base( &cmd );
         cmd.FontFBIndex     = font->m_RenderCommandBufferIndex;
-        cmd.StringIndex     = m_RenderCommandBuffer->StringBuffer.insert( text );
+        cmd.StringIndex     = m_RenderCommandBuffer->StringBuffer->insert( text );
         cmd.StringLength    = static_cast<uint32_t>( text.size() );
         cmd.Position        = position;
         cmd.FontSize        = text_size;
@@ -258,8 +244,8 @@ namespace InnoEngine
         IE_ASSERT( texture != nullptr && m_RenderCommandBuffer != nullptr );
         IE_ASSERT( texture->m_RenderCommandBufferIndex == InvalidRenderCommandBufferIndex );
 
-        texture->m_RenderCommandBufferIndex = static_cast<RenderCommandBufferIndexType>( m_RenderCommandBuffer->TextureRegister.size() );
-        m_RenderCommandBuffer->TextureRegister.push_back( texture );
+        texture->m_RenderCommandBufferIndex = static_cast<RenderCommandBufferIndexType>( m_RenderCommandBuffer->TextureRegister->size() );
+        m_RenderCommandBuffer->TextureRegister->push_back( texture );
     }
 
     void RenderContext::register_font( Ref<Font> font ) const
@@ -267,8 +253,8 @@ namespace InnoEngine
         IE_ASSERT( font != nullptr && m_RenderCommandBuffer != nullptr );
         IE_ASSERT( font->m_RenderCommandBufferIndex == InvalidRenderCommandBufferIndex );
 
-        font->m_RenderCommandBufferIndex = static_cast<RenderCommandBufferIndexType>( m_RenderCommandBuffer->FontRegister.size() );
-        m_RenderCommandBuffer->FontRegister.push_back( font );
+        font->m_RenderCommandBufferIndex = static_cast<RenderCommandBufferIndexType>( m_RenderCommandBuffer->FontRegister->size() );
+        m_RenderCommandBuffer->FontRegister->push_back( font );
     }
 
     void RenderContext::populate_command_base( RenderCommandBase* cmd_base ) const

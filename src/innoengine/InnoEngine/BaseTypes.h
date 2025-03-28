@@ -27,6 +27,22 @@ namespace InnoEngine
         AlreadyInitialized  = 2,
     };
 
+    enum class TextureFormat
+    {
+        Invalid = 0,
+        RGBA,
+        RGBX
+    };
+
+    enum class Origin
+    {
+        Middle = 0,
+        TopLeft,
+        TopRight,
+        BottomLeft,
+        BottomRight,
+    };
+
     constexpr const char* result_to_string( Result res )
     {
         switch ( res ) {
@@ -97,11 +113,7 @@ namespace InnoEngine
     struct RenderCommandBase
     {
         float                        Depth        = 0;
-        /*
-        CameraIndexType       CameraIndex       = 0;
-        ViewPortIndexType     ViewPortIndex     = 0;
-        RenderTargetIndexType RenderTargetIndex = 0;
-        */
         RenderCommandBufferIndexType ContextIndex = InvalidRenderCommandBufferIndex;
     };
+
 }    // namespace InnoEngine

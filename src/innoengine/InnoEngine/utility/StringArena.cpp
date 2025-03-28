@@ -33,7 +33,7 @@ namespace InnoEngine
     {
         if ( m_currentIdx + string.size() + 1 > m_size ) {
             IE_ASSERT( static_cast<uint64_t>( m_size ) * m_growFactor <= ( std::numeric_limits<uint32_t>::max )() );
-            grow( static_cast<uint32_t>( m_size * m_growFactor ) );
+            grow( max( static_cast<uint32_t>( m_size * m_growFactor ), static_cast<uint32_t>( m_currentIdx + string.size() + 1 ) ) );
         }
 
         std::memcpy( static_cast<void*>( &m_data[ m_currentIdx ] ), string.data(), string.size() );

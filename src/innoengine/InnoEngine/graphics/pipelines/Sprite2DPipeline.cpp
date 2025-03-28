@@ -119,11 +119,11 @@ namespace InnoEngine
     {
         IE_ASSERT( m_Device != nullptr );
 
-        if ( command_list.size() == 0 )
-            return;
-
         sort_commands( command_list );
         m_GPUBatch->clear();
+
+        if (command_list.size() == 0)
+            return;
 
         SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_Device );
         if ( gpu_copy_cmd_buf == nullptr ) {
@@ -166,9 +166,9 @@ namespace InnoEngine
         }
     }
 
-    uint32_t Sprite2DPipeline::swapchain_render( const std::vector<Ref<RenderContext>>& rendercontext_list,
-                                                 const TextureList&                     texture_list,
-                                                 SDL_GPURenderPass*                     render_pass )
+    uint32_t Sprite2DPipeline::swapchain_render( const RenderContext* render_ctx,
+                                                 const TextureList&   texture_list,
+                                                 SDL_GPURenderPass*   render_pass )
     {
         IE_ASSERT( m_Device != nullptr );
         IE_ASSERT( render_pass != nullptr );
@@ -179,20 +179,14 @@ namespace InnoEngine
         SDL_BindGPUGraphicsPipeline( render_pass, m_Pipeline );
         SDL_BindGPUVertexBuffers( render_pass, 0, nullptr, 0 );
 
+        const auto&     vp = render_ctx->get_viewport();
+        SDL_GPUViewport viewport( vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth );
+        SDL_SetGPUViewport( render_pass, &viewport );
+
         uint32_t                     draw_calls      = 0;
-        // RenderTargetIndexType current_rendertarget = 0;
-        RenderCommandBufferIndexType current_context = InvalidRenderCommandBufferIndex;
         RenderCommandBufferIndexType current_texture = InvalidRenderCommandBufferIndex;
 
         for ( const auto& batch_data : m_GPUBatch->get_batchlist() ) {
-
-            if ( batch_data.CustomData.ContextIndex != current_context ) {
-                const auto&     vp = rendercontext_list[ batch_data.CustomData.ContextIndex ]->get_viewport();
-                SDL_GPUViewport viewport( vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth );
-                SDL_SetGPUViewport( render_pass, &viewport );
-                current_context = batch_data.CustomData.ContextIndex;
-            }
-
             if ( batch_data.CustomData.TextureIndex != current_texture ) {
                 SDL_GPUTextureSamplerBinding texture_sampler_binding = {};
                 texture_sampler_binding.sampler                      = m_DefaultSampler;
@@ -217,13 +211,10 @@ namespace InnoEngine
             m_SortedCommands.resize( command_list.size() );
 
         for ( size_t i = 0; i < command_list.size(); ++i ) {
-            m_SortedCommands[ i ] = &command_list[ i ];
+            m_SortedCommands.emplace_back();
         }
 
         std::sort( m_SortedCommands.begin(), m_SortedCommands.end(), []( const Command* a, const Command* b ) {
-            if ( a->ContextIndex > b->ContextIndex )
-                return true;
-
             if ( a->TextureIndex > b->TextureIndex )
                 return true;
 

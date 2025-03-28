@@ -23,7 +23,7 @@ namespace InnoEngine
         static auto create() -> std::optional<Ref<Font>>;
 
         Ref<Texture2D> get_atlas_texture() const;
-        Ref<MSDFData>  get_msdf_data() const;
+        Ref<MSDFData>     get_msdf_data() const;
 
         float calculate_screen_pix_range( float FontSize ) const;
 
@@ -37,8 +37,8 @@ namespace InnoEngine
         void   preload_msdf_ascii_data();
 
     private:
-        Ref<Texture2D> m_atlasTexture;
-        Ref<MSDFData>  m_msdfData;
+        Ref<Texture2D> m_AtlasTexture;
+        Ref<MSDFData>     m_msdfData;
 
         bool m_Initialized = false;
 

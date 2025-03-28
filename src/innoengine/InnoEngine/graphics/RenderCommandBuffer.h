@@ -10,7 +10,7 @@
 #include "InnoEngine/graphics/pipelines/Primitive2DPipeline.h"
 
 #include "InnoEngine/utility/StringArena.h"
-#include "InnoEngine/graphics/Viewport.h"                
+#include "InnoEngine/graphics/Viewport.h"
 
 #include "DirectXMath.h"
 #include "Directxtk/SimpleMath.h"
@@ -20,29 +20,30 @@ namespace DXSM = DirectX::SimpleMath;
 
 namespace InnoEngine
 {
-    struct RenderCommandBuffer
+    struct RenderContextCommands
     {
-        bool                        Clear;
-        DXSM::Color                 ClearColor;
-
-        std::vector<Ref<RenderContext>> RenderContextRegister;
-
-        /*
-        std::vector<DXSM::Matrix>   ViewProjectionMatrices;
-        std::vector<Viewport>       Viewports;
-        std::vector<Ref<Texture2D>> RenderTargets;
-        */
-
-        TextureList TextureRegister;    // hold a reference to all texture objects we are going to use this frame
+        TextureList* TextureRegister = nullptr;    // owned by RenderCommandBuffer
+        StringArena* StringBuffer    = nullptr;    // owned by RenderCommandBuffer
+        FontList*    FontRegister    = nullptr;    // owned by RenderCommandBuffer
 
         SpriteCommandBuffer SpriteRenderCommands;
         QuadCommandBuffer   QuadRenderCommands;
         LineCommandBuffer   LineRenderCommands;
         CircleCommandBuffer CircleRenderCommands;
+        FontCommandBuffer   FontRenderCommands;
+    };
 
-        StringArena       StringBuffer;    // arena like container to hold a copy of all strings we are going to render this frame
-        FontList          FontRegister;    // hold a reference to all font objects we are going to use this frame
-        FontCommandBuffer FontRenderCommands;
+    struct RenderCommandBuffer
+    {
+        bool        Clear;
+        DXSM::Color ClearColor;
+
+        std::vector<Ref<RenderContext>>    RenderContextList;
+        std::vector<RenderContextCommands> RenderContextCommands;
+
+        TextureList TextureRegister;    // hold a reference to all texture objects we are going to use this frame
+        StringArena StringBuffer;       // arena like container to hold a copy of all strings we are going to render this frame
+        FontList    FontRegister;       // hold a reference to all font objects we are going to use this frame
 
         ImGuiPipeline::CommandData ImGuiCommandBuffer;
 

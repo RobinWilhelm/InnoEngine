@@ -9,15 +9,6 @@ namespace InnoEngine
 {
     class GPURenderer;
 
-    enum class Origin
-    {
-        Middle = 0,
-        TopLeft,
-        TopRight,
-        BottomLeft,
-        BottomRight,
-    };
-
     class Sprite
     {
         friend class RenderContext;
@@ -31,7 +22,6 @@ namespace InnoEngine
             IE_ASSERT( m_texture != nullptr );
         };
 
-        SDL_PixelFormat get_format() const;
         int             width() const;
         int             height() const;
 

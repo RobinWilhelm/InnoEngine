@@ -7,19 +7,11 @@
 
 namespace InnoEngine
 {
-    Texture2D::~Texture2D()
-    {
-        if ( m_texture ) {
-            SDL_ReleaseGPUTexture( m_Device, m_texture );
-            m_texture = nullptr;
-        }
-    }
-
-    auto Texture2D::create( uint32_t width, uint32_t height, TextureFormat format, SDL_GPUTextureUsageFlags usage, bool enable_mipmap ) -> std::optional<Ref<Texture2D>>
+    auto Texture2D::create( TextureSpecifications specs ) -> std::optional<Ref<Texture2D>>
     {
         Ref<Texture2D> texture = Ref<Texture2D>( new Texture2D() );
 
-        if ( IE_SUCCESS( texture->create_gpu_texture( width, height, format, usage, enable_mipmap ) ) ) {
+        if ( IE_SUCCESS( texture->create_gpu_texture( specs ) ) ) {
             return texture;
         }
         return std::nullopt;
@@ -42,7 +34,7 @@ namespace InnoEngine
     Result Texture2D::load_from_file( const std::filesystem::path& full_path )
     {
         IE_ASSERT( m_Device != nullptr );
-        IE_ASSERT( m_texture == nullptr );
+        IE_ASSERT( m_Texture == nullptr );
 
         SDL_Surface* surface = IMG_Load( full_path.string().c_str() );
         if ( surface == nullptr ) {
@@ -50,15 +42,20 @@ namespace InnoEngine
             return Result::Fail;
         }
 
-        TextureFormat format = sdl_pixelformat_to_textureformat( surface->format );
+        TextureFormat format = convert_sdlpixelformat( surface->format );
         if ( format == TextureFormat::Invalid ) {
             IE_LOG_ERROR( "Loading texture \"{}\" failed: {}", full_path.filename().string(), "Unsupported texture format" );
             return Result::Fail;
         }
 
-        Result res = create_gpu_texture( surface->w, surface->h, format, SDL_GPU_TEXTUREUSAGE_SAMPLER | SDL_GPU_TEXTUREUSAGE_COLOR_TARGET, true );
-        if ( IE_SUCCESS( res ) ) {
+        TextureSpecifications specs = {};
+        specs.Width                 = surface->w;
+        specs.Height                = surface->h;
+        specs.Format                = format;
+        specs.EnableMipmap          = true;
 
+        Result res = create_gpu_texture( specs );
+        if ( IE_SUCCESS( res ) ) {
             res = load_data( surface->pixels, surface->w * surface->h, surface->format );
         }
         SDL_DestroySurface( surface );
@@ -69,106 +66,13 @@ namespace InnoEngine
         return res;
     }
 
-    Result Texture2D::create_gpu_texture( uint32_t width, uint32_t height, TextureFormat format, SDL_GPUTextureUsageFlags usage, bool enable_mipmap )
-    {
-        IE_ASSERT( m_Device != nullptr );
-
-        SDL_GPUTextureFormat gpu_texture_format = textureformat_to_sdl_gpu_textureformat( format );
-
-        bool supported = SDL_GPUTextureSupportsFormat( m_Device, gpu_texture_format, SDL_GPU_TEXTURETYPE_2D, usage );
-        if ( supported == false ) {
-            return Result::InvalidParameters;
-        }
-
-        m_texelBlockSize = SDL_GPUTextureFormatTexelBlockSize( gpu_texture_format );
-
-        m_width  = width;
-        m_height = height;
-        m_format = format;
-
-        m_miplevels = 1;
-        if ( enable_mipmap )
-            m_miplevels = Texture2D::calculate_miplevels( width, height );
-
-        SDL_GPUTextureCreateInfo textureCreateInfo = {};
-        textureCreateInfo.type                     = SDL_GPU_TEXTURETYPE_2D;
-        textureCreateInfo.format                   = gpu_texture_format;
-        textureCreateInfo.usage                    = usage;
-        textureCreateInfo.width                    = width;
-        textureCreateInfo.height                   = height;
-        textureCreateInfo.layer_count_or_depth     = 1;
-        textureCreateInfo.num_levels               = m_miplevels;
-
-        m_texture = SDL_CreateGPUTexture( m_Device, &textureCreateInfo );
-        if ( m_texture == nullptr ) {
-            IE_LOG_ERROR( "Loading texture \"{}\" failed at SDL_CreateGPUTexture: {}", get_path().filename().string(), SDL_GetError() );
-            return Result::Fail;
-        }
-
-        return Result::Success;
-    }
-
-    void Texture2D::map_pixels( void* texture, const void* surface, uint32_t pixel_count, SDL_PixelFormat pixel_format ) const
-    {
-        std::byte*       texture_bytes = static_cast<std::byte*>( texture );
-        const std::byte* surface_bytes = static_cast<const std::byte*>( surface );
-
-        SDL_GPUTextureFormat target_format = textureformat_to_sdl_gpu_textureformat( m_format );
-
-        switch ( pixel_format ) {
-        case SDL_PIXELFORMAT_RGB24:
-            switch ( target_format ) {
-            case SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM:
-                for ( size_t i = 0; i < pixel_count; ++i ) {
-                    texture_bytes[ i * 4 ]     = surface_bytes[ i * 3 ];
-                    texture_bytes[ i * 4 + 1 ] = surface_bytes[ i * 3 + 1 ];
-                    texture_bytes[ i * 4 + 2 ] = surface_bytes[ i * 3 + 2 ];
-                    texture_bytes[ i * 4 + 3 ] = static_cast<std::byte>( 255 );
-                }
-                break;
-            }
-            break;
-        case SDL_PIXELFORMAT_RGBA32:
-            switch ( target_format ) {
-            case SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM:
-                SDL_memcpy( texture, surface_bytes, pixel_count * 4 );
-                break;
-            }
-            break;
-        }
-    }
-
-    SDL_GPUTextureFormat Texture2D::textureformat_to_sdl_gpu_textureformat( TextureFormat format )
-    {
-        switch ( format ) {
-        case TextureFormat::RGBA:
-        case TextureFormat::RGBX:
-            return SDL_GPUTextureFormat::SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
-        default:
-            IE_LOG_ERROR( "Invalid texture format \"{}\"", static_cast<uint32_t>( format ) );
-            return SDL_GPUTextureFormat::SDL_GPU_TEXTUREFORMAT_INVALID;
-        }
-    }
-
-    TextureFormat Texture2D::sdl_pixelformat_to_textureformat( SDL_PixelFormat format )
-    {
-        switch ( format ) {
-        case SDL_PIXELFORMAT_RGB24:
-            return TextureFormat::RGBX;
-        case SDL_PIXELFORMAT_RGBA32:
-            return TextureFormat::RGBA;
-        default:
-            return TextureFormat::Invalid;
-        }
-    }
-
     Result Texture2D::load_data( const void* pixels, uint32_t pixel_count, SDL_PixelFormat pixel_format )
     {
         IE_ASSERT( pixels != nullptr );
         IE_ASSERT( m_Device != nullptr );
-        IE_ASSERT( m_texture != nullptr );
+        IE_ASSERT( m_Texture != nullptr );
 
-        if ( pixelformat_supported( pixel_format ) == false ) {
+        if ( convert_sdlpixelformat( pixel_format ) == TextureFormat::Invalid ) {
             IE_LOG_ERROR( "Loading texture \"{}\" failed: {}", get_path().filename().string(), "Pixel format not supported" );
             return Result::Fail;
         }
@@ -179,12 +83,12 @@ namespace InnoEngine
             return Result::Fail;
         }
 
-        uint32_t               size                  = pixel_count * m_texelBlockSize;
+        uint32_t               size                  = pixel_count * m_TexelBlockSize;
         SDL_GPUTransferBuffer* textureTransferBuffer = nullptr;
 
         bool success = false;
 
-        if ( m_texture ) {
+        if ( m_Texture ) {
             SDL_GPUTransferBufferCreateInfo transferBufferCreateInfo = {};
             transferBufferCreateInfo.usage                           = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
             transferBufferCreateInfo.size                            = size;
@@ -194,9 +98,7 @@ namespace InnoEngine
                 Uint8* textureTransferPtr = static_cast<Uint8*>( SDL_MapGPUTransferBuffer( m_Device, textureTransferBuffer, false ) );
 
                 if ( textureTransferPtr ) {
-
-                    (void)pixels;
-                    map_pixels( textureTransferPtr, pixels, pixel_count, pixel_format );
+                    copy_pixels_from_surface( textureTransferPtr, m_Format, pixels, pixel_format, pixel_count );
 
                     SDL_UnmapGPUTransferBuffer( m_Device, textureTransferBuffer );
                     // Upload the transfer data to the GPU resources
@@ -209,20 +111,20 @@ namespace InnoEngine
                             SDL_GPUTextureTransferInfo textureTransferInfo = {};
                             textureTransferInfo.transfer_buffer            = textureTransferBuffer;
                             textureTransferInfo.offset                     = 0; /* Zeroes out the rest */
-                            textureTransferInfo.pixels_per_row             = m_width;
+                            textureTransferInfo.pixels_per_row             = m_Specs.Width;
 
                             SDL_GPUTextureRegion textureRegion = {};
-                            textureRegion.texture              = m_texture;
+                            textureRegion.texture              = m_Texture;
                             // textureRegion.mip_level            = 1;
-                            textureRegion.w                    = m_width;
-                            textureRegion.h                    = m_height;
+                            textureRegion.w                    = m_Specs.Width;
+                            textureRegion.h                    = m_Specs.Height;
                             textureRegion.d                    = 1;
 
                             SDL_UploadToGPUTexture( copyPass, &textureTransferInfo, &textureRegion, false );
                             SDL_EndGPUCopyPass( copyPass );
 
-                            if ( m_miplevels > 1 )
-                                SDL_GenerateMipmapsForGPUTexture( uploadCmdBuf, m_texture );
+                            if ( m_MipLevels > 1 )
+                                SDL_GenerateMipmapsForGPUTexture( uploadCmdBuf, m_Texture );
 
                             success = SDL_SubmitGPUCommandBuffer( uploadCmdBuf );
                         }
@@ -235,41 +137,5 @@ namespace InnoEngine
         }
 
         return success ? Result::Success : Result::InitializationError;
-    }
-
-    SDL_PixelFormat Texture2D::get_format() const
-    {
-        return SDL_PixelFormat();
-    }
-
-    int Texture2D::width() const
-    {
-        return m_width;
-    }
-
-    int Texture2D::height() const
-    {
-        return m_height;
-    }
-
-    SDL_GPUTexture* Texture2D::get_sdltexture() const
-    {
-        return m_texture;
-    }
-
-    bool Texture2D::pixelformat_supported( SDL_PixelFormat pixel_format )
-    {
-        return sdl_pixelformat_to_textureformat( pixel_format ) != TextureFormat::Invalid;
-    }
-
-    uint32_t Texture2D::calculate_miplevels( uint32_t width, uint32_t height )
-    {
-        uint32_t mip_levels = 0;
-        uint32_t size       = max( width, height );
-        while ( size > 1 ) {
-            size /= 2;
-            ++mip_levels;
-        }
-        return mip_levels;
     }
 }    // namespace InnoEngine
