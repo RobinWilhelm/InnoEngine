@@ -69,7 +69,7 @@ namespace InnoEngine
         m_LineGPUBatch->clear();
         m_CircleGPUBatch->clear();
 
-        if (quad_command_list.size() == 0 && line_command_list.size() == 0 && circle_command_list.size() == 0)
+        if ( quad_command_list.size() == 0 && line_command_list.size() == 0 && circle_command_list.size() == 0 )
             return;
 
         SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_Device );
@@ -200,10 +200,10 @@ namespace InnoEngine
         m_SortedQuadCommands.clear();
 
         if ( quad_command_list.size() > m_SortedQuadCommands.size() )
-            m_SortedQuadCommands.resize( quad_command_list.size() );
+            m_SortedQuadCommands.reserve( quad_command_list.size() );
 
         for ( size_t i = 0; i < quad_command_list.size(); ++i ) {
-            m_SortedQuadCommands[ i ] = &quad_command_list[ i ];
+            m_SortedQuadCommands.push_back( &quad_command_list[ i ] );
         }
 
         std::sort( m_SortedQuadCommands.begin(), m_SortedQuadCommands.end(), []( const QuadCommand* a, const QuadCommand* b ) {
@@ -221,10 +221,10 @@ namespace InnoEngine
         m_SortedLineCommands.clear();
 
         if ( line_command_list.size() > m_SortedLineCommands.size() )
-            m_SortedLineCommands.resize( line_command_list.size() );
+            m_SortedLineCommands.reserve( line_command_list.size() );
 
         for ( size_t i = 0; i < line_command_list.size(); ++i ) {
-            m_SortedLineCommands[ i ] = &line_command_list[ i ];
+            m_SortedLineCommands.push_back( &line_command_list[ i ] );
         }
 
         std::sort( m_SortedLineCommands.begin(), m_SortedLineCommands.end(), []( const LineCommand* a, const LineCommand* b ) {
@@ -243,11 +243,12 @@ namespace InnoEngine
         m_SortedCircleCommands.clear();
 
         if ( circle_command_list.size() > m_SortedCircleCommands.size() )
-            m_SortedCircleCommands.resize( circle_command_list.size() );
+            m_SortedCircleCommands.reserve( circle_command_list.size() );
 
         for ( size_t i = 0; i < circle_command_list.size(); ++i ) {
-            m_SortedCircleCommands[ i ] = &circle_command_list[ i ];
+            m_SortedCircleCommands.push_back( &circle_command_list[ i ] );
         }
+
         std::sort( m_SortedCircleCommands.begin(), m_SortedCircleCommands.end(), []( const CircleCommand* a, const CircleCommand* b ) {
             if ( a->ContextIndex > b->ContextIndex )
                 return true;

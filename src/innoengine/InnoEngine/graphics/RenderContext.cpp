@@ -21,6 +21,11 @@ namespace InnoEngine
         return render_ctx;
     }
 
+    Ref<Texture2D> RenderContext::get_rendertarget() const
+    {
+        return m_Specs.ColorTarget;
+    }
+
     Ref<Camera> RenderContext::get_camera() const
     {
         return m_Specs.Camera;

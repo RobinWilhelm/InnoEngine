@@ -122,7 +122,7 @@ namespace InnoEngine
         sort_commands( command_list );
         m_GPUBatch->clear();
 
-        if (command_list.size() == 0)
+        if ( command_list.size() == 0 )
             return;
 
         SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_Device );
@@ -208,10 +208,10 @@ namespace InnoEngine
         m_SortedCommands.clear();
 
         if ( command_list.size() > m_SortedCommands.size() )
-            m_SortedCommands.resize( command_list.size() );
+            m_SortedCommands.reserve( command_list.size() );
 
         for ( size_t i = 0; i < command_list.size(); ++i ) {
-            m_SortedCommands.emplace_back();
+            m_SortedCommands.push_back( &command_list[ i ] );
         }
 
         std::sort( m_SortedCommands.begin(), m_SortedCommands.end(), []( const Command* a, const Command* b ) {

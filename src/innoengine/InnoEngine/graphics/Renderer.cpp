@@ -71,15 +71,16 @@ namespace InnoEngine
         void prepare( RenderContext* render_ctx )
         {
             IE_ASSERT( m_Initialized );
+            IE_ASSERT( render_ctx != nullptr && render_ctx->m_RenderCommandBufferIndex != InvalidRenderCommandBufferIndex );
             const RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
 
-            m_Sprite2DPipeline->prepare_render( render_ctx->m_RenderCommandBuffer->SpriteRenderCommands );
+            m_Sprite2DPipeline->prepare_render( render_cmd_buf.RenderContextCommands[ render_ctx->m_RenderCommandBufferIndex ].SpriteRenderCommands );
 
-            m_PrimitivePipeline->prepare_render( render_ctx->m_RenderCommandBuffer->QuadRenderCommands,
-                                                 render_ctx->m_RenderCommandBuffer->LineRenderCommands,
-                                                 render_ctx->m_RenderCommandBuffer->CircleRenderCommands );
+            m_PrimitivePipeline->prepare_render( render_cmd_buf.RenderContextCommands[ render_ctx->m_RenderCommandBufferIndex ].QuadRenderCommands,
+                                                 render_cmd_buf.RenderContextCommands[ render_ctx->m_RenderCommandBufferIndex ].LineRenderCommands,
+                                                 render_cmd_buf.RenderContextCommands[ render_ctx->m_RenderCommandBufferIndex ].CircleRenderCommands );
 
-            m_Font2DPipeline->prepare_render( render_ctx->m_RenderCommandBuffer->FontRenderCommands,
+            m_Font2DPipeline->prepare_render( render_cmd_buf.RenderContextCommands[ render_ctx->m_RenderCommandBufferIndex ].FontRenderCommands,
                                               render_cmd_buf.FontRegister,
                                               render_cmd_buf.StringBuffer );
         }
@@ -163,6 +164,9 @@ namespace InnoEngine
             }
 
             m_pipelineProcessor.reset();
+
+            m_RenderContextCache.clear();
+            m_RenderContextRegisterQueue.clear();
 
             if ( m_Window ) {
                 SDL_ReleaseWindowFromGPUDevice( m_sdlGPUDevice, m_Window->get_sdlwindow() );
@@ -412,7 +416,7 @@ namespace InnoEngine
 
                 bool first_pass = true;
 
-                for ( const auto& render_ctx : render_commands.RenderContextList) {
+                for ( const auto& render_ctx : render_commands.RenderContextList ) {
                     if ( render_ctx->m_Specs.ColorTarget != nullptr || render_ctx->m_RenderCommandBuffer == nullptr )
                         continue;
 

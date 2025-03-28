@@ -50,10 +50,10 @@ Demoscene::Demoscene( Sandbox* parent ) :
     spec.Height                    = viewport_size.y;
 
     IE::RenderContextSpecifications render_ctx_scene = {};
-    // render_ctx_scene.ColorTarget = IE::Texture2D::create( spec ).value();
+    render_ctx_scene.ColorTarget                     = IE::Texture2D::create( spec ).value();
     render_ctx_scene.Camera                          = IE::OrthographicCamera::create( { viewport_size.x, viewport_size.y } );
     render_ctx_scene.Viewport                        = IE::Viewport( window->width() / 2 - viewport_size.x / 2, 100, viewport_size.x, viewport_size.y );
-    m_SceneCtxHandle                                 = m_Parent->get_renderer()->create_rendercontext(render_ctx_scene);
+    m_SceneCtxHandle                                 = m_Parent->get_renderer()->create_rendercontext( render_ctx_scene );
 
     m_Parent->register_camera( render_ctx_scene.Camera );
 
@@ -101,18 +101,15 @@ void Demoscene::render( float interp_factor, IE::GPURenderer* renderer )
     const IE::RenderContext* scene_ctx = renderer->acquire_rendercontext( m_SceneCtxHandle );
     if ( scene_ctx ) {
         if ( fullscreen_ctx ) {
-            //IE::RenderContext::use_specific_depth_layer(1);
-            //fullscreen_ctx->add_quad( IE::Origin::TopLeft, { scene_ctx->get_viewport().LeftOffset, scene_ctx->get_viewport().TopOffset }, { scene_ctx->get_viewport().Width, scene_ctx->get_viewport().Height }, 0.0f, { 1.0f, 0.0f, 0.0f, 1.0f } );
-            //IE::RenderContext::use_specific_depth_layer(0);
             fullscreen_ctx->add_quad( IE::Origin::TopLeft, { scene_ctx->get_viewport().LeftOffset, scene_ctx->get_viewport().TopOffset }, { scene_ctx->get_viewport().Width, scene_ctx->get_viewport().Height }, 0.0f, { 0.0f, 1.0f, 0.0f, 1.0f } );
         }
 
-        //scene_ctx->add_quad( IE::Origin::TopLeft, { 0, 0 }, { scene_ctx->get_viewport().Width, scene_ctx->get_viewport().Height }, 0.0f, { 0.0f, 1.0f, 0.0f, 1.0f } );
-
-        IE::RenderContext::use_specific_depth_layer(60000);
+        IE::RenderContext::next_depth_layer();
         for ( int i = 0; i < 10000; ++i ) {
             scene_ctx->add_text( m_testFont, m_positions[ i ], m_scales[ i ] * 20, "Hello there!", m_colors[ i ] );
-        } 
+        }
+
+        fullscreen_ctx->add_textured_quad( scene_ctx->get_rendertarget(), IE::Origin::TopLeft, { 0.0f, 0.0f, 1.0f, 1.0f }, { scene_ctx->get_viewport().LeftOffset, scene_ctx->get_viewport().TopOffset } );
     }
 }
 

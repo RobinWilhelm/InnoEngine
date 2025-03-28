@@ -25,6 +25,7 @@ namespace InnoEngine
         static auto create( GPURenderer* renderer, const RenderContextSpecifications& spec ) -> Ref<RenderContext>;
 
     public:
+        Ref<Texture2D>  get_rendertarget() const;
         Ref<Camera>     get_camera() const;
         const Viewport& get_viewport() const;
 
@@ -61,7 +62,7 @@ namespace InnoEngine
         RenderContextSpecifications m_Specs    = {};
 
         RenderCommandBufferIndexType m_RenderCommandBufferIndex = InvalidRenderCommandBufferIndex;
-        RenderContextCommands*  m_RenderCommandBuffer      = nullptr;    // instance owned by GPURenderer
+        RenderContextCommands*       m_RenderCommandBuffer      = nullptr;    // instance owned by GPURenderer
 
         DXSM::Color m_CustomColorTargetClearColor = {};
         bool        m_ClearCustomColorTarget      = false;
@@ -70,5 +71,5 @@ namespace InnoEngine
         static float    m_CurrentLayerDepth;
     };
 
-    using RenderContextHandle = uint32_t; 
+    using RenderContextHandle = uint32_t;
 }    // namespace InnoEngine
