@@ -38,8 +38,8 @@ namespace InnoEngine
         bool        Clear;
         DXSM::Color ClearColor;
 
-        std::vector<Ref<RenderContext>>    RenderContextList;
-        std::vector<RenderContextCommands> RenderContextCommands;
+        std::vector<RenderContextFrameData> RenderContextData;
+        std::vector<RenderContextCommands>  RenderContextCommands;
 
         TextureList TextureRegister;    // hold a reference to all texture objects we are going to use this frame
         StringArena StringBuffer;       // arena like container to hold a copy of all strings we are going to render this frame

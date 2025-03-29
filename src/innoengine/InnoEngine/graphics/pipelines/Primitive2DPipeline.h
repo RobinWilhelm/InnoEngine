@@ -97,8 +97,8 @@ namespace InnoEngine
         void     prepare_render( const QuadCommandList&   quad_command_list,
                                  const LineCommandList&   line_command_list,
                                  const CircleCommandList& circle_command_list );
-        uint32_t swapchain_render( const RenderContext* render_ctx,
-                                   SDL_GPURenderPass*   render_pass );
+        uint32_t swapchain_render( const RenderContextFrameData& render_ctx_data,
+                                   SDL_GPURenderPass*            render_pass );
 
         void sort_quad_commands( const QuadCommandList& quad_command_list );
         void sort_line_commands( const LineCommandList& quad_command_list );

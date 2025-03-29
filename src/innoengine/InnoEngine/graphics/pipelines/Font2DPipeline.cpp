@@ -118,8 +118,9 @@ namespace InnoEngine
         sort_commands( command_list );
         m_GPUBatch->clear();
 
-        if (command_list.size() == 0)
-            return;                   SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_Device );
+        if ( command_list.size() == 0 )
+            return;
+        SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_Device );
         if ( gpu_copy_cmd_buf == nullptr ) {
             IE_LOG_ERROR( "AcquireGPUCommandBuffer failed: {}", SDL_GetError() );
             return;
@@ -244,17 +245,14 @@ namespace InnoEngine
         }
     }
 
-    uint32_t Font2DPipeline::swapchain_render( const RenderContext* render_ctx, const FontList& font_list, SDL_GPURenderPass* render_pass )
+    uint32_t Font2DPipeline::swapchain_render( const RenderContextFrameData& render_ctx_data, const FontList& font_list, SDL_GPURenderPass* render_pass )
     {
         IE_ASSERT( m_Device != nullptr );
         IE_ASSERT( render_pass != nullptr );
 
         SDL_BindGPUGraphicsPipeline( render_pass, m_Pipeline );
         SDL_BindGPUVertexBuffers( render_pass, 0, nullptr, 0 );
-
-        const auto&     vp       = render_ctx->get_viewport();
-        SDL_GPUViewport viewport = { vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth };
-        SDL_SetGPUViewport( render_pass, &viewport );
+        SDL_SetGPUViewport( render_pass, &render_ctx_data.Viewport );
 
         RenderCommandBufferIndexType current_font = InvalidRenderCommandBufferIndex;
 
@@ -283,7 +281,7 @@ namespace InnoEngine
             m_SortedCommands.reserve( command_list.size() );
 
         for ( size_t i = 0; i < command_list.size(); ++i ) {
-            m_SortedCommands.push_back(&command_list[ i ]);
+            m_SortedCommands.push_back( &command_list[ i ] );
         }
 
         std::sort( m_SortedCommands.begin(), m_SortedCommands.end(), []( const Command* a, const Command* b ) {

@@ -64,7 +64,7 @@ namespace InnoEngine
         Clear      = false;
         ClearColor = DXSM::Color( 0.0f, 0.0f, 0.0f, 0.0f );
 
-        RenderContextList.clear();
+        RenderContextData.clear();
 
         // clear the commands but not the rendercontexts itself
         for ( auto& render_ctx_cmds : RenderContextCommands ) {

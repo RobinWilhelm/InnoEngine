@@ -86,7 +86,7 @@ namespace InnoEngine
         RenderCommandBuffer* get_render_command_buffer() const;
 
         Result create_camera_transformation_buffers();
-        void   upload_camera_transformations( const std::vector<Ref<RenderContext>>& registered_rendercontexts );
+        void   upload_camera_transformations( const std::vector<RenderContextFrameData>& render_ctx_data );
 
     private:
         bool m_Initialized  = false;

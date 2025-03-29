@@ -21,6 +21,20 @@ namespace InnoEngine
         return render_ctx;
     }
 
+    RenderContext::RenderContext( const RenderContext& other )
+    {
+        *this = other;
+    }
+
+    RenderContext RenderContext::operator=( const RenderContext& other )
+    {
+        m_Renderer                 = other.m_Renderer;
+        m_Specs                    = other.m_Specs;
+        m_RenderCommandBufferIndex = other.m_RenderCommandBufferIndex;
+        m_RenderCommandBuffer      = other.m_RenderCommandBuffer;
+        return *this;
+    }
+
     Ref<Texture2D> RenderContext::get_rendertarget() const
     {
         return m_Specs.ColorTarget;

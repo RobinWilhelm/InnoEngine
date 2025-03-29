@@ -152,16 +152,13 @@ namespace InnoEngine
         }
     }
 
-    uint32_t Primitive2DPipeline::swapchain_render( const RenderContext* render_ctx, SDL_GPURenderPass* render_pass )
+    uint32_t Primitive2DPipeline::swapchain_render( const RenderContextFrameData& render_ctx_data, SDL_GPURenderPass* render_pass )
     {
         IE_ASSERT( m_Device != nullptr );
         IE_ASSERT( render_pass != nullptr );
 
         SDL_BindGPUVertexBuffers( render_pass, 0, nullptr, 0 );
-
-        const auto&     vp = render_ctx->get_viewport();
-        SDL_GPUViewport viewport( vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth );
-        SDL_SetGPUViewport( render_pass, &viewport );
+        SDL_SetGPUViewport( render_pass, &render_ctx_data.Viewport );
 
         uint32_t draw_calls = 0;
 

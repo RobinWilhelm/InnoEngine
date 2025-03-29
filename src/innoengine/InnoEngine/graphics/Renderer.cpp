@@ -68,36 +68,36 @@ namespace InnoEngine
             return Result::Success;
         }
 
-        void prepare( RenderContext* render_ctx )
+        void prepare( const RenderContextFrameData& render_ctx_data )
         {
             IE_ASSERT( m_Initialized );
-            IE_ASSERT( render_ctx != nullptr && render_ctx->m_RenderCommandBufferIndex != InvalidRenderCommandBufferIndex );
+            IE_ASSERT( render_ctx_data.Index != InvalidRenderCommandBufferIndex );
             const RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
 
-            m_Sprite2DPipeline->prepare_render( render_cmd_buf.RenderContextCommands[ render_ctx->m_RenderCommandBufferIndex ].SpriteRenderCommands );
+            m_Sprite2DPipeline->prepare_render( render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].SpriteRenderCommands );
 
-            m_PrimitivePipeline->prepare_render( render_cmd_buf.RenderContextCommands[ render_ctx->m_RenderCommandBufferIndex ].QuadRenderCommands,
-                                                 render_cmd_buf.RenderContextCommands[ render_ctx->m_RenderCommandBufferIndex ].LineRenderCommands,
-                                                 render_cmd_buf.RenderContextCommands[ render_ctx->m_RenderCommandBufferIndex ].CircleRenderCommands );
+            m_PrimitivePipeline->prepare_render( render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].QuadRenderCommands,
+                                                 render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].LineRenderCommands,
+                                                 render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].CircleRenderCommands );
 
-            m_Font2DPipeline->prepare_render( render_cmd_buf.RenderContextCommands[ render_ctx->m_RenderCommandBufferIndex ].FontRenderCommands,
+            m_Font2DPipeline->prepare_render( render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].FontRenderCommands,
                                               render_cmd_buf.FontRegister,
                                               render_cmd_buf.StringBuffer );
         }
 
-        void render( const RenderContext* render_ctx, SDL_GPURenderPass* render_pass, RenderStatistics& stats )
+        void render( const RenderContextFrameData& render_ctx_data, SDL_GPURenderPass* render_pass, RenderStatistics& stats )
         {
             IE_ASSERT( m_Initialized );
             const RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
 
-            stats.SpriteDrawCalls += m_Sprite2DPipeline->swapchain_render( render_ctx,
+            stats.SpriteDrawCalls += m_Sprite2DPipeline->swapchain_render( render_ctx_data,
                                                                            render_cmd_buf.TextureRegister,
                                                                            render_pass );
 
-            stats.PrimitivesDrawCalls += m_PrimitivePipeline->swapchain_render( render_ctx,
+            stats.PrimitivesDrawCalls += m_PrimitivePipeline->swapchain_render( render_ctx_data,
                                                                                 render_pass );
 
-            stats.FontDrawCalls += m_Font2DPipeline->swapchain_render( render_ctx,
+            stats.FontDrawCalls += m_Font2DPipeline->swapchain_render( render_ctx_data,
                                                                        render_cmd_buf.FontRegister,
                                                                        render_pass );
         }
@@ -351,7 +351,7 @@ namespace InnoEngine
             return;
         }
 
-        upload_camera_transformations( m_RenderContextCache );
+        upload_camera_transformations( render_commands.RenderContextData );
 
         SDL_GPUCommandBuffer* gpu_cmd_buf = SDL_AcquireGPUCommandBuffer( m_sdlGPUDevice );
         if ( gpu_cmd_buf == nullptr ) {
@@ -360,22 +360,22 @@ namespace InnoEngine
         }
 
         // custom rendertarget passes
-        for ( const auto& render_ctx : render_commands.RenderContextList ) {
-            if ( render_ctx->m_Specs.ColorTarget == nullptr || render_ctx->m_RenderCommandBuffer == nullptr ) {
+        for ( const auto& render_ctx : render_commands.RenderContextData ) {
+            if ( render_ctx.RenderTarget == nullptr ) {
                 continue;
             }
 
-            m_pipelineProcessor->prepare( render_ctx.get() );
+            m_pipelineProcessor->prepare( render_ctx );
 
             SDL_GPUColorTargetInfo color_target = {};
-            color_target.texture                = render_ctx->m_Specs.ColorTarget->get_sdltexture();
-            color_target.clear_color            = { render_ctx->m_CustomColorTargetClearColor.R(), render_ctx->m_CustomColorTargetClearColor.G(), render_ctx->m_CustomColorTargetClearColor.B(), render_ctx->m_CustomColorTargetClearColor.A() };
-            color_target.load_op                = render_ctx->m_ClearCustomColorTarget ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
+            color_target.texture                = render_ctx.RenderTarget->get_sdltexture();
+            color_target.clear_color            = { render_ctx.ClearColor.R(), render_ctx.ClearColor.G(), render_ctx.ClearColor.B(), render_ctx.ClearColor.A() };
+            color_target.load_op                = SDL_GPU_LOADOP_CLEAR;
             color_target.store_op               = SDL_GPU_STOREOP_STORE;
 
             SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass( gpu_cmd_buf, &color_target, 1, nullptr );
             SDL_BindGPUVertexStorageBuffers( render_pass, 0, &m_CameraMatrixStorageBuffer, 1 );
-            m_pipelineProcessor->render( render_ctx.get(), render_pass, m_Statistics.get_producer_data() );
+            m_pipelineProcessor->render( render_ctx, render_pass, m_Statistics.get_producer_data() );
             SDL_EndGPURenderPass( render_pass );
         }
 
@@ -416,18 +416,18 @@ namespace InnoEngine
 
                 bool first_pass = true;
 
-                for ( const auto& render_ctx : render_commands.RenderContextList ) {
-                    if ( render_ctx->m_Specs.ColorTarget != nullptr || render_ctx->m_RenderCommandBuffer == nullptr )
+                for ( const auto& render_ctx_data : render_commands.RenderContextData ) {
+                    if ( render_ctx_data.RenderTarget != nullptr )
                         continue;
 
-                    m_pipelineProcessor->prepare( render_ctx.get() );
+                    m_pipelineProcessor->prepare( render_ctx_data );
                     SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass( gpu_cmd_buf,
                                                                              first_pass ? &color_target_first : &color_target,
                                                                              1,
                                                                              first_pass ? &depth_stencil_first : &depth_stencil );
 
                     SDL_BindGPUVertexStorageBuffers( render_pass, 0, &m_CameraMatrixStorageBuffer, 1 );
-                    m_pipelineProcessor->render( render_ctx.get(), render_pass, m_Statistics.get_producer_data() );
+                    m_pipelineProcessor->render( render_ctx_data, render_pass, m_Statistics.get_producer_data() );
                     SDL_EndGPURenderPass( render_pass );
 
                     first_pass = false;
@@ -481,13 +481,20 @@ namespace InnoEngine
         if ( handle >= m_RenderContextCache.size() )
             return nullptr;
 
-        auto& cmd_buffer = m_pipelineProcessor->get_command_buffer_for_collecting();
+        auto&                        cmd_buffer = m_pipelineProcessor->get_command_buffer_for_collecting();
+        RenderCommandBufferIndexType index      = static_cast<RenderCommandBufferIndexType>( cmd_buffer.RenderContextData.size() );
 
         Ref<RenderContext> render_ctx          = m_RenderContextCache[ handle ];
-        render_ctx->m_RenderCommandBufferIndex = handle;
-        render_ctx->m_RenderCommandBuffer      = &cmd_buffer.RenderContextCommands[ handle ];
+        render_ctx->m_RenderCommandBufferIndex = index;
+        render_ctx->m_RenderCommandBuffer      = &cmd_buffer.RenderContextCommands[ index ];
 
-        cmd_buffer.RenderContextList.push_back( render_ctx );
+        auto&       render_ctx_data          = cmd_buffer.RenderContextData.emplace_back();
+        const auto& vp                       = render_ctx->get_viewport();
+        render_ctx_data.Viewport             = { vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth };
+        render_ctx_data.RenderTarget         = render_ctx->m_Specs.ColorTarget;
+        render_ctx_data.ViewProjectionMatrix = render_ctx->get_camera()->get_viewprojectionmatrix();
+        render_ctx_data.Index                = index;
+
         return render_ctx.get();
     }
 
@@ -606,15 +613,16 @@ namespace InnoEngine
         return Result::Success;
     }
 
-    void GPURenderer::upload_camera_transformations( const std::vector<Ref<RenderContext>>& registered_rendercontexts )
+    void GPURenderer::upload_camera_transformations( const std::vector<RenderContextFrameData>& render_ctx_data )
     {
         IE_ASSERT( m_sdlGPUDevice != nullptr );
         IE_ASSERT( m_CameraMatrixTransferBuffer != nullptr );
         IE_ASSERT( m_CameraMatrixStorageBuffer != nullptr );
 
         DXSM::Matrix* buffer_data = static_cast<DXSM::Matrix*>( SDL_MapGPUTransferBuffer( m_sdlGPUDevice, m_CameraMatrixTransferBuffer, true ) );
-        for ( const auto render_ctx : registered_rendercontexts ) {
-            *buffer_data = render_ctx->get_camera()->get_viewprojectionmatrix();
+
+        for ( const auto render_ctx : render_ctx_data ) {
+            *buffer_data = render_ctx.ViewProjectionMatrix;
             ++buffer_data;
         }
 
@@ -622,7 +630,7 @@ namespace InnoEngine
         SDL_GPUTransferBufferLocation tranferBufferLocation { .transfer_buffer = m_CameraMatrixTransferBuffer, .offset = 0 };
         SDL_GPUBufferRegion           bufferRegion { .buffer = m_CameraMatrixStorageBuffer,
                                                      .offset = 0,
-                                                     .size   = static_cast<uint32_t>( registered_rendercontexts.size() * sizeof( DXSM::Matrix ) ) };
+                                                     .size   = static_cast<uint32_t>( render_ctx_data.size() * sizeof( DXSM::Matrix ) ) };
 
         SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_sdlGPUDevice );
         if ( gpu_copy_cmd_buf == nullptr ) {

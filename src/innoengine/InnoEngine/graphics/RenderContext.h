@@ -18,11 +18,28 @@ namespace InnoEngine
         Viewport       Viewport;
     };
 
+    // this is the per frame data that needs to be copied for the renderthread
+    struct RenderContextFrameData
+    {
+        Ref<Texture2D> RenderTarget;    // a custom color target, if nullptr then the swapchain is the target
+        DXSM::Color    ClearColor;      // only valid when a custom rendertarget is set, ignored otherwise
+
+        DXSM::Matrix                 ViewProjectionMatrix;
+        SDL_GPUViewport              Viewport;
+        RenderCommandBufferIndexType Index;
+    };
+
     class RenderContext
     {
         friend class GPURenderer;
         RenderContext() = default;
         static auto create( GPURenderer* renderer, const RenderContextSpecifications& spec ) -> Ref<RenderContext>;
+
+        RenderContext( const RenderContext& other );
+        RenderContext operator=( const RenderContext& other );
+
+        RenderContext( const RenderContext&& other )           = delete;
+        RenderContext operator=( const RenderContext&& other ) = delete;
 
     public:
         Ref<Texture2D>  get_rendertarget() const;
@@ -63,9 +80,6 @@ namespace InnoEngine
 
         RenderCommandBufferIndexType m_RenderCommandBufferIndex = InvalidRenderCommandBufferIndex;
         RenderContextCommands*       m_RenderCommandBuffer      = nullptr;    // instance owned by GPURenderer
-
-        DXSM::Color m_CustomColorTargetClearColor = {};
-        bool        m_ClearCustomColorTarget      = false;
 
         static uint16_t m_CurrentDepthLayer;
         static float    m_CurrentLayerDepth;
