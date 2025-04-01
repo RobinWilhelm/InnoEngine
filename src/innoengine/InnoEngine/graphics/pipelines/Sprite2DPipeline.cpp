@@ -115,55 +115,24 @@ namespace InnoEngine
         return Result::Success;
     }
 
-    void Sprite2DPipeline::prepare_render( const CommandList& command_list )
+    uint32_t Sprite2DPipeline::prepare_render_opaque( const CommandList& command_list )
     {
         IE_ASSERT( m_Device != nullptr );
-
-        sort_commands( command_list );
-        m_GPUBatch->clear();
-
         if ( command_list.size() == 0 )
-            return;
+            return 0;
 
-        SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_Device );
-        if ( gpu_copy_cmd_buf == nullptr ) {
-            IE_LOG_ERROR( "AcquireGPUCommandBuffer failed: {}", SDL_GetError() );
-            return;
-        }
+        sort_commands( command_list, true );
+        return prepare_batches();
+    }
 
-        SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass( gpu_copy_cmd_buf );
+    uint32_t Sprite2DPipeline::prepare_render( const CommandList& command_list )
+    {
+        IE_ASSERT( m_Device != nullptr );
+        if ( command_list.size() == 0 )
+            return 0;
 
-        BatchData* current = nullptr;
-
-        for ( const Command* command : m_SortedCommands ) {
-            if ( current == nullptr || m_GPUBatch->current_batch_full() ||
-                 current->ContextIndex != command->ContextIndex ||
-                 current->TextureIndex != command->TextureIndex ) {
-
-                current               = m_GPUBatch->upload_and_add_batch( copy_pass );
-                current->ContextIndex = command->ContextIndex;
-                current->TextureIndex = command->TextureIndex;
-            }
-
-            StructuredBufferLayout* buffer_data = m_GPUBatch->next_data();
-
-            buffer_data->ContextIndex = command->ContextIndex;
-            buffer_data->Color        = command->Color;
-            buffer_data->Position     = command->Position;
-            buffer_data->OriginOffset = command->OriginOffset;
-            buffer_data->Size         = command->Size;
-            buffer_data->Rotation     = command->Rotation;
-            buffer_data->Depth        = command->Depth;
-            buffer_data->SourceRect   = command->SourceRect;
-        }
-        m_GPUBatch->upload_last( copy_pass );
-
-        SDL_EndGPUCopyPass( copy_pass );
-
-        if ( SDL_SubmitGPUCommandBuffer( gpu_copy_cmd_buf ) == false ) {
-            IE_LOG_ERROR( "SDL_SubmitGPUCommandBuffer failed: {}", SDL_GetError() );
-            return;
-        }
+        sort_commands( command_list, false );
+        return prepare_batches();
     }
 
     uint32_t Sprite2DPipeline::swapchain_render( const RenderContextFrameData& render_ctx_data,
@@ -197,10 +166,58 @@ namespace InnoEngine
             ++draw_calls;
         }
 
+        m_GPUBatch->clear();
         return draw_calls;
     }
 
-    void Sprite2DPipeline::sort_commands( const CommandList& command_list )
+    uint32_t Sprite2DPipeline::prepare_batches()
+    {
+        m_GPUBatch->clear();
+
+        SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_Device );
+        if ( gpu_copy_cmd_buf == nullptr ) {
+            IE_LOG_ERROR( "AcquireGPUCommandBuffer failed: {}", SDL_GetError() );
+            return 0;
+        }
+
+        SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass( gpu_copy_cmd_buf );
+
+        BatchData* current = nullptr;
+
+        for ( const Command* command : m_SortedCommands ) {
+            if ( current == nullptr || m_GPUBatch->current_batch_full() ||
+                 current->ContextIndex != command->ContextIndex ||
+                 current->TextureIndex != command->TextureIndex ) {
+
+                current               = m_GPUBatch->upload_and_add_batch( copy_pass );
+                current->ContextIndex = command->ContextIndex;
+                current->TextureIndex = command->TextureIndex;
+            }
+
+            StructuredBufferLayout* buffer_data = m_GPUBatch->next_data();
+
+            buffer_data->ContextIndex = command->ContextIndex;
+            buffer_data->Color        = command->Color;
+            buffer_data->Position     = command->Position;
+            buffer_data->OriginOffset = command->OriginOffset;
+            buffer_data->Size         = command->Size;
+            buffer_data->Rotation     = command->Rotation;
+            buffer_data->Depth        = command->Depth;
+            buffer_data->SourceRect   = command->SourceRect;
+        }
+        m_GPUBatch->upload_last( copy_pass );
+
+        SDL_EndGPUCopyPass( copy_pass );
+
+        if ( SDL_SubmitGPUCommandBuffer( gpu_copy_cmd_buf ) == false ) {
+            IE_LOG_ERROR( "SDL_SubmitGPUCommandBuffer failed: {}", SDL_GetError() );
+            return 0;
+        }
+
+        return static_cast<uint32_t>( m_GPUBatch->size() );
+    }
+
+    void Sprite2DPipeline::sort_commands( const CommandList& command_list, bool opaque )
     {
         m_SortedCommands.clear();
 
@@ -211,14 +228,22 @@ namespace InnoEngine
             m_SortedCommands.push_back( &command_list[ i ] );
         }
 
-        std::sort( m_SortedCommands.begin(), m_SortedCommands.end(), []( const Command* a, const Command* b ) {
+        auto command_sort = [ & ]( const Command* a, const Command* b ) {
             if ( a->TextureIndex > b->TextureIndex )
                 return true;
 
-            if ( a->Depth > b->Depth )
-                return true;
+            if ( opaque ) {
+                if ( a->Depth < b->Depth )
+                    return true;
+            }
+            else {
+                if ( a->Depth > b->Depth )
+                    return true;
+            }
 
             return false;
-        } );
+        };
+
+        std::sort( m_SortedCommands.begin(), m_SortedCommands.end(), command_sort );
     }
 }    // namespace InnoEngine

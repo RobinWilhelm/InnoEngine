@@ -50,6 +50,11 @@ namespace InnoEngine
         return m_Specs.Viewport;
     }
 
+    void RenderContext::add_clear( DXSM::Color clear_color )
+    {
+        m_ClearColor = clear_color;
+    }
+
     void RenderContext::add_sprite( const Sprite& sprite ) const
     {
         IE_ASSERT( sprite.m_texture != nullptr );
@@ -78,12 +83,22 @@ namespace InnoEngine
     {
         IE_ASSERT( m_RenderCommandBuffer != nullptr && m_RenderCommandBufferIndex != InvalidRenderCommandBufferIndex );
 
-        Primitive2DPipeline::QuadCommand& cmd = m_RenderCommandBuffer->QuadRenderCommands.emplace_back();
-        populate_command_base( &cmd );
-        cmd.Position = origin_transform( origin, position, size );
-        cmd.Size     = size;
-        cmd.Rotation = DirectX::XMConvertToRadians( rotation );
-        cmd.Color    = color;
+        if ( color.A() == 1.0f ) {
+            Primitive2DPipeline::QuadCommand& cmd = m_RenderCommandBuffer->QuadRenderCommandsOpaque.emplace_back();
+            populate_command_base( &cmd );
+            cmd.Position = origin_transform( origin, position, size );
+            cmd.Size     = size;
+            cmd.Rotation = DirectX::XMConvertToRadians( rotation );
+            cmd.Color    = color;
+        }
+        else {
+            Primitive2DPipeline::QuadCommand& cmd = m_RenderCommandBuffer->QuadRenderCommands.emplace_back();
+            populate_command_base( &cmd );
+            cmd.Position = origin_transform( origin, position, size );
+            cmd.Size     = size;
+            cmd.Rotation = DirectX::XMConvertToRadians( rotation );
+            cmd.Color    = color;
+        }
     }
 
     void RenderContext::add_line( const DXSM::Vector2& start, const DXSM::Vector2& end, float thickness, float edge_fade, const DXSM::Color& color ) const
@@ -172,6 +187,40 @@ namespace InnoEngine
             register_texture( texture );
 
         Sprite2DPipeline::Command& cmd = m_RenderCommandBuffer->SpriteRenderCommands.emplace_back();
+        populate_command_base( &cmd );
+        cmd.TextureIndex = texture->m_RenderCommandBufferIndex;
+        cmd.Size         = { scale.x * texture->m_Specs.Width, scale.y * texture->m_Specs.Height };
+        cmd.Position     = origin_transform( origin, position, cmd.Size );
+        cmd.OriginOffset = cmd.Size * 0.5f;
+        cmd.SourceRect   = source_rect;
+        cmd.Rotation     = DirectX::XMConvertToRadians( rotation );
+        cmd.Color        = color;
+    }
+
+    void RenderContext::add_textured_quad_opaque( Ref<Texture2D> texture, Origin origin, const DXSM::Vector2& position ) const
+    {
+        add_textured_quad( texture, origin, position, { 1.0f, 1.0f }, 0.0f, { 1.0f, 1.0f, 1.0f, 1.0f } );
+    }
+
+    void RenderContext::add_textured_quad_opaque( Ref<Texture2D> texture, Origin origin, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color ) const
+    {
+        add_textured_quad( texture, origin, { 0.0f, 0.0f, 1.0f, 1.0f }, position, scale, rotation, color );
+    }
+
+    void RenderContext::add_textured_quad_opaque( Ref<Texture2D> texture, Origin origin, const DXSM::Vector4& source_rect, const DXSM::Vector2& position ) const
+    {
+        add_textured_quad( texture, origin, source_rect, position, { 1.0f, 1.0f }, 0.0f, { 1.0f, 1.0f, 1.0f, 1.0f } );
+    }
+
+    void RenderContext::add_textured_quad_opaque( Ref<Texture2D> texture, Origin origin, const DXSM::Vector4& source_rect, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color ) const
+    {
+        IE_ASSERT( texture != nullptr );
+        IE_ASSERT( m_RenderCommandBuffer != nullptr && m_RenderCommandBufferIndex != InvalidRenderCommandBufferIndex );
+
+        if ( texture->m_RenderCommandBufferIndex == InvalidRenderCommandBufferIndex )
+            register_texture( texture );
+
+        Sprite2DPipeline::Command& cmd = m_RenderCommandBuffer->SpriteRenderCommandsOpaque.emplace_back();
         populate_command_base( &cmd );
         cmd.TextureIndex = texture->m_RenderCommandBufferIndex;
         cmd.Size         = { scale.x * texture->m_Specs.Width, scale.y * texture->m_Specs.Height };

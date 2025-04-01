@@ -52,18 +52,13 @@ Demoscene::Demoscene( Sandbox* parent ) :
     IE::RenderContextSpecifications render_ctx_scene = {};
     render_ctx_scene.ColorTarget                     = IE::Texture2D::create( spec ).value();
     render_ctx_scene.Camera                          = IE::OrthographicCamera::create( { viewport_size.x, viewport_size.y } );
-    render_ctx_scene.Viewport                        = IE::Viewport( window->width() / 2 - viewport_size.x / 2, 100, viewport_size.x, viewport_size.y );
+    render_ctx_scene.Viewport                        = IE::Viewport( 0, 0, viewport_size.x, viewport_size.y );
     m_SceneCtxHandle                                 = m_Parent->get_renderer()->create_rendercontext( render_ctx_scene );
 
     m_Parent->register_camera( render_ctx_scene.Camera );
 
     auto scene_camera_controller = IE::DefaultCameraController::create( render_ctx_scene.Camera, render_ctx_scene.Viewport );
     m_Parent->register_cameracontroller( scene_camera_controller );
-
-    IE::RenderContextSpecifications render_ctx_ui = {};
-    render_ctx_ui.Camera                          = IE::CoreAPI::get_application()->get_default_camera();
-    render_ctx_ui.Viewport                        = IE::CoreAPI::get_application()->get_fullscreen_viewport();
-    m_UICtxHandle                                 = m_Parent->get_renderer()->create_rendercontext( render_ctx_ui );
 }
 
 void Demoscene::update( double delta_time )
@@ -93,24 +88,28 @@ void Demoscene::render( float interp_factor, IE::GPURenderer* renderer )
     (void)interp_factor;
     renderer->set_clear_color( { 0.0f, 0.0f, 0.0f, 1.0f } );
 
-    const IE::RenderContext* fullscreen_ctx = renderer->acquire_rendercontext( m_UICtxHandle );
+    const IE::RenderContext* fullscreen_ctx = renderer->acquire_rendercontext( m_Parent->get_fullscreen_rch() );
     if ( fullscreen_ctx ) {
         fullscreen_ctx->add_text_centered( m_testFont, { 1920 / 2.0f, 50.0f }, 40, "InnoEngine Demoscene", m_textColor );
+
+        fullscreen_ctx->add_quad(IE::Origin::TopLeft, {1920 / 2.0f - 1280 / 2.0f, 200}, {1280, 720}, 0.0f, {0.0f, 1.0f, 0.0f, 1.0f});
+        fullscreen_ctx->add_quad(IE::Origin::TopLeft, {1920 / 2.0f - 1280 / 2.0f, 200}, {1280, 720}, 0.0f, {1.0f, 0.0f, 0.0f, 0.5f});
+        //fullscreen_ctx->add_quad(IE::Origin::TopLeft, {1920 / 2.0f - 1280 / 2.0f, 200}, {1280, 720}, 0.0f, {0.0f, 0.0f, 1.0f, 0.3f});
     }
 
-    const IE::RenderContext* scene_ctx = renderer->acquire_rendercontext( m_SceneCtxHandle );
+
+
+    /*
+    IE::RenderContext* scene_ctx = renderer->acquire_rendercontext( m_SceneCtxHandle );
     if ( scene_ctx ) {
-        if ( fullscreen_ctx ) {
-            fullscreen_ctx->add_quad( IE::Origin::TopLeft, { scene_ctx->get_viewport().LeftOffset, scene_ctx->get_viewport().TopOffset }, { scene_ctx->get_viewport().Width, scene_ctx->get_viewport().Height }, 0.0f, { 0.0f, 1.0f, 0.0f, 1.0f } );
-        }
 
         IE::RenderContext::next_depth_layer();
-        for ( int i = 0; i < 10000; ++i ) {
-            scene_ctx->add_text( m_testFont, m_positions[ i ], m_scales[ i ] * 20, "Hello there!", m_colors[ i ] );
-        }
+        scene_ctx->add_clear( { 0.0f, 0.0f, 0.0f, 1.0f } );
 
-        fullscreen_ctx->add_textured_quad( scene_ctx->get_rendertarget(), IE::Origin::TopLeft, { 0.0f, 0.0f, 1.0f, 1.0f }, { scene_ctx->get_viewport().LeftOffset, scene_ctx->get_viewport().TopOffset } );
+               IE::RenderContext::next_depth_layer();
+        // fullscreen_ctx->add_textured_quad( scene_ctx->get_rendertarget(), IE::Origin::TopLeft, { 0.0f, 0.0f, 1.0f, 1.0f }, { 1920 / 2.0f - scene_ctx->get_viewport().Width / 2.0f, 200 } );
     }
+    */
 }
 
 bool Demoscene::handle_event( const SDL_Event& event )

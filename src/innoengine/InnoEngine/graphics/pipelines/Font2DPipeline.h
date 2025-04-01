@@ -52,13 +52,15 @@ namespace InnoEngine
         ~Font2DPipeline();
 
         Result   initialize( GPURenderer* renderer, AssetManager* assetmanager );
-        void     prepare_render( const CommandList& command_list, const FontList& texture_list, const StringArena& string_buffer );
+        uint32_t prepare_render_opaque( const CommandList& command_list, const FontList& texture_list, const StringArena& string_buffer );
+        uint32_t prepare_render( const CommandList& command_list, const FontList& texture_list, const StringArena& string_buffer );
         uint32_t swapchain_render( const RenderContextFrameData& render_ctx_data,
                                    const FontList&               texture_list,
                                    SDL_GPURenderPass*            render_pass );
 
     private:
-        void sort_commands( const CommandList& command_list );
+        uint32_t prepare_batches( const FontList& font_list, const StringArena& string_buffer );
+        void     sort_commands( const CommandList& command_list, bool opaque );
 
     private:
         bool                     m_Initialized = false;

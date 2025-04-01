@@ -46,6 +46,8 @@ namespace InnoEngine
         Ref<Camera>     get_camera() const;
         const Viewport& get_viewport() const;
 
+        void add_clear( DXSM::Color clear_color );
+
         void add_sprite( const Sprite& sprite ) const;
         void add_pixel( const DXSM::Vector2& position, const DXSM::Color& color ) const;
         void add_quad( Origin origin, const DXSM::Vector2& position, const DXSM::Vector2& size, float rotation, const DXSM::Color& color ) const;
@@ -58,6 +60,11 @@ namespace InnoEngine
         void add_textured_quad( Ref<Texture2D> texture, Origin origin, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color ) const;
         void add_textured_quad( Ref<Texture2D> texture, Origin origin, const DXSM::Vector4& source_rect, const DXSM::Vector2& position ) const;
         void add_textured_quad( Ref<Texture2D> texture, Origin origin, const DXSM::Vector4& source_rect, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color ) const;
+
+        void add_textured_quad_opaque( Ref<Texture2D> texture, Origin origin, const DXSM::Vector2& position ) const;
+        void add_textured_quad_opaque( Ref<Texture2D> texture, Origin origin, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color ) const;
+        void add_textured_quad_opaque( Ref<Texture2D> texture, Origin origin, const DXSM::Vector4& source_rect, const DXSM::Vector2& position ) const;
+        void add_textured_quad_opaque( Ref<Texture2D> texture, Origin origin, const DXSM::Vector4& source_rect, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color ) const;
 
         void add_text( const Ref<Font> font, const DXSM::Vector2& position, uint32_t text_size, std::string_view text, const DXSM::Color& color ) const;
         void add_text_centered( const Ref<Font> font, const DXSM::Vector2& position, uint32_t text_size, std::string_view text, const DXSM::Color& color ) const;    // recalculates text size every time
@@ -77,6 +84,8 @@ namespace InnoEngine
     private:
         GPURenderer*                m_Renderer = nullptr;
         RenderContextSpecifications m_Specs    = {};
+
+        DXSM::Color m_ClearColor = {};
 
         RenderCommandBufferIndexType m_RenderCommandBufferIndex = InvalidRenderCommandBufferIndex;
         RenderContextCommands*       m_RenderCommandBuffer      = nullptr;    // instance owned by GPURenderer

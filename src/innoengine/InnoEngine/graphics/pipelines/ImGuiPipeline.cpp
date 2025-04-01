@@ -75,7 +75,7 @@ namespace InnoEngine
         return Result::Success;
     }
 
-    void ImGuiPipeline::prepare_render( const CommandData& command_data )
+    uint32_t ImGuiPipeline::prepare_render( const CommandData& command_data )
     {
         IE_ASSERT( m_Device != nullptr );
 
@@ -83,15 +83,15 @@ namespace InnoEngine
         int fb_width  = (int)(command_data.DisplaySize.x * command_data.FrameBufferScale.x);
         int fb_height = (int)(command_data.DisplaySize.y * command_data.FrameBufferScale.y);
         if (fb_width <= 0 || fb_height <= 0 || command_data.TotalVertexCount <= 0)
-            return;
+            return 0;
 
         if (ImGui::GetCurrentContext() == nullptr)
-            return;
+            return 0;
 
         SDL_GPUCommandBuffer* copyCmdbuf = SDL_AcquireGPUCommandBuffer( m_Device );
         if ( copyCmdbuf == nullptr ) {
             IE_LOG_ERROR( "AcquireGPUCommandBuffer failed: {}", SDL_GetError() );
-            return;
+            return 0;
         }
 
         ImGui_ImplSDLGPU3_Data*      bd = (ImGui_ImplSDLGPU3_Data*)ImGui::GetIO().BackendRendererUserData;
@@ -154,8 +154,9 @@ namespace InnoEngine
 
         if ( SDL_SubmitGPUCommandBuffer( copyCmdbuf ) == false ) {
             IE_LOG_ERROR( "SDL_SubmitGPUCommandBuffer failed: {}", SDL_GetError() );
-            return;
+            return 0;
         }
+        return 1;
     }
 
     uint32_t ImGuiPipeline::swapchain_render( const CommandData& command_data, SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass )

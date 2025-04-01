@@ -105,10 +105,15 @@ namespace InnoEngine
             auto input_system_opt = InputSystem::create();
             m_InputSystem         = std::move( input_system_opt.value() );
 
-            m_FullscreenDefaultViewport = Viewport( 0, 0, static_cast<float>( m_Window->width() ), static_cast<float>( m_Window->height() ));
+            m_FullscreenDefaultViewport = Viewport( 0, 0, static_cast<float>( m_Window->width() ), static_cast<float>( m_Window->height() ) );
 
             m_DefaultCamera = OrthographicCamera::create( { m_FullscreenDefaultViewport.Width, m_FullscreenDefaultViewport.Height } );
             register_camera( m_DefaultCamera );
+
+            RenderContextSpecifications render_ctx_ui = {};
+            render_ctx_ui.Camera                      = m_DefaultCamera;
+            render_ctx_ui.Viewport                    = m_FullscreenDefaultViewport;
+            m_RCHScreen                               = m_Renderer->create_rendercontext( render_ctx_ui );
 
             on_init_assets( m_AssetManager.get() );
             publish_coreapi();
@@ -324,6 +329,11 @@ namespace InnoEngine
     Ref<Camera> Application::get_default_camera() const
     {
         return m_DefaultCamera;
+    }
+
+    RenderContextHandle Application::get_fullscreen_rch() const
+    {
+        return m_RCHScreen;
     }
 
     void Application::on_synchronize() { }

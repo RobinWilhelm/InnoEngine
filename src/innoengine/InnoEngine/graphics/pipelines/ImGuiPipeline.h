@@ -59,7 +59,7 @@ namespace InnoEngine
 
         // Inherited via GPUPipeline
         Result   initialize( GPURenderer* renderer );
-        void     prepare_render( const CommandData& command_data );
+        uint32_t prepare_render( const CommandData& command_data );
         uint32_t swapchain_render( const CommandData& command_data, SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass );
 
     private:

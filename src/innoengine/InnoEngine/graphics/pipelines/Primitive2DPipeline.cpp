@@ -57,99 +57,30 @@ namespace InnoEngine
         return res;
     }
 
-    void Primitive2DPipeline::prepare_render( const QuadCommandList&   quad_command_list,
-                                              const LineCommandList&   line_command_list,
-                                              const CircleCommandList& circle_command_list )
+    uint32_t Primitive2DPipeline::prepare_render_opaque( const QuadCommandList& quad_command_list, const LineCommandList& line_command_list, const CircleCommandList& circle_command_list )
     {
         IE_ASSERT( m_Device != nullptr );
-        sort_quad_commands( quad_command_list );
-        sort_line_commands( line_command_list );
-        sort_circle_commands( circle_command_list );
-        m_QuadGPUBatch->clear();
-        m_LineGPUBatch->clear();
-        m_CircleGPUBatch->clear();
-
         if ( quad_command_list.size() == 0 && line_command_list.size() == 0 && circle_command_list.size() == 0 )
-            return;
+            return 0;
 
-        SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_Device );
-        if ( gpu_copy_cmd_buf == nullptr ) {
-            IE_LOG_ERROR( "AcquireGPUCommandBuffer failed: {}", SDL_GetError() );
-            return;
-        }
+        sort_quad_commands( quad_command_list, true );
+        sort_line_commands( line_command_list, true );
+        sort_circle_commands( circle_command_list, true );
+        return prepare_batches();
+    }
 
-        SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass( gpu_copy_cmd_buf );
+    uint32_t Primitive2DPipeline::prepare_render( const QuadCommandList&   quad_command_list,
+                                                  const LineCommandList&   line_command_list,
+                                                  const CircleCommandList& circle_command_list )
+    {
+        IE_ASSERT( m_Device != nullptr );
+        if ( quad_command_list.size() == 0 && line_command_list.size() == 0 && circle_command_list.size() == 0 )
+            return 0;
 
-        BatchData* current = nullptr;
-        for ( const QuadCommand* command : m_SortedQuadCommands ) {
-            if ( m_QuadGPUBatch->current_batch_full() ||
-                 current == nullptr ||
-                 current->ContextIndex != command->ContextIndex ) {
-
-                current               = m_QuadGPUBatch->upload_and_add_batch( copy_pass );
-                current->ContextIndex = command->ContextIndex;
-            }
-
-            QuadStorageBufferLayout* buffer_data = m_QuadGPUBatch->next_data();
-
-            buffer_data->ContextIndex = command->ContextIndex;
-            buffer_data->Color        = command->Color;
-            buffer_data->Depth        = command->Depth;
-            buffer_data->Position     = command->Position;
-            buffer_data->Rotation     = command->Rotation;
-            buffer_data->Size         = command->Size;
-        }
-        m_QuadGPUBatch->upload_last( copy_pass );
-
-        current = nullptr;
-        for ( const LineCommand* command : m_SortedLineCommands ) {
-            if ( m_LineGPUBatch->current_batch_full() ||
-                 current == nullptr ||
-                 current->ContextIndex != command->ContextIndex ) {
-
-                current               = m_LineGPUBatch->upload_and_add_batch( copy_pass );
-                current->ContextIndex = command->ContextIndex;
-            }
-
-            LineStorageBufferLayout* buffer_data = m_LineGPUBatch->next_data();
-
-            buffer_data->ContextIndex = command->ContextIndex;
-            buffer_data->Color        = command->Color;
-            buffer_data->Thickness    = command->Thickness;
-            buffer_data->EdgeFade     = command->EdgeFade;
-            buffer_data->Start        = command->Start;
-            buffer_data->End          = command->End;
-            buffer_data->Depth        = command->Depth;
-        }
-        m_LineGPUBatch->upload_last( copy_pass );
-
-        current = nullptr;
-        for ( const CircleCommand* command : m_SortedCircleCommands ) {
-            if ( m_CircleGPUBatch->current_batch_full() ||
-                 current == nullptr ||
-                 current->ContextIndex != command->ContextIndex ) {
-
-                current               = m_CircleGPUBatch->upload_and_add_batch( copy_pass );
-                current->ContextIndex = command->ContextIndex;
-            }
-            CircleStorageBufferLayout* buffer_data = m_CircleGPUBatch->next_data();
-
-            buffer_data->ContextIndex = command->ContextIndex;
-            buffer_data->Color        = command->Color;
-            buffer_data->Depth        = command->Depth;
-            buffer_data->Position     = command->Position;
-            buffer_data->Fade         = command->Fade;
-            buffer_data->Thickness    = command->Thickness;
-            buffer_data->Radius       = command->Radius;
-        }
-        m_CircleGPUBatch->upload_last( copy_pass );
-
-        SDL_EndGPUCopyPass( copy_pass );
-
-        if ( SDL_SubmitGPUCommandBuffer( gpu_copy_cmd_buf ) == false ) {
-            IE_LOG_ERROR( "SDL_SubmitGPUCommandBuffer failed: {}", SDL_GetError() );
-            return;
-        }
+        sort_line_commands( line_command_list, false );
+        sort_quad_commands( quad_command_list, false );
+        sort_circle_commands( circle_command_list, false );
+        return prepare_batches();
     }
 
     uint32_t Primitive2DPipeline::swapchain_render( const RenderContextFrameData& render_ctx_data, SDL_GPURenderPass* render_pass )
@@ -189,10 +120,13 @@ namespace InnoEngine
             }
         }
 
+        m_QuadGPUBatch->clear();
+        m_LineGPUBatch->clear();
+        m_CircleGPUBatch->clear();
         return draw_calls;
     }
 
-    void Primitive2DPipeline::sort_quad_commands( const QuadCommandList& quad_command_list )
+    void Primitive2DPipeline::sort_quad_commands( const QuadCommandList& quad_command_list, bool opaque )
     {
         m_SortedQuadCommands.clear();
 
@@ -203,17 +137,25 @@ namespace InnoEngine
             m_SortedQuadCommands.push_back( &quad_command_list[ i ] );
         }
 
-        std::sort( m_SortedQuadCommands.begin(), m_SortedQuadCommands.end(), []( const QuadCommand* a, const QuadCommand* b ) {
+        auto command_sort = [ & ]( const QuadCommand* a, const QuadCommand* b ) {
             if ( a->ContextIndex > b->ContextIndex )
                 return true;
 
-            if ( a->Depth > b->Depth )
-                return true;
+            if ( opaque ) {
+                if ( a->Depth < b->Depth )
+                    return true;
+            }
+            else {
+                if ( a->Depth > b->Depth )
+                    return true;
+            }
             return false;
-        } );
+        };
+
+        std::sort( m_SortedQuadCommands.begin(), m_SortedQuadCommands.end(), command_sort );
     }
 
-    void Primitive2DPipeline::sort_line_commands( const LineCommandList& line_command_list )
+    void Primitive2DPipeline::sort_line_commands( const LineCommandList& line_command_list, bool opaque )
     {
         m_SortedLineCommands.clear();
 
@@ -224,18 +166,25 @@ namespace InnoEngine
             m_SortedLineCommands.push_back( &line_command_list[ i ] );
         }
 
-        std::sort( m_SortedLineCommands.begin(), m_SortedLineCommands.end(), []( const LineCommand* a, const LineCommand* b ) {
+        auto command_sort = [ & ]( const LineCommand* a, const LineCommand* b ) {
             if ( a->ContextIndex > b->ContextIndex )
                 return true;
 
-            if ( a->Depth > b->Depth )
-                return true;
-
+            if ( opaque ) {
+                if ( a->Depth < b->Depth )
+                    return true;
+            }
+            else {
+                if ( a->Depth > b->Depth )
+                    return true;
+            }
             return false;
-        } );
+        };
+
+        std::sort( m_SortedLineCommands.begin(), m_SortedLineCommands.end(), command_sort );
     }
 
-    void Primitive2DPipeline::sort_circle_commands( const CircleCommandList& circle_command_list )
+    void Primitive2DPipeline::sort_circle_commands( const CircleCommandList& circle_command_list, bool opaque )
     {
         m_SortedCircleCommands.clear();
 
@@ -246,15 +195,22 @@ namespace InnoEngine
             m_SortedCircleCommands.push_back( &circle_command_list[ i ] );
         }
 
-        std::sort( m_SortedCircleCommands.begin(), m_SortedCircleCommands.end(), []( const CircleCommand* a, const CircleCommand* b ) {
+        auto command_sort = [ & ]( const CircleCommand* a, const CircleCommand* b ) {
             if ( a->ContextIndex > b->ContextIndex )
                 return true;
 
-            if ( a->Depth > b->Depth )
-                return true;
-
+            if ( opaque ) {
+                if ( a->Depth < b->Depth )
+                    return true;
+            }
+            else {
+                if ( a->Depth > b->Depth )
+                    return true;
+            }
             return false;
-        } );
+        };
+
+        std::sort( m_SortedCircleCommands.begin(), m_SortedCircleCommands.end(), command_sort );
     }
 
     Result Primitive2DPipeline::load_quad_pipeline( SDL_Window* sdl_window, AssetRepository<Shader>* shader_repo )
@@ -420,5 +376,93 @@ namespace InnoEngine
 
         m_CircleGPUBatch = GPUBatchStorageBuffer<CircleStorageBufferLayout, BatchData>::create( m_Device, CircleBatchSize );
         return Result::Success;
+    }
+
+    uint32_t Primitive2DPipeline::prepare_batches()
+    {
+        m_QuadGPUBatch->clear();
+        m_LineGPUBatch->clear();
+        m_CircleGPUBatch->clear();
+
+        SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_Device );
+        if ( gpu_copy_cmd_buf == nullptr ) {
+            IE_LOG_ERROR( "AcquireGPUCommandBuffer failed: {}", SDL_GetError() );
+            return 0;
+        }
+
+        SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass( gpu_copy_cmd_buf );
+
+        BatchData* current = nullptr;
+        for ( const QuadCommand* command : m_SortedQuadCommands ) {
+            if ( m_QuadGPUBatch->current_batch_full() ||
+                 current == nullptr ||
+                 current->ContextIndex != command->ContextIndex ) {
+
+                current               = m_QuadGPUBatch->upload_and_add_batch( copy_pass );
+                current->ContextIndex = command->ContextIndex;
+            }
+
+            QuadStorageBufferLayout* buffer_data = m_QuadGPUBatch->next_data();
+
+            buffer_data->ContextIndex = command->ContextIndex;
+            buffer_data->Color        = command->Color;
+            buffer_data->Depth        = command->Depth;
+            buffer_data->Position     = command->Position;
+            buffer_data->Rotation     = command->Rotation;
+            buffer_data->Size         = command->Size;
+        }
+        m_QuadGPUBatch->upload_last( copy_pass );
+
+        current = nullptr;
+        for ( const LineCommand* command : m_SortedLineCommands ) {
+            if ( m_LineGPUBatch->current_batch_full() ||
+                 current == nullptr ||
+                 current->ContextIndex != command->ContextIndex ) {
+
+                current               = m_LineGPUBatch->upload_and_add_batch( copy_pass );
+                current->ContextIndex = command->ContextIndex;
+            }
+
+            LineStorageBufferLayout* buffer_data = m_LineGPUBatch->next_data();
+
+            buffer_data->ContextIndex = command->ContextIndex;
+            buffer_data->Color        = command->Color;
+            buffer_data->Thickness    = command->Thickness;
+            buffer_data->EdgeFade     = command->EdgeFade;
+            buffer_data->Start        = command->Start;
+            buffer_data->End          = command->End;
+            buffer_data->Depth        = command->Depth;
+        }
+        m_LineGPUBatch->upload_last( copy_pass );
+
+        current = nullptr;
+        for ( const CircleCommand* command : m_SortedCircleCommands ) {
+            if ( m_CircleGPUBatch->current_batch_full() ||
+                 current == nullptr ||
+                 current->ContextIndex != command->ContextIndex ) {
+
+                current               = m_CircleGPUBatch->upload_and_add_batch( copy_pass );
+                current->ContextIndex = command->ContextIndex;
+            }
+            CircleStorageBufferLayout* buffer_data = m_CircleGPUBatch->next_data();
+
+            buffer_data->ContextIndex = command->ContextIndex;
+            buffer_data->Color        = command->Color;
+            buffer_data->Depth        = command->Depth;
+            buffer_data->Position     = command->Position;
+            buffer_data->Fade         = command->Fade;
+            buffer_data->Thickness    = command->Thickness;
+            buffer_data->Radius       = command->Radius;
+        }
+        m_CircleGPUBatch->upload_last( copy_pass );
+
+        SDL_EndGPUCopyPass( copy_pass );
+
+        if ( SDL_SubmitGPUCommandBuffer( gpu_copy_cmd_buf ) == false ) {
+            IE_LOG_ERROR( "SDL_SubmitGPUCommandBuffer failed: {}", SDL_GetError() );
+            return 0;
+        }
+
+        return static_cast<uint32_t>(m_QuadGPUBatch->size() + m_LineGPUBatch->size() + m_CircleGPUBatch->size());
     }
 }    // namespace InnoEngine

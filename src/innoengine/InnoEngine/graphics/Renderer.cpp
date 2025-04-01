@@ -68,21 +68,42 @@ namespace InnoEngine
             return Result::Success;
         }
 
-        void prepare( const RenderContextFrameData& render_ctx_data )
+        uint32_t prepare_opaque( const RenderContextFrameData& render_ctx_data )
         {
             IE_ASSERT( m_Initialized );
             IE_ASSERT( render_ctx_data.Index != InvalidRenderCommandBufferIndex );
             const RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
 
-            m_Sprite2DPipeline->prepare_render( render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].SpriteRenderCommands );
+            uint32_t batch_count = 0;
+            batch_count += m_Sprite2DPipeline->prepare_render_opaque( render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].SpriteRenderCommandsOpaque );
 
-            m_PrimitivePipeline->prepare_render( render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].QuadRenderCommands,
-                                                 render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].LineRenderCommands,
-                                                 render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].CircleRenderCommands );
+            batch_count += m_PrimitivePipeline->prepare_render_opaque( render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].QuadRenderCommandsOpaque,
+                                                                       render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].LineRenderCommands,
+                                                                       render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].CircleRenderCommands );
 
-            m_Font2DPipeline->prepare_render( render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].FontRenderCommands,
-                                              render_cmd_buf.FontRegister,
-                                              render_cmd_buf.StringBuffer );
+            batch_count += m_Font2DPipeline->prepare_render_opaque( render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].FontRenderCommands,
+                                                                    render_cmd_buf.FontRegister,
+                                                                    render_cmd_buf.StringBuffer );
+            return batch_count;
+        }
+
+        uint32_t prepare( const RenderContextFrameData& render_ctx_data )
+        {
+            IE_ASSERT( m_Initialized );
+            IE_ASSERT( render_ctx_data.Index != InvalidRenderCommandBufferIndex );
+            const RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
+
+            uint32_t batch_count = 0;
+            batch_count += m_Sprite2DPipeline->prepare_render( render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].SpriteRenderCommands );
+
+            batch_count += m_PrimitivePipeline->prepare_render( render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].QuadRenderCommands,
+                                                                render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].LineRenderCommands,
+                                                                render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].CircleRenderCommands );
+
+            batch_count += m_Font2DPipeline->prepare_render( render_cmd_buf.RenderContextCommands[ render_ctx_data.Index ].FontRenderCommands,
+                                                             render_cmd_buf.FontRegister,
+                                                             render_cmd_buf.StringBuffer );
+            return batch_count;
         }
 
         void render( const RenderContextFrameData& render_ctx_data, SDL_GPURenderPass* render_pass, RenderStatistics& stats )
@@ -102,11 +123,11 @@ namespace InnoEngine
                                                                        render_pass );
         }
 
-        void prepare_imgui()
+        uint32_t prepare_imgui()
         {
             IE_ASSERT( m_Initialized );
             const RenderCommandBuffer& render_cmd_buf = get_command_buffer_for_rendering();
-            m_ImGuiPipeline->prepare_render( render_cmd_buf.ImGuiCommandBuffer );
+            return m_ImGuiPipeline->prepare_render( render_cmd_buf.ImGuiCommandBuffer );
         }
 
         void render_imgui( SDL_GPUCommandBuffer* gpu_cmd_buf, SDL_GPURenderPass* render_pass, RenderStatistics& stats )
@@ -341,7 +362,7 @@ namespace InnoEngine
         ProfileScoped profile_rendercommands( ProfilePoint::ProcessRenderCommands );
 
         IE_ASSERT( m_Initialized );
-        const auto& render_commands = m_pipelineProcessor->get_command_buffer_for_rendering();
+        const RenderCommandBuffer& render_commands = m_pipelineProcessor->get_command_buffer_for_rendering();
 
         IE_ASSERT( m_RenderContextCache.size() <= 256 );
 
@@ -359,88 +380,11 @@ namespace InnoEngine
             return;
         }
 
-        // custom rendertarget passes
-        for ( const auto& render_ctx : render_commands.RenderContextData ) {
-            if ( render_ctx.RenderTarget == nullptr ) {
-                continue;
-            }
-
-            m_pipelineProcessor->prepare( render_ctx );
-
-            SDL_GPUColorTargetInfo color_target = {};
-            color_target.texture                = render_ctx.RenderTarget->get_sdltexture();
-            color_target.clear_color            = { render_ctx.ClearColor.R(), render_ctx.ClearColor.G(), render_ctx.ClearColor.B(), render_ctx.ClearColor.A() };
-            color_target.load_op                = SDL_GPU_LOADOP_CLEAR;
-            color_target.store_op               = SDL_GPU_STOREOP_STORE;
-
-            SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass( gpu_cmd_buf, &color_target, 1, nullptr );
-            SDL_BindGPUVertexStorageBuffers( render_pass, 0, &m_CameraMatrixStorageBuffer, 1 );
-            m_pipelineProcessor->render( render_ctx, render_pass, m_Statistics.get_producer_data() );
-            SDL_EndGPURenderPass( render_pass );
-        }
+        render_custom_passes( gpu_cmd_buf, render_commands );
 
         // main swapchain pass
         if ( has_window() ) {    // only works when a window is associated
-            SDL_GPUTexture* swapchainTexture;
-            {
-                ProfileScoped gpu_swapchain_wait( ProfilePoint::GPUSwapChainWait );
-                if ( !SDL_WaitAndAcquireGPUSwapchainTexture( gpu_cmd_buf, m_Window->get_sdlwindow(), &swapchainTexture, nullptr, nullptr ) ) {
-                    SDL_CancelGPUCommandBuffer( gpu_cmd_buf );
-                    IE_LOG_WARNING( "WaitAndAcquireGPUSwapchainTexture failed : %s", SDL_GetError() );
-                    return;
-                }
-            }
-
-            if ( swapchainTexture != nullptr ) {
-                SDL_GPUDepthStencilTargetInfo depth_stencil_first = {};
-                depth_stencil_first.texture                       = m_DepthTexture;
-                depth_stencil_first.clear_depth                   = 0;
-                depth_stencil_first.load_op                       = SDL_GPU_LOADOP_CLEAR;
-                depth_stencil_first.store_op                      = SDL_GPU_STOREOP_STORE;
-
-                SDL_GPUColorTargetInfo color_target_first = {};
-                color_target_first.texture                = swapchainTexture;
-                color_target_first.clear_color            = { render_commands.ClearColor.R(), render_commands.ClearColor.G(), render_commands.ClearColor.B(), render_commands.ClearColor.A() };
-                color_target_first.load_op                = render_commands.Clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
-                color_target_first.store_op               = SDL_GPU_STOREOP_STORE;
-
-                SDL_GPUDepthStencilTargetInfo depth_stencil = {};
-                depth_stencil.texture                       = m_DepthTexture;
-                depth_stencil.load_op                       = SDL_GPU_LOADOP_LOAD;
-                depth_stencil.store_op                      = SDL_GPU_STOREOP_STORE;
-
-                SDL_GPUColorTargetInfo color_target = {};
-                color_target.texture                = swapchainTexture;
-                color_target.load_op                = SDL_GPU_LOADOP_LOAD;
-                color_target.store_op               = SDL_GPU_STOREOP_STORE;
-
-                bool first_pass = true;
-
-                for ( const auto& render_ctx_data : render_commands.RenderContextData ) {
-                    if ( render_ctx_data.RenderTarget != nullptr )
-                        continue;
-
-                    m_pipelineProcessor->prepare( render_ctx_data );
-                    SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass( gpu_cmd_buf,
-                                                                             first_pass ? &color_target_first : &color_target,
-                                                                             1,
-                                                                             first_pass ? &depth_stencil_first : &depth_stencil );
-
-                    SDL_BindGPUVertexStorageBuffers( render_pass, 0, &m_CameraMatrixStorageBuffer, 1 );
-                    m_pipelineProcessor->render( render_ctx_data, render_pass, m_Statistics.get_producer_data() );
-                    SDL_EndGPURenderPass( render_pass );
-
-                    first_pass = false;
-                }
-
-                SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass( gpu_cmd_buf,
-                                                                         first_pass ? &color_target_first : &color_target,
-                                                                         1,
-                                                                         nullptr );
-                m_pipelineProcessor->prepare_imgui();
-                m_pipelineProcessor->render_imgui( gpu_cmd_buf, render_pass, m_Statistics.get_producer_data() );
-                SDL_EndGPURenderPass( render_pass );
-            }
+            render_swapchain_passes( gpu_cmd_buf, render_commands );
         }
 
         if ( SDL_SubmitGPUCommandBuffer( gpu_cmd_buf ) == false ) {
@@ -476,7 +420,7 @@ namespace InnoEngine
         return static_cast<RenderContextHandle>( m_RenderContextCache.size() + queued_amount );
     }
 
-    const RenderContext* GPURenderer::acquire_rendercontext( RenderContextHandle handle )
+    RenderContext* GPURenderer::acquire_rendercontext( RenderContextHandle handle )
     {
         if ( handle >= m_RenderContextCache.size() )
             return nullptr;
@@ -492,6 +436,7 @@ namespace InnoEngine
         const auto& vp                       = render_ctx->get_viewport();
         render_ctx_data.Viewport             = { vp.LeftOffset, vp.TopOffset, vp.Width, vp.Height, vp.MinDepth, vp.MaxDepth };
         render_ctx_data.RenderTarget         = render_ctx->m_Specs.ColorTarget;
+        render_ctx_data.ClearColor           = render_ctx->m_ClearColor;
         render_ctx_data.ViewProjectionMatrix = render_ctx->get_camera()->get_viewprojectionmatrix();
         render_ctx_data.Index                = index;
 
@@ -619,6 +564,9 @@ namespace InnoEngine
         IE_ASSERT( m_CameraMatrixTransferBuffer != nullptr );
         IE_ASSERT( m_CameraMatrixStorageBuffer != nullptr );
 
+        if(render_ctx_data.size() == 0)
+            return;
+
         DXSM::Matrix* buffer_data = static_cast<DXSM::Matrix*>( SDL_MapGPUTransferBuffer( m_sdlGPUDevice, m_CameraMatrixTransferBuffer, true ) );
 
         for ( const auto render_ctx : render_ctx_data ) {
@@ -645,6 +593,113 @@ namespace InnoEngine
         if ( SDL_SubmitGPUCommandBuffer( gpu_copy_cmd_buf ) == false ) {
             IE_LOG_ERROR( "SDL_SubmitGPUCommandBuffer failed: {}", SDL_GetError() );
             return;
+        }
+    }
+
+    void GPURenderer::render_custom_passes( SDL_GPUCommandBuffer* gpu_cmd_buf, const RenderCommandBuffer& render_cmd_buf )
+    {
+        // custom rendertarget passes
+        for ( const auto& render_ctx : render_cmd_buf.RenderContextData ) {
+            if ( render_ctx.RenderTarget == nullptr ) {
+                continue;
+            }
+
+            if ( m_pipelineProcessor->prepare_opaque( render_ctx ) > 0 ) {
+                SDL_GPUColorTargetInfo color_target = {};
+                color_target.texture                = render_ctx.RenderTarget->get_sdltexture();
+                color_target.clear_color            = { render_ctx.ClearColor.R(), render_ctx.ClearColor.G(), render_ctx.ClearColor.B(), render_ctx.ClearColor.A() };
+                color_target.load_op                = SDL_GPU_LOADOP_CLEAR;
+                color_target.store_op               = SDL_GPU_STOREOP_STORE;
+
+                SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass( gpu_cmd_buf, &color_target, 1, nullptr );
+                SDL_BindGPUVertexStorageBuffers( render_pass, 0, &m_CameraMatrixStorageBuffer, 1 );
+                m_pipelineProcessor->render( render_ctx, render_pass, m_Statistics.get_producer_data() );
+                SDL_EndGPURenderPass( render_pass );
+            }
+
+            if ( m_pipelineProcessor->prepare( render_ctx ) > 0 ) {
+                SDL_GPUColorTargetInfo color_target = {};
+                color_target.texture                = render_ctx.RenderTarget->get_sdltexture();
+                color_target.load_op                = SDL_GPU_LOADOP_LOAD;
+                color_target.store_op               = SDL_GPU_STOREOP_STORE;
+
+                SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass( gpu_cmd_buf, &color_target, 1, nullptr );
+                SDL_BindGPUVertexStorageBuffers( render_pass, 0, &m_CameraMatrixStorageBuffer, 1 );
+                m_pipelineProcessor->render( render_ctx, render_pass, m_Statistics.get_producer_data() );
+                SDL_EndGPURenderPass( render_pass );
+            }
+        }
+    }
+
+    void GPURenderer::render_swapchain_passes( SDL_GPUCommandBuffer* gpu_cmd_buf, const RenderCommandBuffer& render_cmd_buf )
+    {
+        SDL_GPUTexture* swapchainTexture = nullptr;
+        {
+            ProfileScoped gpu_swapchain_wait( ProfilePoint::GPUSwapChainWait );
+            if ( !SDL_WaitAndAcquireGPUSwapchainTexture( gpu_cmd_buf, m_Window->get_sdlwindow(), &swapchainTexture, nullptr, nullptr ) ) {
+                SDL_CancelGPUCommandBuffer( gpu_cmd_buf );
+                IE_LOG_WARNING( "WaitAndAcquireGPUSwapchainTexture failed : %s", SDL_GetError() );
+                return;
+            }
+        }
+
+        if ( swapchainTexture != nullptr ) {
+            SDL_GPUDepthStencilTargetInfo depth_stencil = {};
+            depth_stencil.texture                       = m_DepthTexture;
+            depth_stencil.clear_depth                   = 0;
+            depth_stencil.load_op                       = SDL_GPU_LOADOP_CLEAR;
+            depth_stencil.store_op                      = SDL_GPU_STOREOP_STORE;
+
+            SDL_GPUColorTargetInfo color_target = {};
+            color_target.texture                = swapchainTexture;
+            color_target.clear_color            = { render_cmd_buf.ClearColor.R(), render_cmd_buf.ClearColor.G(), render_cmd_buf.ClearColor.B(), render_cmd_buf.ClearColor.A() };
+            color_target.load_op                = render_cmd_buf.Clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
+            color_target.store_op               = SDL_GPU_STOREOP_STORE;
+
+            // opaque passes
+            for ( const auto& render_ctx_data : render_cmd_buf.RenderContextData ) {
+                if ( render_ctx_data.RenderTarget != nullptr )
+                    continue;
+
+                uint32_t batch_count = m_pipelineProcessor->prepare_opaque( render_ctx_data );
+                if ( batch_count == 0 )
+                    continue;
+
+                SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass( gpu_cmd_buf, &color_target, 1, &depth_stencil );
+                SDL_BindGPUVertexStorageBuffers( render_pass, 0, &m_CameraMatrixStorageBuffer, 1 );
+                m_pipelineProcessor->render( render_ctx_data, render_pass, m_Statistics.get_producer_data() );
+                SDL_EndGPURenderPass( render_pass );
+
+                depth_stencil.texture  = m_DepthTexture;
+                depth_stencil.load_op  = SDL_GPU_LOADOP_LOAD;
+                depth_stencil.store_op = SDL_GPU_STOREOP_STORE;
+
+                color_target.texture  = swapchainTexture;
+                color_target.load_op  = SDL_GPU_LOADOP_LOAD;
+                color_target.store_op = SDL_GPU_STOREOP_STORE;
+            }
+
+            // alpha passes
+            for ( const auto& render_ctx_data : render_cmd_buf.RenderContextData ) {
+                if ( render_ctx_data.RenderTarget != nullptr )
+                    continue;
+
+                uint32_t batch_count = m_pipelineProcessor->prepare( render_ctx_data );
+                if ( batch_count == 0 )
+                    continue;
+
+                SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass( gpu_cmd_buf, &color_target, 1, &depth_stencil );
+                SDL_BindGPUVertexStorageBuffers( render_pass, 0, &m_CameraMatrixStorageBuffer, 1 );
+                m_pipelineProcessor->render( render_ctx_data, render_pass, m_Statistics.get_producer_data() );
+                SDL_EndGPURenderPass( render_pass );
+            }
+
+            // render imgui always topmost and without depth testing
+            if ( m_pipelineProcessor->prepare_imgui() > 0 ) {
+                SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass( gpu_cmd_buf, &color_target, 1, nullptr );
+                m_pipelineProcessor->render_imgui( gpu_cmd_buf, render_pass, m_Statistics.get_producer_data() );
+                SDL_EndGPURenderPass( render_pass );
+            }
         }
     }
 

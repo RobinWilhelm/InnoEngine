@@ -57,19 +57,23 @@ namespace InnoEngine
         Sprite2DPipeline() = default;
         ~Sprite2DPipeline();
 
-        Result   initialize( GPURenderer* renderer, AssetManager* assetmanager );
-        void     prepare_render( const CommandList& command_list );
+        Result initialize( GPURenderer* renderer, AssetManager* assetmanager );
+
+        uint32_t prepare_render_opaque( const CommandList& command_list );
+        uint32_t prepare_render( const CommandList& command_list );
         uint32_t swapchain_render( const RenderContextFrameData& render_ctx_data,
                                    const TextureList&            texture_list,
                                    SDL_GPURenderPass*            renderPass );
 
     private:
-        void sort_commands( const CommandList& command_list );
+        uint32_t prepare_batches();
+        void     sort_commands( const CommandList& command_list, bool opaque );
 
     private:
         bool                     m_Initialized    = false;
         GPUDeviceRef             m_Device         = nullptr;
         SDL_GPUGraphicsPipeline* m_Pipeline       = nullptr;
+        SDL_GPUGraphicsPipeline* m_PipelineOpaque = nullptr;
         SDL_GPUSampler*          m_DefaultSampler = nullptr;
 
         std::vector<const Command*> m_SortedCommands;    // objects owned by the RenderCommandBuffer

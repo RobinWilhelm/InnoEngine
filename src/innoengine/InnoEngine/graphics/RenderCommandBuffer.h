@@ -26,6 +26,9 @@ namespace InnoEngine
         StringArena* StringBuffer    = nullptr;    // owned by RenderCommandBuffer
         FontList*    FontRegister    = nullptr;    // owned by RenderCommandBuffer
 
+        SpriteCommandBuffer SpriteRenderCommandsOpaque;
+        QuadCommandBuffer   QuadRenderCommandsOpaque;
+
         SpriteCommandBuffer SpriteRenderCommands;
         QuadCommandBuffer   QuadRenderCommands;
         LineCommandBuffer   LineRenderCommands;

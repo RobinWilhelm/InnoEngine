@@ -5,6 +5,7 @@
 #include "InnoEngine/graphics/Window.h"
 #include "InnoEngine/utility/Profiler.h"
 #include "InnoEngine/graphics/Viewport.h"
+#include "InnoEngine/graphics/RenderContext.h"
 
 #include <memory>
 #include <string>
@@ -74,8 +75,10 @@ namespace InnoEngine
         void register_cameracontroller( Ref<CameraController> camera_controller );
         void unregister_cameracontroller( Ref<CameraController> camera_controller );
 
-        const Viewport&    get_fullscreen_viewport() const;
-        Ref<Camera>        get_default_camera() const;
+        const Viewport& get_fullscreen_viewport() const;
+        Ref<Camera>     get_default_camera() const;
+
+        RenderContextHandle get_fullscreen_rch() const;
 
     private:
         virtual void   on_init_assets( AssetManager* assetmanager ) = 0;
@@ -111,6 +114,7 @@ namespace InnoEngine
         std::vector<Ref<CameraController>> m_CameraControllers;
         Viewport                           m_FullscreenDefaultViewport;
         Ref<Camera>                        m_DefaultCamera;
+        RenderContextHandle                m_RCHScreen;
 
         bool             m_InitializationSucceded = false;
         std::atomic_bool m_MustQuit               = false;

@@ -112,18 +112,64 @@ namespace InnoEngine
         return Result::Success;
     }
 
-    void Font2DPipeline::prepare_render( const CommandList& command_list, const FontList& font_list, const StringArena& string_buffer )
+    uint32_t Font2DPipeline::prepare_render_opaque( const CommandList& command_list, const FontList& font_list, const StringArena& string_buffer )
     {
         IE_ASSERT( m_Device != nullptr );
-        sort_commands( command_list );
+        if ( command_list.size() == 0 )
+            return 0;
+
+        sort_commands( command_list, true );
+        return prepare_batches( font_list, string_buffer );
+    }
+
+    uint32_t Font2DPipeline::prepare_render( const CommandList& command_list, const FontList& font_list, const StringArena& string_buffer )
+    {
+        IE_ASSERT( m_Device != nullptr );
+        if ( command_list.size() == 0 )
+            return 0;
+
+        sort_commands( command_list, false );
+        return prepare_batches( font_list, string_buffer );
+    }
+
+    uint32_t Font2DPipeline::swapchain_render( const RenderContextFrameData& render_ctx_data, const FontList& font_list, SDL_GPURenderPass* render_pass )
+    {
+        IE_ASSERT( m_Device != nullptr );
+        IE_ASSERT( render_pass != nullptr );
+
+        SDL_BindGPUGraphicsPipeline( render_pass, m_Pipeline );
+        SDL_BindGPUVertexBuffers( render_pass, 0, nullptr, 0 );
+        SDL_SetGPUViewport( render_pass, &render_ctx_data.Viewport );
+
+        RenderCommandBufferIndexType current_font = InvalidRenderCommandBufferIndex;
+
+        uint32_t draw_calls = 0;
+        for ( const auto& batch_data : m_GPUBatch->get_batchlist() ) {
+            if ( batch_data.CustomData.FontFBIndex != current_font ) {
+                SDL_GPUTextureSamplerBinding texture_sampler_binding = {};
+                texture_sampler_binding.sampler                      = m_FontSampler;
+                texture_sampler_binding.texture                      = font_list[ batch_data.CustomData.FontFBIndex ]->get_atlas_texture()->get_sdltexture();
+                SDL_BindGPUFragmentSamplers( render_pass, 0, &texture_sampler_binding, 1 );
+                current_font = batch_data.CustomData.FontFBIndex;
+            }
+
+            SDL_BindGPUVertexStorageBuffers( render_pass, 1, &batch_data.GPUBuffer, 1 );
+            SDL_DrawGPUPrimitives( render_pass, batch_data.Count * 6, 1, 0, 0 );
+            ++draw_calls;
+        }
+
+        m_GPUBatch->clear();
+        return draw_calls;
+    }
+
+    uint32_t Font2DPipeline::prepare_batches( const FontList& font_list, const StringArena& string_buffer )
+    {
         m_GPUBatch->clear();
 
-        if ( command_list.size() == 0 )
-            return;
         SDL_GPUCommandBuffer* gpu_copy_cmd_buf = SDL_AcquireGPUCommandBuffer( m_Device );
         if ( gpu_copy_cmd_buf == nullptr ) {
             IE_LOG_ERROR( "AcquireGPUCommandBuffer failed: {}", SDL_GetError() );
-            return;
+            return 0;
         }
 
         SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass( gpu_copy_cmd_buf );
@@ -241,39 +287,13 @@ namespace InnoEngine
 
         if ( SDL_SubmitGPUCommandBuffer( gpu_copy_cmd_buf ) == false ) {
             IE_LOG_ERROR( "SDL_SubmitGPUCommandBuffer failed: {}", SDL_GetError() );
-            return;
+            return 0;
         }
+
+        return static_cast<uint32_t>(m_GPUBatch->size());
     }
 
-    uint32_t Font2DPipeline::swapchain_render( const RenderContextFrameData& render_ctx_data, const FontList& font_list, SDL_GPURenderPass* render_pass )
-    {
-        IE_ASSERT( m_Device != nullptr );
-        IE_ASSERT( render_pass != nullptr );
-
-        SDL_BindGPUGraphicsPipeline( render_pass, m_Pipeline );
-        SDL_BindGPUVertexBuffers( render_pass, 0, nullptr, 0 );
-        SDL_SetGPUViewport( render_pass, &render_ctx_data.Viewport );
-
-        RenderCommandBufferIndexType current_font = InvalidRenderCommandBufferIndex;
-
-        uint32_t draw_calls = 0;
-        for ( const auto& batch_data : m_GPUBatch->get_batchlist() ) {
-            if ( batch_data.CustomData.FontFBIndex != current_font ) {
-                SDL_GPUTextureSamplerBinding texture_sampler_binding = {};
-                texture_sampler_binding.sampler                      = m_FontSampler;
-                texture_sampler_binding.texture                      = font_list[ batch_data.CustomData.FontFBIndex ]->get_atlas_texture()->get_sdltexture();
-                SDL_BindGPUFragmentSamplers( render_pass, 0, &texture_sampler_binding, 1 );
-                current_font = batch_data.CustomData.FontFBIndex;
-            }
-
-            SDL_BindGPUVertexStorageBuffers( render_pass, 1, &batch_data.GPUBuffer, 1 );
-            SDL_DrawGPUPrimitives( render_pass, batch_data.Count * 6, 1, 0, 0 );
-            ++draw_calls;
-        }
-        return draw_calls;
-    }
-
-    void Font2DPipeline::sort_commands( const CommandList& command_list )
+    void Font2DPipeline::sort_commands( const CommandList& command_list, bool opaque )
     {
         m_SortedCommands.clear();
 
@@ -284,17 +304,21 @@ namespace InnoEngine
             m_SortedCommands.push_back( &command_list[ i ] );
         }
 
-        std::sort( m_SortedCommands.begin(), m_SortedCommands.end(), []( const Command* a, const Command* b ) {
-            if ( a->ContextIndex > b->ContextIndex )
-                return true;
-
+        auto command_sort = [ & ]( const Command* a, const Command* b ) {
             if ( a->FontFBIndex > b->FontFBIndex )
                 return true;
 
-            if ( a->Depth > b->Depth )
-                return true;
-
+            if ( opaque ) {
+                if ( a->Depth < b->Depth )
+                    return true;
+            }
+            else {
+                if ( a->Depth > b->Depth )
+                    return true;
+            }
             return false;
-        } );
+        };
+
+        std::sort( m_SortedCommands.begin(), m_SortedCommands.end(), command_sort );
     }
 }    // namespace InnoEngine

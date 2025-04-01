@@ -71,8 +71,8 @@ namespace InnoEngine
         void begin_collection();
         void end_collection();
 
-        RenderContextHandle  create_rendercontext( RenderContextSpecifications specs );
-        const RenderContext* acquire_rendercontext( RenderContextHandle handle );
+        RenderContextHandle create_rendercontext( RenderContextSpecifications specs );
+        RenderContext*      acquire_rendercontext( RenderContextHandle handle );
 
         void set_clear_color( DXSM::Color color );    // the color the swapchain texture should be cleared to at the begin of the frame
         void add_imgui_draw_data( ImDrawData* draw_data );
@@ -87,6 +87,9 @@ namespace InnoEngine
 
         Result create_camera_transformation_buffers();
         void   upload_camera_transformations( const std::vector<RenderContextFrameData>& render_ctx_data );
+
+        void render_custom_passes( SDL_GPUCommandBuffer* gpu_cmd_buf, const RenderCommandBuffer& render_cmd_buf );
+        void render_swapchain_passes( SDL_GPUCommandBuffer* gpu_cmd_buf, const RenderCommandBuffer& render_cmd_buf );
 
     private:
         bool m_Initialized  = false;

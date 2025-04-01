@@ -94,20 +94,25 @@ namespace InnoEngine
         ~Primitive2DPipeline();
 
         Result   initialize( GPURenderer* renderer, AssetManager* asset_manager );
-        void     prepare_render( const QuadCommandList&   quad_command_list,
+        uint32_t prepare_render_opaque( const QuadCommandList&   quad_command_list,
+                                        const LineCommandList&   line_command_list,
+                                        const CircleCommandList& circle_command_list );
+        uint32_t prepare_render( const QuadCommandList&   quad_command_list,
                                  const LineCommandList&   line_command_list,
                                  const CircleCommandList& circle_command_list );
         uint32_t swapchain_render( const RenderContextFrameData& render_ctx_data,
                                    SDL_GPURenderPass*            render_pass );
 
-        void sort_quad_commands( const QuadCommandList& quad_command_list );
-        void sort_line_commands( const LineCommandList& quad_command_list );
-        void sort_circle_commands( const CircleCommandList& circle_command_list );
+        void sort_quad_commands( const QuadCommandList& quad_command_list, bool opaque );
+        void sort_line_commands( const LineCommandList& quad_command_list, bool opaque );
+        void sort_circle_commands( const CircleCommandList& circle_command_list, bool opaque );
 
     private:
         Result load_quad_pipeline( SDL_Window* sdl_window, AssetRepository<Shader>* shader_repo );
         Result load_line_pipeline( SDL_Window* sdl_window, AssetRepository<Shader>* shader_repo );
         Result load_circle_pipeline( SDL_Window* sdl_window, AssetRepository<Shader>* shader_repo );
+
+        uint32_t prepare_batches();
 
     private:
         bool         m_Initialized = false;
