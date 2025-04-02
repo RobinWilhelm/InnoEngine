@@ -1,2 +1,3 @@
 add_subdirectory(innoengine)
 add_subdirectory(sandbox)
+add_subdirectory(sample)
