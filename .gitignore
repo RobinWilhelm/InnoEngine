@@ -1,3 +1,5 @@
+scripts/userSetup.ps1
+
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles

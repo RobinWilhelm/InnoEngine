@@ -1,3 +1,0 @@
-if((Get-Variable 'VCPKG_ROOT' -ErrorAction SilentlyContinue) -eq $null){
-    $env:VCPKG_ROOT = "../../../scripts/vcpkg/"
-}
