@@ -1,4 +1,6 @@
-﻿struct Input
+﻿#include "FragmentBase.fragi.hlsl"
+
+struct Input
 {
     float4 Color : TEXCOORD1;
     float2 Local : TEXCOORD2;
@@ -16,5 +18,5 @@ float4 main(Input input) : SV_Target0
         discard;
     
     color.a *= alpha;
-    return color;
+    return calc_final_color(color);
 }

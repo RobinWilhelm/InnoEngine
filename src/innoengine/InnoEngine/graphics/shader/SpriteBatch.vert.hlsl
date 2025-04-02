@@ -1,4 +1,4 @@
-#include "GPUPipelineBase.verti.hlsl"
+#include "VertexBase.verti.hlsl"
 
 struct SpriteData
 {

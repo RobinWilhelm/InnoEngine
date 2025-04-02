@@ -94,7 +94,7 @@ void Demoscene::render( float interp_factor, IE::GPURenderer* renderer )
 
         fullscreen_ctx->add_quad(IE::Origin::TopLeft, {1920 / 2.0f - 1280 / 2.0f, 200}, {1280, 720}, 0.0f, {0.0f, 1.0f, 0.0f, 1.0f});
         fullscreen_ctx->add_quad(IE::Origin::TopLeft, {1920 / 2.0f - 1280 / 2.0f, 200}, {1280, 720}, 0.0f, {1.0f, 0.0f, 0.0f, 0.5f});
-        //fullscreen_ctx->add_quad(IE::Origin::TopLeft, {1920 / 2.0f - 1280 / 2.0f, 200}, {1280, 720}, 0.0f, {0.0f, 0.0f, 1.0f, 0.3f});
+        //fullscreen_ctx->add_quad(IE::Origin::TopLeft, {1920 / 2.0f - 1280 / 2.0f, 200}, {1280, 720}, 0.0f, {0.0f, 0.0f, 1.0f, 0.5f});
     }
 
 

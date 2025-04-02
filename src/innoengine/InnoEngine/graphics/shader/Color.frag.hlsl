@@ -1,3 +1,5 @@
+#include "FragmentBase.fragi.hlsl"
+
 struct Input
 {
     float4 Color : TEXCOORD1;
@@ -5,5 +7,5 @@ struct Input
 
 float4 main(Input input) : SV_Target0
 {   
-    return input.Color;
+    return calc_final_color(input.Color);
 }

@@ -73,6 +73,8 @@ namespace InnoEngine
             render_ctx_cmds.QuadRenderCommands.clear();
             render_ctx_cmds.LineRenderCommands.clear();
             render_ctx_cmds.FontRenderCommands.clear();
+            render_ctx_cmds.SpriteRenderCommandsOpaque.clear();
+            render_ctx_cmds.QuadRenderCommandsOpaque.clear();
         }
         ImGuiCommandBuffer.RenderCommandLists.clear();
 

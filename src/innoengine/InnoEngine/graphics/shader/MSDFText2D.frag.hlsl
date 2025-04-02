@@ -1,3 +1,5 @@
+#include "FragmentBase.fragi.hlsl"
+
 Texture2D<float4> msdf_texture : register(t0, space2);
 SamplerState Sampler : register(s0, space2);
 
@@ -35,5 +37,5 @@ float4 main(Input input) : SV_Target0
     if (opacity == 0.0f)
         discard;
     
-    return lerp(float4(input.Color.rgb, 0.0f), input.Color, opacity);
+    return calc_final_color(lerp(float4(input.Color.rgb, 0.0f), input.Color, opacity));
 }
