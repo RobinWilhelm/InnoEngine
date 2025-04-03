@@ -252,8 +252,8 @@ namespace InnoEngine
 
             depthtexture_createinfo.usage                = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET;
             depthtexture_createinfo.format               = SDL_GPU_TEXTUREFORMAT_D16_UNORM;
-            depthtexture_createinfo.width                = m_Window->width();
-            depthtexture_createinfo.height               = m_Window->height();
+            depthtexture_createinfo.width                = m_Window->get_width();
+            depthtexture_createinfo.height               = m_Window->get_height();
             depthtexture_createinfo.num_levels           = 1;
             depthtexture_createinfo.layer_count_or_depth = 1;
             depthtexture_createinfo.type                 = SDL_GPU_TEXTURETYPE_2D;

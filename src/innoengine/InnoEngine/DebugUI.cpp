@@ -165,15 +165,14 @@ namespace InnoEngine
                     ImGui::EndTabItem();
                 }
 
-                /*
                 if ( ImGui::BeginTabItem( "Camera" ) ) {
-                    Camera*     camera  = CoreAPI::get_camera();
+                    const auto& camera  = app->get_default_camera();
                     const auto& cam_pos = camera->get_position();
 
-                    ImGui::Text( "Position: %.1f %.1f %.1f", cam_pos.x, cam_pos.y, cam_pos.z );
+                    ImGui::Text( "Position: %.1f %.1f %.2f", cam_pos.x, cam_pos.y, cam_pos.z );
                     ImGui::EndTabItem();
                 }
-                  */
+
                 ImGui::EndTabBar();
             }
         }
@@ -353,7 +352,7 @@ namespace InnoEngine
     void DebugUI::imgui_end_frame( GPURenderer* renderer )
     {
         (void)renderer;
-        ImGui::Render();         
+        ImGui::Render();
         renderer->add_imgui_draw_data( ImGui::GetDrawData() );
     }
 }    // namespace InnoEngine

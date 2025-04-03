@@ -11,18 +11,34 @@ namespace InnoEngine
             return std::nullopt;
 
         window->m_params = creationParams;
+
+        if ( SDL_GetWindowSize( window->m_sdlWindow, &window->m_ClientWidth, &window->m_ClientHeight ) == false ) {
+            IE_LOG_CRITICAL( "Window creation failed: {}", SDL_GetError() );
+            return std::nullopt;
+        }
+
         IE_LOG_DEBUG( "Created Window: {} x {}", creationParams.width, creationParams.height );
         return window;
     }
 
-    int Window::width() const
+    int Window::get_width() const
     {
         return static_cast<int>( m_params.width );
     }
 
-    int Window::height() const
+    int Window::get_height() const
     {
         return static_cast<int>( m_params.height );
+    }
+
+    int Window::get_client_width() const
+    {
+        return m_ClientWidth;
+    }
+
+    int Window::get_client_height() const
+    {
+        return m_ClientHeight;
     }
 
     auto Window::get_sdlwindow() const -> SDL_Window*

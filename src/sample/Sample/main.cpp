@@ -1,9 +1,9 @@
-#include "Sandbox.h"
+#include "Sample.h"
 
 int main()
 {
     IE::CreationParams creationParams;
-    creationParams.WindowParams.title  = "Sandbox";
+    creationParams.WindowParams.title  = "Sample game";
     creationParams.WindowParams.width  = 1920;
     creationParams.WindowParams.height = 1080;
     creationParams.EnableVSync         = false;
@@ -12,8 +12,8 @@ int main()
     creationParams.AssetDirectory      = "../assets";
     creationParams.RunAsync            = true;
 
-    Sandbox sandbox;
-    sandbox.init( creationParams );
-    sandbox.enable_debugui(false);
-    return static_cast<int>( sandbox.run() );
+    SampleProject sample;
+    sample.init( creationParams );
+    sample.enable_debugui(true);
+    return static_cast<int>(sample.run() );
 }

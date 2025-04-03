@@ -24,13 +24,19 @@ namespace InnoEngine
         [[nodiscard]]
         static auto create( const CreationParams& creationParams ) -> std::optional<Own<Window>>;
 
-        int         width() const;
-        int         height() const;
+        int get_width() const;
+        int get_height() const;
+
+        int get_client_width() const;
+        int get_client_height() const;
+
         SDL_Window* get_sdlwindow() const;
 
     private:
         CreationParams m_params;
-        SDL_Window*    m_sdlWindow = nullptr;
+        SDL_Window*    m_sdlWindow    = nullptr;
+        int            m_ClientWidth  = 0;
+        int            m_ClientHeight = 0;
     };
 
 }    // namespace InnoEngine

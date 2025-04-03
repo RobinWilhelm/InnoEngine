@@ -9,19 +9,17 @@
 #include "InnoEngine/graphics/Camera.h"
 
 #include "InnoEngine/graphics/Viewport.h"
-#include "InnoEngine/graphics/DefaultCameraController.h"
 #include "InnoEngine/graphics/RenderContext.h"
 
 namespace IE = InnoEngine;
 
-constexpr int sprite_count = 1000000;
+class SampleProject;
+class PlayerCameraController;
 
-class Sandbox;
-
-class Demoscene : public IE::Layer
+class GameScene : public IE::Layer
 {
 public:
-    Demoscene( Sandbox* parent );
+    GameScene( SampleProject* parent );
 
     // Inherited via Layer
     void update( double deltaTime ) override;
@@ -29,22 +27,8 @@ public:
     bool handle_event( const SDL_Event& pEvent ) override;
 
 private:
-    IE::Ref<IE::Font>      m_testFont;
-    IE::Ref<IE::Texture2D> m_testTexture;
-    IE::Sprite             m_testSprite;
+    InnoEngine::Ref<PlayerCameraController> m_CameraController;
 
-    std::vector<DXSM::Vector2> m_positions;
-    std::vector<float>         m_rotations;
-    std::vector<DXSM::Color>   m_colors;
-    std::vector<float>         m_rotationSpeeds;
-    std::vector<float>         m_scales;
-
-    uint64_t    m_colorAnimStart = 0;
-    DXSM::Color m_textColor { 0.0f, 1.0f, 0.0f, 1.0f };
-    float       m_color_h = 0;
-    float       m_color_s = 1.0;
-    float       m_color_v = 1.0;
-
-    IE::RenderContextHandle m_SceneCtxHandle = 0;
-    IE::RenderContextHandle m_UICtxHandle    = 0;
+    const uint32_t m_SceneWidth  = 3000;
+    const uint32_t m_SceneHeight = 6000;
 };

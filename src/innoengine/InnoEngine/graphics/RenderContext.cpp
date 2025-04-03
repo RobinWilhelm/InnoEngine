@@ -287,18 +287,20 @@ namespace InnoEngine
             return new_pos;
             break;
         case InnoEngine::Origin::TopLeft:
-            new_pos += size * 0.5f;
-            break;
-        case InnoEngine::Origin::TopRight:
-            new_pos.x -= size.x * 0.5f;
-            new_pos.y += size.y * 0.5f;
-            break;
-        case InnoEngine::Origin::BottomLeft:
             new_pos.x += size.x * 0.5f;
             new_pos.y -= size.y * 0.5f;
             break;
+        case InnoEngine::Origin::TopRight:
+            new_pos.x -= size.x * 0.5f;
+            new_pos.y -= size.y * 0.5f;
+            break;
+        case InnoEngine::Origin::BottomLeft:
+            new_pos.x += size.x * 0.5f;
+            new_pos.y += size.y * 0.5f;
+            break;
         case InnoEngine::Origin::BottomRight:
-            new_pos -= size * 0.5f;
+            new_pos.x -= size.x * 0.5f;
+            new_pos.y += size.y * 0.5f;
             break;
         default:
             IE_ASSERT( "Invalid origin" );

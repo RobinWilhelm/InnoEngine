@@ -79,6 +79,7 @@ namespace InnoEngine
         void         populate_command_base( RenderCommandBase* cmd_base ) const;
         static float transform_layer_to_depth( uint16_t layer );
 
+        // transform the given coordinates and origin to a origin in the middle for the shaders
         const DXSM::Vector2 origin_transform( Origin origin, const DXSM::Vector2& position, const DXSM::Vector2& size ) const;
 
     private:

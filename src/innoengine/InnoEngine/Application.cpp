@@ -105,7 +105,7 @@ namespace InnoEngine
             auto input_system_opt = InputSystem::create();
             m_InputSystem         = std::move( input_system_opt.value() );
 
-            m_FullscreenDefaultViewport = Viewport( 0, 0, static_cast<float>( m_Window->width() ), static_cast<float>( m_Window->height() ) );
+            m_FullscreenDefaultViewport = Viewport( 0, 0, static_cast<float>( m_Window->get_client_width() ), static_cast<float>( m_Window->get_client_height() ) );
 
             m_DefaultCamera = OrthographicCamera::create( { m_FullscreenDefaultViewport.Width, m_FullscreenDefaultViewport.Height } );
             register_camera( m_DefaultCamera );

@@ -1,11 +1,11 @@
 #include "InnoEngine/Application.h"
 #include "InnoEngine/AssetManager.h"
 
-#include "DemoScene.h"
+#include "MainScene.h"
 
 namespace IE = InnoEngine;
 
-class Sandbox : public IE::Application
+class SampleProject : public IE::Application
 {
 public:
     // Inherited via Application
@@ -14,5 +14,5 @@ public:
     void       on_shutdown() override;
 
 private:
-    IE::Own<Demoscene> m_demoScene;
+    IE::Own<GameScene> m_demoScene;
 };
