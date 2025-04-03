@@ -34,6 +34,7 @@ target_precompile_headers(${NAME} PRIVATE ${INNOENGINE_PCH})
     
 target_include_directories(${NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(${NAME} PRIVATE project_warnings msdf-atlas-gen)
+target_link_libraries(${NAME} PUBLIC box2d)
 
 find_package(Vulkan REQUIRED)
 target_link_libraries(${NAME} PRIVATE Vulkan::Vulkan)
