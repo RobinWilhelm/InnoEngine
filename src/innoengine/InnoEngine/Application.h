@@ -80,6 +80,8 @@ namespace InnoEngine
 
         RenderContextHandle get_fullscreen_rch() const;
 
+        DXSM::Vector2 get_mouse_scene_pos() const;
+
     private:
         virtual void   on_init_assets( AssetManager* assetmanager ) = 0;
         virtual Result on_init()                                    = 0;

@@ -59,10 +59,11 @@ struct QuadData
     float2 Position;
     float2 Size;
     float4 Color;
+    float2 RotationOrigin;
     float Rotation;
     float Depth;
     uint CameraIndex;
-    float pad;
+    float pad[3];
 };
 
 struct type_StructuredBuffer_QuadData
@@ -70,8 +71,8 @@ struct type_StructuredBuffer_QuadData
     QuadData _m0[1];
 };
 
-constant spvUnsafeArray<uint, 6> _48 = spvUnsafeArray<uint, 6>({ 0u, 1u, 2u, 3u, 2u, 1u });
-constant spvUnsafeArray<float2, 4> _53 = spvUnsafeArray<float2, 4>({ float2(0.0), float2(1.0, 0.0), float2(0.0, 1.0), float2(1.0) });
+constant spvUnsafeArray<uint, 6> _47 = spvUnsafeArray<uint, 6>({ 0u, 1u, 2u, 3u, 2u, 1u });
+constant spvUnsafeArray<float2, 4> _52 = spvUnsafeArray<float2, 4>({ float2(0.0), float2(1.0, 0.0), float2(0.0, 1.0), float2(1.0) });
 
 struct main0_out
 {
@@ -82,23 +83,23 @@ struct main0_out
 vertex main0_out main0(const device type_StructuredBuffer_CameraData& CameraDataBuffer [[buffer(0)]], const device type_StructuredBuffer_QuadData& DataBuffer [[buffer(1)]], uint gl_VertexIndex [[vertex_id]])
 {
     main0_out out = {};
-    uint _61 = gl_VertexIndex / 6u;
-    float2 _80 = (_53[_48[gl_VertexIndex % 6u]] - float2(0.5)) * DataBuffer._m0[_61].Size;
-    float2 _91;
-    if (DataBuffer._m0[_61].Rotation != 0.0)
+    uint _60 = gl_VertexIndex / 6u;
+    float2 _80 = _52[_47[gl_VertexIndex % 6u]] * DataBuffer._m0[_60].Size;
+    float2 _93;
+    if (DataBuffer._m0[_60].Rotation != 0.0)
     {
-        float _84 = cos(DataBuffer._m0[_61].Rotation);
-        float _85 = sin(DataBuffer._m0[_61].Rotation);
-        _91 = float2x2(float2(_84, _85), float2(-_85, _84)) * _80;
+        float _85 = cos(DataBuffer._m0[_60].Rotation);
+        float _86 = sin(DataBuffer._m0[_60].Rotation);
+        _93 = (float2x2(float2(_85, _86), float2(-_86, _85)) * (_80 - DataBuffer._m0[_60].RotationOrigin)) + DataBuffer._m0[_60].RotationOrigin;
     }
     else
     {
-        _91 = _80;
+        _93 = _80;
     }
-    float4 _98 = CameraDataBuffer._m0[DataBuffer._m0[_61].CameraIndex].ViewProjectionMatrix * float4(_91 + DataBuffer._m0[_61].Position, DataBuffer._m0[_61].Depth, 1.0);
-    _98.z = DataBuffer._m0[_61].Depth;
-    out.out_var_TEXCOORD1 = DataBuffer._m0[_61].Color;
-    out.gl_Position = _98;
+    float4 _100 = CameraDataBuffer._m0[DataBuffer._m0[_60].CameraIndex].ViewProjectionMatrix * float4(_93 + DataBuffer._m0[_60].Position, DataBuffer._m0[_60].Depth, 1.0);
+    _100.z = DataBuffer._m0[_60].Depth;
+    out.out_var_TEXCOORD1 = DataBuffer._m0[_60].Color;
+    out.gl_Position = _100;
     return out;
 }
 

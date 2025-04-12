@@ -49,25 +49,64 @@ namespace InnoEngine
         void add_clear( DXSM::Color clear_color );
 
         void add_sprite( const Sprite& sprite ) const;
-        void add_pixel( const DXSM::Vector2& position, const DXSM::Color& color ) const;
-        void add_quad( Origin origin, const DXSM::Vector2& position, const DXSM::Vector2& size, float rotation, const DXSM::Color& color ) const;
-        void add_line( const DXSM::Vector2& start, const DXSM::Vector2& end, float thickness, float edge_fade, const DXSM::Color& color ) const;
-        void add_lines( const std::vector<DXSM::Vector2>& points, float thickness, float edge_fade, const DXSM::Color& color, bool loop ) const;
-        void add_circle( const DXSM::Vector2& position, float radius, float edge_fade, const DXSM::Color& color ) const;
-        void add_circle( const DXSM::Vector2& position, float radius, float thickness, float edge_fade, const DXSM::Color& color ) const;
+        void add_pixel( const DXSM::Vector2& position,
+                        const DXSM::Color&   color ) const;
 
-        void add_textured_quad( Ref<Texture2D> texture, Origin origin, const DXSM::Vector2& position ) const;
-        void add_textured_quad( Ref<Texture2D> texture, Origin origin, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color ) const;
-        void add_textured_quad( Ref<Texture2D> texture, Origin origin, const DXSM::Vector4& source_rect, const DXSM::Vector2& position ) const;
-        void add_textured_quad( Ref<Texture2D> texture, Origin origin, const DXSM::Vector4& source_rect, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color ) const;
+        void add_quad( const DXSM::Vector2& position,
+                       Origin               position_origin,
+                       const DXSM::Vector2& size,
+                       const DXSM::Color&   color,
+                       float                rotation        = 0.0f,
+                       const DXSM::Vector2& rotation_origin = { 0.5, 0.5 } ) const;
 
-        void add_textured_quad_opaque( Ref<Texture2D> texture, Origin origin, const DXSM::Vector2& position ) const;
-        void add_textured_quad_opaque( Ref<Texture2D> texture, Origin origin, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color ) const;
-        void add_textured_quad_opaque( Ref<Texture2D> texture, Origin origin, const DXSM::Vector4& source_rect, const DXSM::Vector2& position ) const;
-        void add_textured_quad_opaque( Ref<Texture2D> texture, Origin origin, const DXSM::Vector4& source_rect, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color ) const;
+        void add_line( const DXSM::Vector2& start_position,
+                       const DXSM::Vector2& end_position,
+                       const DXSM::Color&   color,
+                       float                thickness = 1.0f,
+                       float                edge_fade = 0.0f ) const;
 
-        void add_text( const Ref<Font> font, const DXSM::Vector2& position, uint32_t text_size, std::string_view text, const DXSM::Color& color ) const;
-        void add_text_centered( const Ref<Font> font, const DXSM::Vector2& position, uint32_t text_size, std::string_view text, const DXSM::Color& color ) const;    // recalculates text size every time
+        void add_lines( const std::vector<DXSM::Vector2>& points,
+                        const DXSM::Color&                color,
+                        float                             thickness = 1.0f,
+                        float                             edge_fade = 0.0f,
+                        bool                              loop      = false ) const;
+
+        void add_circle( const DXSM::Vector2& center_position,
+                         float                radius,
+                         const DXSM::Color&   color,
+                         float                thickness = 1.0f,
+                         float                edge_fade = 0.0f ) const;
+
+        void add_textured_quad( Ref<Texture2D>       texture,
+                                const DXSM::Vector4& source_rect,
+                                const DXSM::Vector2& position,
+                                Origin               position_origin = Origin::TopLeft,
+                                const DXSM::Vector2& scale           = { 1.0f, 1.0f },
+                                float                rotation        = 0.0f,
+                                const DXSM::Vector2& rotation_origin = { 0.5f, 0.5f },
+                                const DXSM::Color&   color           = { 1.0f, 1.0f, 1.0f, 1.0f } ) const;
+
+        void add_textured_quad_opaque( Ref<Texture2D>       texture,
+                                       const DXSM::Vector4& source_rect,
+                                       const DXSM::Vector2& position,
+                                       Origin               position_origin = Origin::TopLeft,
+                                       const DXSM::Vector2& scale           = { 1.0f, 1.0f },
+                                       float                rotation        = 0.0f,
+                                       const DXSM::Vector2& rotation_origin = { 0.5f, 0.5f },
+                                       const DXSM::Color&   color           = { 1.0f, 1.0f, 1.0f, 1.0f } ) const;
+
+        void add_text( const Ref<Font>      font,
+                       const DXSM::Vector2& position,
+                       uint32_t             text_size,
+                       std::string_view     text,
+                       const DXSM::Color&   color = { 1.0f, 1.0f, 1.0f, 1.0f } ) const;
+
+        // Beware: recalculates text size every time. Its probably better to cache the text size for static texts.
+        void add_text_centered( const Ref<Font>      font,
+                                const DXSM::Vector2& position,
+                                uint32_t             text_size,
+                                std::string_view     text,
+                                const DXSM::Color&   color = { 1.0f, 1.0f, 1.0f, 1.0f } ) const;
 
         static uint16_t get_current_depth_layer();
         static uint16_t next_depth_layer();
@@ -78,9 +117,6 @@ namespace InnoEngine
         void         register_font( Ref<Font> font ) const;
         void         populate_command_base( RenderCommandBase* cmd_base ) const;
         static float transform_layer_to_depth( uint16_t layer );
-
-        // transform the given coordinates and origin to a origin in the middle for the shaders
-        const DXSM::Vector2 origin_transform( Origin origin, const DXSM::Vector2& position, const DXSM::Vector2& size ) const;
 
     private:
         GPURenderer*                m_Renderer = nullptr;

@@ -60,9 +60,9 @@ struct SpriteData
     packed_float4 Color;
     packed_float2 Position;
     packed_float2 Size;
-    packed_float2 OriginOffset;
-    float Depth;
+    packed_float2 RotationOrigin;
     float Rotation;
+    float Depth;
     uint CameraIndex;
     packed_float3 pad;
 };
@@ -87,25 +87,25 @@ vertex main0_out main0(const device type_StructuredBuffer_CameraData& CameraData
     main0_out out = {};
     uint _64 = gl_VertexIndex / 6u;
     uint _65 = gl_VertexIndex % 6u;
-    float2 _87 = (_54[_49[_65]] * float2(DataBuffer._m0[_64].Size)) - float2(DataBuffer._m0[_64].OriginOffset);
-    float2 _98;
+    float2 _86 = _54[_49[_65]] * float2(DataBuffer._m0[_64].Size);
+    float2 _99;
     if (DataBuffer._m0[_64].Rotation != 0.0)
     {
         float _91 = cos(DataBuffer._m0[_64].Rotation);
         float _92 = sin(DataBuffer._m0[_64].Rotation);
-        _98 = float2x2(float2(_91, _92), float2(-_92, _91)) * _87;
+        _99 = (float2x2(float2(_91, _92), float2(-_92, _91)) * (_86 - float2(DataBuffer._m0[_64].RotationOrigin))) + float2(DataBuffer._m0[_64].RotationOrigin);
     }
     else
     {
-        _98 = _87;
+        _99 = _86;
     }
-    spvUnsafeArray<float2, 4> _111 = spvUnsafeArray<float2, 4>({ float2(DataBuffer._m0[_64].SourceRect[0], DataBuffer._m0[_64].SourceRect[1]), float2(DataBuffer._m0[_64].SourceRect[2], DataBuffer._m0[_64].SourceRect[1]), float2(DataBuffer._m0[_64].SourceRect[0], DataBuffer._m0[_64].SourceRect[3]), float2(DataBuffer._m0[_64].SourceRect[2], DataBuffer._m0[_64].SourceRect[3]) });
-    spvUnsafeArray<float2, 4> _62 = _111;
-    float4 _114 = CameraDataBuffer._m0[DataBuffer._m0[_64].CameraIndex].ViewProjectionMatrix * float4(_98 + float2(DataBuffer._m0[_64].Position), DataBuffer._m0[_64].Depth, 1.0);
-    _114.z = DataBuffer._m0[_64].Depth;
+    spvUnsafeArray<float2, 4> _112 = spvUnsafeArray<float2, 4>({ float2(DataBuffer._m0[_64].SourceRect[0], DataBuffer._m0[_64].SourceRect[3]), float2(DataBuffer._m0[_64].SourceRect[2], DataBuffer._m0[_64].SourceRect[3]), float2(DataBuffer._m0[_64].SourceRect[0], DataBuffer._m0[_64].SourceRect[1]), float2(DataBuffer._m0[_64].SourceRect[2], DataBuffer._m0[_64].SourceRect[1]) });
+    spvUnsafeArray<float2, 4> _62 = _112;
+    float4 _115 = CameraDataBuffer._m0[DataBuffer._m0[_64].CameraIndex].ViewProjectionMatrix * float4(_99 + float2(DataBuffer._m0[_64].Position), DataBuffer._m0[_64].Depth, 1.0);
+    _115.z = DataBuffer._m0[_64].Depth;
     out.out_var_TEXCOORD0 = _62[_49[_65]];
     out.out_var_TEXCOORD1 = float4(DataBuffer._m0[_64].Color);
-    out.gl_Position = _114;
+    out.gl_Position = _115;
     return out;
 }
 

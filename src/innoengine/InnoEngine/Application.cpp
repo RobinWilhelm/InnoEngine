@@ -336,6 +336,23 @@ namespace InnoEngine
         return m_RCHScreen;
     }
 
+    DXSM::Vector2 Application::get_mouse_scene_pos() const
+    {
+        IE_ASSERT( m_Window != nullptr );
+        IE_ASSERT( m_DefaultCamera != nullptr );
+        IE_ASSERT( m_InputSystem != nullptr );
+
+        DXSM::Matrix inverse_transform = static_pointer_cast<OrthographicCamera>( m_DefaultCamera )->get_inverted_viewprojectionmatrix();
+
+        // transform mouse_pos from window pos to clipspace pos then reverse the transformation to get scene position
+        DXSM::Vector4 mouse_clip_pos = { m_InputSystem->get_mouse_position().x / ( m_Window->get_client_width() / 2 ) - 1,
+                                         ( m_Window->get_client_height() - m_InputSystem->get_mouse_position().y ) / ( m_Window->get_client_height() / 2.0f ) - 1,
+                                         1.0f, 1.0f };
+
+        DXSM::Vector4 mouse_pos_scene = DXSM::Vector4::Transform( mouse_clip_pos, inverse_transform );
+        return DXSM::Vector2( mouse_pos_scene.x, mouse_pos_scene.y );
+    }
+
     void Application::on_synchronize() { }
 
     void Application::synchronize()

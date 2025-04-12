@@ -6,9 +6,9 @@ struct SpriteData
     float4 Color;
     float2 Position;
     float2 Size;
-    float2 OriginOffset;
+    float2 RotationOrigin;
+    float Rotation;    
     float Depth;
-    float Rotation;
     uint CameraIndex;
     float3 pad;
 };
@@ -29,16 +29,19 @@ Output main(uint id : SV_VertexID)
     uint vert = QuadIndices[id % 6];
     SpriteData sprite = DataBuffer[spriteIndex];
     float2 coord = QuadVertices[vert];
+      
     coord *= sprite.Size;
-    coord -= sprite.OriginOffset;
     
     if (sprite.Rotation != 0.0f)
     {
+        coord -= sprite.RotationOrigin;
+    
         float c = cos(sprite.Rotation);
         float s = sin(sprite.Rotation);    
         
         float2x2 rotation = { c, s, -s, c };
-        coord = mul(coord , rotation) ;
+        coord = mul(coord , rotation);
+        coord += sprite.RotationOrigin;
     }
     
     float4 coord_with_depth = float4(coord + sprite.Position,sprite.Depth, 1.0f);
@@ -46,10 +49,10 @@ Output main(uint id : SV_VertexID)
     
     float2 texcoord[4] =
     {
+        { sprite.SourceRect.x, sprite.SourceRect.w },
+        { sprite.SourceRect.z, sprite.SourceRect.w },
         { sprite.SourceRect.x, sprite.SourceRect.y },
-        {  sprite.SourceRect.z, sprite.SourceRect.y },
-        { sprite.SourceRect.x,  sprite.SourceRect.w },
-        {  sprite.SourceRect.z,  sprite.SourceRect.w }
+        { sprite.SourceRect.z, sprite.SourceRect.y }
     };
             
     Output output;

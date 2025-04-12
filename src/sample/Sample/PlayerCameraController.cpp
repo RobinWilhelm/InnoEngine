@@ -97,6 +97,7 @@ void PlayerCameraController::update( double delta_time )
         m_MouseMove = {};
     }
 
+    /*
     if ( left_border >= right_border )
         camera_pos.x = ( m_BorderRight + m_BorderLeft ) / 2;
     else
@@ -106,7 +107,7 @@ void PlayerCameraController::update( double delta_time )
         camera_pos.y = ( m_BorderTop + m_BorderBottom ) / 2;
     else
         camera_pos.y = std::clamp( camera_pos.y, bottom_border, top_border );
-
+    */
     m_Camera->set_position( camera_pos );
 }
 

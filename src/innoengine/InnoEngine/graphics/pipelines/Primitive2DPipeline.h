@@ -28,6 +28,8 @@ namespace InnoEngine
             DXSM::Vector2 Position;
             DXSM::Vector2 Size;
             DXSM::Color   Color;
+
+            DXSM::Vector2 RotationOrigin;
             float         Rotation;
         };
 
@@ -36,10 +38,12 @@ namespace InnoEngine
             DXSM::Vector2 Position;
             DXSM::Vector2 Size;
             DXSM::Color   Color;
+
+            DXSM::Vector2 RotationOrigin;
             float         Rotation;
             float         Depth;
             uint32_t      ContextIndex;
-            float         pad[ 1 ];
+            float         pad[ 3 ];
         };
 
         struct LineCommand : RenderCommandBase

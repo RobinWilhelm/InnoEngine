@@ -90,10 +90,10 @@ void Demoscene::render( float interp_factor, IE::GPURenderer* renderer )
 
     const IE::RenderContext* fullscreen_ctx = renderer->acquire_rendercontext( m_Parent->get_fullscreen_rch() );
     if ( fullscreen_ctx ) {
-        fullscreen_ctx->add_text_centered( m_testFont, { 1920 / 2.0f, 50.0f }, 40, "InnoEngine Demoscene", m_textColor );
+        //fullscreen_ctx->add_text_centered( m_testFont, { 1920 / 2.0f, 50.0f }, 40, "InnoEngine Demoscene", m_textColor );
 
-        fullscreen_ctx->add_quad(IE::Origin::TopLeft, {1920 / 2.0f - 1280 / 2.0f, 200}, {1280, 720}, 0.0f, {0.0f, 1.0f, 0.0f, 1.0f});
-        fullscreen_ctx->add_quad(IE::Origin::TopLeft, {1920 / 2.0f - 1280 / 2.0f, 200}, {1280, 720}, 0.0f, {1.0f, 0.0f, 0.0f, 0.5f});
+        //fullscreen_ctx->add_quad(IE::Origin::TopLeft, {1920 / 2.0f - 1280 / 2.0f, 200}, {1280, 720}, 0.0f, {0.0f, 1.0f, 0.0f, 1.0f});
+        //fullscreen_ctx->add_quad(IE::Origin::TopLeft, {1920 / 2.0f - 1280 / 2.0f, 200}, {1280, 720}, 0.0f, {1.0f, 0.0f, 0.0f, 0.5f});
         //fullscreen_ctx->add_quad(IE::Origin::TopLeft, {1920 / 2.0f - 1280 / 2.0f, 200}, {1280, 720}, 0.0f, {0.0f, 0.0f, 1.0f, 0.5f});
     }
 

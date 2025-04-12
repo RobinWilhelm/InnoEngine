@@ -77,6 +77,8 @@ namespace InnoEngine
         void set_clear_color( DXSM::Color color );    // the color the swapchain texture should be cleared to at the begin of the frame
         void add_imgui_draw_data( ImDrawData* draw_data );
 
+        Ref<Font> get_debug_font() const;
+
     private:
         void retrieve_shaderformatinfo();
 
@@ -111,5 +113,7 @@ namespace InnoEngine
 
         SDL_GPUTransferBuffer* m_CameraMatrixTransferBuffer = nullptr;
         SDL_GPUBuffer*         m_CameraMatrixStorageBuffer  = nullptr;
+
+        Ref<Font> m_DebugFont;
     };
 }    // namespace InnoEngine

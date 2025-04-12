@@ -199,7 +199,7 @@ namespace InnoEngine
             buffer_data->ContextIndex = command->ContextIndex;
             buffer_data->Color        = command->Color;
             buffer_data->Position     = command->Position;
-            buffer_data->OriginOffset = command->OriginOffset;
+            buffer_data->RotationOrigin = command->RotationOrigin;
             buffer_data->Size         = command->Size;
             buffer_data->Rotation     = command->Rotation;
             buffer_data->Depth        = command->Depth;

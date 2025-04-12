@@ -189,6 +189,10 @@ namespace InnoEngine
             m_RenderContextCache.clear();
             m_RenderContextRegisterQueue.clear();
 
+            if ( m_DebugFont != nullptr ) {
+                m_DebugFont.reset();
+            }
+
             if ( m_Window ) {
                 SDL_ReleaseWindowFromGPUDevice( m_sdlGPUDevice, m_Window->get_sdlwindow() );
                 m_Window = nullptr;
@@ -231,6 +235,7 @@ namespace InnoEngine
         renderer->m_pipelineProcessor = std::make_unique<PipelineProcessor>();
         renderer->retrieve_shaderformatinfo();
         renderer->m_RenderContextCache.reserve( 256 );
+
         return renderer;
     }
 
@@ -268,6 +273,11 @@ namespace InnoEngine
         RETURN_RESULT_IF_FAILED( create_camera_transformation_buffers() );
 
         RETURN_RESULT_IF_FAILED( m_pipelineProcessor->initialize( this, assetmanager ) );
+
+        if ( auto fontOpt = CoreAPI::get_assetmanager()->require_asset<Font>( "Calibri.ttf", true ) ) {
+            m_DebugFont = fontOpt.value().get();
+        }
+
         m_Initialized = true;
         return Result::Success;
     }
@@ -471,6 +481,11 @@ namespace InnoEngine
         }
     }
 
+    Ref<Font> GPURenderer::get_debug_font() const
+    {
+        return m_DebugFont;
+    }
+
     /*
     void GPURenderer::add_bounding_box( const DXSM::Vector4& aabb, const DXSM::Vector2& position, const DXSM::Color& color )
     {
@@ -564,7 +579,7 @@ namespace InnoEngine
         IE_ASSERT( m_CameraMatrixTransferBuffer != nullptr );
         IE_ASSERT( m_CameraMatrixStorageBuffer != nullptr );
 
-        if(render_ctx_data.size() == 0)
+        if ( render_ctx_data.size() == 0 )
             return;
 
         DXSM::Matrix* buffer_data = static_cast<DXSM::Matrix*>( SDL_MapGPUTransferBuffer( m_sdlGPUDevice, m_CameraMatrixTransferBuffer, true ) );

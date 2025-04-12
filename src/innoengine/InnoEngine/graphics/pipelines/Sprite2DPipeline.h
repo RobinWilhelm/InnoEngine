@@ -34,8 +34,8 @@ namespace InnoEngine
             DXSM::Color   Color;
             DXSM::Vector2 Position;
             DXSM::Vector2 Size;
-            DXSM::Vector2 OriginOffset;    // for rotation, in texels
-            float         Rotation;        // in radians
+            DXSM::Vector2 RotationOrigin;    // for rotation, in texels
+            float         Rotation;          // in radians
         };
 
         struct StructuredBufferLayout
@@ -44,9 +44,9 @@ namespace InnoEngine
             DXSM::Color   Color;
             DXSM::Vector2 Position;
             DXSM::Vector2 Size;
-            DXSM::Vector2 OriginOffset;    // for rotation, in texels
-            float         Depth;
+            DXSM::Vector2 RotationOrigin;    // for rotation, in texels
             float         Rotation;    // in radians
+            float         Depth;
             uint32_t      ContextIndex;
             float         pad[ 3 ];
         };

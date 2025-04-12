@@ -23,7 +23,10 @@ namespace InnoEngine
 
     RenderContext::RenderContext( const RenderContext& other )
     {
-        *this = other;
+        m_Renderer                 = other.m_Renderer;
+        m_Specs                    = other.m_Specs;
+        m_RenderCommandBufferIndex = other.m_RenderCommandBufferIndex;
+        m_RenderCommandBuffer      = other.m_RenderCommandBuffer;
     }
 
     RenderContext RenderContext::operator=( const RenderContext& other )
@@ -57,64 +60,68 @@ namespace InnoEngine
 
     void RenderContext::add_sprite( const Sprite& sprite ) const
     {
-        IE_ASSERT( sprite.m_texture != nullptr );
+        IE_ASSERT( sprite.m_Texture != nullptr );
         IE_ASSERT( m_RenderCommandBuffer != nullptr && m_RenderCommandBufferIndex != InvalidRenderCommandBufferIndex );
 
-        if ( sprite.m_texture->m_RenderCommandBufferIndex == InvalidRenderCommandBufferIndex )
-            register_texture( sprite.m_texture );
+        if ( sprite.m_Texture->m_RenderCommandBufferIndex == InvalidRenderCommandBufferIndex )
+            register_texture( sprite.m_Texture );
 
         Sprite2DPipeline::Command& cmd = m_RenderCommandBuffer->SpriteRenderCommands.emplace_back();
         populate_command_base( &cmd );
-        cmd.TextureIndex = sprite.m_texture->m_RenderCommandBufferIndex;
-        cmd.Position     = sprite.m_position;
-        cmd.Size         = { sprite.m_scale.x * sprite.m_texture->m_Specs.Width, sprite.m_scale.y * sprite.m_texture->m_Specs.Height };
-        cmd.OriginOffset = sprite.m_originOffset * cmd.Size;
-        cmd.SourceRect   = sprite.m_sourceRect;
-        cmd.Rotation     = DirectX::XMConvertToRadians( sprite.m_rotationDegrees );
-        cmd.Color        = sprite.m_color;
+        cmd.TextureIndex   = sprite.m_Texture->m_RenderCommandBufferIndex;
+        cmd.Size           = sprite.m_Size;
+        cmd.Position       = sprite.m_RenderPosition;
+        cmd.SourceRect     = sprite.m_SourceRect;
+        cmd.Rotation       = sprite.m_RotationRadians;
+        cmd.RotationOrigin = sprite.m_RotationOffset;
+        cmd.Color          = sprite.m_Color;
     }
 
     void RenderContext::add_pixel( const DXSM::Vector2& position, const DXSM::Color& color ) const
     {
-        add_quad( Origin::TopLeft, position, { 1.0f, 1.0f }, 0.0f, color );
+        add_quad( position, Origin::TopLeft, { 1.0f, 1.0f }, color );
     }
 
-    void RenderContext::add_quad( Origin origin, const DXSM::Vector2& position, const DXSM::Vector2& size, float rotation, const DXSM::Color& color ) const
+    void RenderContext::add_quad( const DXSM::Vector2& position, Origin position_origin, const DXSM::Vector2& size, const DXSM::Color& color, float rotation, const DXSM::Vector2& rotation_origin ) const
     {
         IE_ASSERT( m_RenderCommandBuffer != nullptr && m_RenderCommandBufferIndex != InvalidRenderCommandBufferIndex );
 
         if ( color.A() == 1.0f ) {
             Primitive2DPipeline::QuadCommand& cmd = m_RenderCommandBuffer->QuadRenderCommandsOpaque.emplace_back();
             populate_command_base( &cmd );
-            cmd.Position = origin_transform( origin, position, size );
-            cmd.Size     = size;
-            cmd.Rotation = DirectX::XMConvertToRadians( rotation );
-            cmd.Color    = color;
+            DXSM::Vector2 rotation_offset = rotation_origin * cmd.Size;
+            cmd.Position                  = origin_transform( position_origin, position, size, rotation_offset );
+            cmd.Size                      = size;
+            cmd.Rotation                  = DirectX::XMConvertToRadians( rotation );
+            cmd.RotationOrigin            = rotation_offset;
+            cmd.Color                     = color;
         }
         else {
             Primitive2DPipeline::QuadCommand& cmd = m_RenderCommandBuffer->QuadRenderCommands.emplace_back();
             populate_command_base( &cmd );
-            cmd.Position = origin_transform( origin, position, size );
-            cmd.Size     = size;
-            cmd.Rotation = DirectX::XMConvertToRadians( rotation );
-            cmd.Color    = color;
+            DXSM::Vector2 rotation_offset = rotation_origin * cmd.Size;
+            cmd.Position                  = origin_transform( position_origin, position, size, rotation_offset );
+            cmd.Size                      = size;
+            cmd.Rotation                  = DirectX::XMConvertToRadians( rotation );
+            cmd.RotationOrigin            = rotation_offset;
+            cmd.Color                     = color;
         }
     }
 
-    void RenderContext::add_line( const DXSM::Vector2& start, const DXSM::Vector2& end, float thickness, float edge_fade, const DXSM::Color& color ) const
+    void RenderContext::add_line( const DXSM::Vector2& start_position, const DXSM::Vector2& end_position, const DXSM::Color& color, float thickness, float edge_fade ) const
     {
         IE_ASSERT( m_RenderCommandBuffer != nullptr && m_RenderCommandBufferIndex != InvalidRenderCommandBufferIndex );
 
         Primitive2DPipeline::LineCommand& cmd = m_RenderCommandBuffer->LineRenderCommands.emplace_back();
         populate_command_base( &cmd );
-        cmd.Start     = start;
-        cmd.End       = end;
+        cmd.Start     = start_position;
+        cmd.End       = end_position;
         cmd.Thickness = thickness;
         cmd.EdgeFade  = edge_fade;
         cmd.Color     = color;
     }
 
-    void RenderContext::add_lines( const std::vector<DXSM::Vector2>& points, float thickness, float edge_fade, const DXSM::Color& color, bool loop ) const
+    void RenderContext::add_lines( const std::vector<DXSM::Vector2>& points, const DXSM::Color& color, float thickness, float edge_fade, bool loop ) const
     {
         IE_ASSERT( m_RenderCommandBuffer != nullptr && m_RenderCommandBufferIndex != InvalidRenderCommandBufferIndex );
 
@@ -144,41 +151,21 @@ namespace InnoEngine
         }
     }
 
-    void RenderContext::add_circle( const DXSM::Vector2& position, float radius, float edge_fade, const DXSM::Color& color ) const
-    {
-        add_circle( position, radius, radius, edge_fade, color );
-    }
-
-    void RenderContext::add_circle( const DXSM::Vector2& position, float radius, float thickness, float edge_fade, const DXSM::Color& color ) const
+    void RenderContext::add_circle( const DXSM::Vector2& center_position, float radius, const DXSM::Color& color, float thickness, float edge_fade ) const
     {
         IE_ASSERT( m_RenderCommandBuffer != nullptr && m_RenderCommandBufferIndex != InvalidRenderCommandBufferIndex );
 
         Primitive2DPipeline::CircleCommand& cmd = m_RenderCommandBuffer->CircleRenderCommands.emplace_back();
         populate_command_base( &cmd );
-        cmd.Position.x = position.x - radius;
-        cmd.Position.y = position.y - radius;
+        cmd.Position.x = center_position.x - radius;
+        cmd.Position.y = center_position.y - radius;
         cmd.Color      = color;
         cmd.Radius     = radius;
         cmd.Fade       = edge_fade;
-        cmd.Thickness  = thickness / radius;
+        cmd.Thickness  = thickness;
     }
 
-    void RenderContext::add_textured_quad( Ref<Texture2D> texture, Origin origin, const DXSM::Vector2& position ) const
-    {
-        add_textured_quad( texture, origin, position, { 1.0f, 1.0f }, 0.0f, { 1.0f, 1.0f, 1.0f, 1.0f } );
-    }
-
-    void RenderContext::add_textured_quad( Ref<Texture2D> texture, Origin origin, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color ) const
-    {
-        add_textured_quad( texture, origin, { 0.0f, 0.0f, 1.0f, 1.0f }, position, scale, rotation, color );
-    }
-
-    void RenderContext::add_textured_quad( Ref<Texture2D> texture, Origin origin, const DXSM::Vector4& source_rect, const DXSM::Vector2& position ) const
-    {
-        add_textured_quad( texture, origin, source_rect, position, { 1.0f, 1.0f }, 0.0f, { 1.0f, 1.0f, 1.0f, 1.0f } );
-    }
-
-    void RenderContext::add_textured_quad( Ref<Texture2D> texture, Origin origin, const DXSM::Vector4& source_rect, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color ) const
+    void RenderContext::add_textured_quad( Ref<Texture2D> texture, const DXSM::Vector4& source_rect, const DXSM::Vector2& position, Origin position_origin, const DXSM::Vector2& scale, float rotation, const DXSM::Vector2& rotation_origin, const DXSM::Color& color ) const
     {
         IE_ASSERT( texture != nullptr );
         IE_ASSERT( m_RenderCommandBuffer != nullptr && m_RenderCommandBufferIndex != InvalidRenderCommandBufferIndex );
@@ -189,30 +176,17 @@ namespace InnoEngine
         Sprite2DPipeline::Command& cmd = m_RenderCommandBuffer->SpriteRenderCommands.emplace_back();
         populate_command_base( &cmd );
         cmd.TextureIndex = texture->m_RenderCommandBufferIndex;
-        cmd.Size         = { scale.x * texture->m_Specs.Width, scale.y * texture->m_Specs.Height };
-        cmd.Position     = origin_transform( origin, position, cmd.Size );
-        cmd.OriginOffset = cmd.Size * 0.5f;
-        cmd.SourceRect   = source_rect;
-        cmd.Rotation     = DirectX::XMConvertToRadians( rotation );
-        cmd.Color        = color;
+        cmd.Size         = { scale.x * texture->m_Specs.Width * ( source_rect.z - source_rect.x ), scale.y * texture->m_Specs.Height * ( source_rect.w - source_rect.y ) };
+
+        DXSM::Vector2 rotation_offset = rotation_origin * cmd.Size;
+        cmd.Position                  = origin_transform( position_origin, position, cmd.Size, rotation_offset );
+        cmd.SourceRect                = source_rect;
+        cmd.Rotation                  = DirectX::XMConvertToRadians( rotation );
+        cmd.RotationOrigin            = rotation_offset;
+        cmd.Color                     = color;
     }
 
-    void RenderContext::add_textured_quad_opaque( Ref<Texture2D> texture, Origin origin, const DXSM::Vector2& position ) const
-    {
-        add_textured_quad( texture, origin, position, { 1.0f, 1.0f }, 0.0f, { 1.0f, 1.0f, 1.0f, 1.0f } );
-    }
-
-    void RenderContext::add_textured_quad_opaque( Ref<Texture2D> texture, Origin origin, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color ) const
-    {
-        add_textured_quad( texture, origin, { 0.0f, 0.0f, 1.0f, 1.0f }, position, scale, rotation, color );
-    }
-
-    void RenderContext::add_textured_quad_opaque( Ref<Texture2D> texture, Origin origin, const DXSM::Vector4& source_rect, const DXSM::Vector2& position ) const
-    {
-        add_textured_quad( texture, origin, source_rect, position, { 1.0f, 1.0f }, 0.0f, { 1.0f, 1.0f, 1.0f, 1.0f } );
-    }
-
-    void RenderContext::add_textured_quad_opaque( Ref<Texture2D> texture, Origin origin, const DXSM::Vector4& source_rect, const DXSM::Vector2& position, const DXSM::Vector2& scale, float rotation, const DXSM::Color& color ) const
+    void RenderContext::add_textured_quad_opaque( Ref<Texture2D> texture, const DXSM::Vector4& source_rect, const DXSM::Vector2& position, Origin position_origin, const DXSM::Vector2& scale, float rotation, const DXSM::Vector2& rotation_origin, const DXSM::Color& color ) const
     {
         IE_ASSERT( texture != nullptr );
         IE_ASSERT( m_RenderCommandBuffer != nullptr && m_RenderCommandBufferIndex != InvalidRenderCommandBufferIndex );
@@ -223,12 +197,14 @@ namespace InnoEngine
         Sprite2DPipeline::Command& cmd = m_RenderCommandBuffer->SpriteRenderCommandsOpaque.emplace_back();
         populate_command_base( &cmd );
         cmd.TextureIndex = texture->m_RenderCommandBufferIndex;
-        cmd.Size         = { scale.x * texture->m_Specs.Width, scale.y * texture->m_Specs.Height };
-        cmd.Position     = origin_transform( origin, position, cmd.Size );
-        cmd.OriginOffset = cmd.Size * 0.5f;
-        cmd.SourceRect   = source_rect;
-        cmd.Rotation     = DirectX::XMConvertToRadians( rotation );
-        cmd.Color        = color;
+        cmd.Size         = { scale.x * texture->m_Specs.Width * ( source_rect.z - source_rect.x ), scale.y * texture->m_Specs.Height * ( source_rect.w - source_rect.y ) };
+
+        DXSM::Vector2 rotation_offset = rotation_origin * cmd.Size;
+        cmd.Position                  = origin_transform( position_origin, position, cmd.Size, rotation_offset );
+        cmd.SourceRect                = source_rect;
+        cmd.Rotation                  = DirectX::XMConvertToRadians( rotation );
+        cmd.RotationOrigin            = rotation_offset;
+        cmd.Color                     = color;
     }
 
     void RenderContext::add_text( const Ref<Font> font, const DXSM::Vector2& position, uint32_t text_size, std::string_view text, const DXSM::Color& color ) const
@@ -277,36 +253,6 @@ namespace InnoEngine
     float RenderContext::transform_layer_to_depth( uint16_t layer )
     {
         return layer == 0 ? 0.0f : static_cast<float>( layer ) / 65536.0f;
-    }
-
-    const DXSM::Vector2 RenderContext::origin_transform( Origin origin, const DXSM::Vector2& position, const DXSM::Vector2& size ) const
-    {
-        DXSM::Vector2 new_pos = position;
-        switch ( origin ) {
-        case InnoEngine::Origin::Middle:
-            return new_pos;
-            break;
-        case InnoEngine::Origin::TopLeft:
-            new_pos.x += size.x * 0.5f;
-            new_pos.y -= size.y * 0.5f;
-            break;
-        case InnoEngine::Origin::TopRight:
-            new_pos.x -= size.x * 0.5f;
-            new_pos.y -= size.y * 0.5f;
-            break;
-        case InnoEngine::Origin::BottomLeft:
-            new_pos.x += size.x * 0.5f;
-            new_pos.y += size.y * 0.5f;
-            break;
-        case InnoEngine::Origin::BottomRight:
-            new_pos.x -= size.x * 0.5f;
-            new_pos.y += size.y * 0.5f;
-            break;
-        default:
-            IE_ASSERT( "Invalid origin" );
-            break;
-        }
-        return new_pos;
     }
 
     void RenderContext::register_texture( Ref<Texture2D> texture ) const

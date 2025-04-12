@@ -404,12 +404,13 @@ namespace InnoEngine
 
             QuadStorageBufferLayout* buffer_data = m_QuadGPUBatch->next_data();
 
-            buffer_data->ContextIndex = command->ContextIndex;
-            buffer_data->Color        = command->Color;
-            buffer_data->Depth        = command->Depth;
-            buffer_data->Position     = command->Position;
-            buffer_data->Rotation     = command->Rotation;
-            buffer_data->Size         = command->Size;
+            buffer_data->ContextIndex   = command->ContextIndex;
+            buffer_data->Color          = command->Color;
+            buffer_data->Depth          = command->Depth;
+            buffer_data->Position       = command->Position;
+            buffer_data->Rotation       = command->Rotation;
+            buffer_data->RotationOrigin = command->RotationOrigin;
+            buffer_data->Size           = command->Size;
         }
         m_QuadGPUBatch->upload_last( copy_pass );
 
@@ -463,6 +464,6 @@ namespace InnoEngine
             return 0;
         }
 
-        return static_cast<uint32_t>(m_QuadGPUBatch->size() + m_LineGPUBatch->size() + m_CircleGPUBatch->size());
+        return static_cast<uint32_t>( m_QuadGPUBatch->size() + m_LineGPUBatch->size() + m_CircleGPUBatch->size() );
     }
 }    // namespace InnoEngine

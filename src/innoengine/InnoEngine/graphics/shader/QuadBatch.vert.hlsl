@@ -4,11 +4,12 @@ struct QuadData
 {
     float2 Position;
     float2 Size;
-    float4 Color;    
+    float4 Color;  
+    float2 RotationOrigin;
     float Rotation;
     float Depth;
     uint CameraIndex;
-    float pad;
+    float pad[3];
 };
 
 StructuredBuffer<QuadData> DataBuffer : register(t1, space0);
@@ -25,17 +26,18 @@ Output main(uint id : SV_VertexID)
     uint vert = QuadIndices[id % 6];
     QuadData quad = DataBuffer[quad_index];
     float2 coord = QuadVertices[vert];
-    
-    coord -= float2(0.5f, 0.5f);
+       
     coord *= quad.Size;    
     
     if (quad.Rotation != 0.0f)
     {
+        coord -= quad.RotationOrigin;
         float c = cos(quad.Rotation);
         float s = sin(quad.Rotation);
         
         float2x2 rotation = { c, s, -s, c };
         coord = mul(coord, rotation);
+        coord += quad.RotationOrigin;
     }
     
     float4 coord_with_depth = float4(coord + quad.Position, float(quad.Depth), 1.0f);

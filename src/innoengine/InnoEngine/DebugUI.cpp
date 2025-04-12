@@ -7,8 +7,10 @@
 #include "InnoEngine/Application.h"
 #include "InnoEngine/graphics/Renderer.h"
 #include "InnoEngine/graphics/RenderCommandBuffer.h"
+#include "InnoEngine/InputSystem.h"
 
 #include "InnoEngine/graphics/Camera.h"
+#include "InnoEngine/graphics/OrthographicCamera.h"
 
 namespace InnoEngine
 {
@@ -165,11 +167,18 @@ namespace InnoEngine
                     ImGui::EndTabItem();
                 }
 
-                if ( ImGui::BeginTabItem( "Camera" ) ) {
+                if ( ImGui::BeginTabItem( "Scene" ) ) {
                     const auto& camera  = app->get_default_camera();
                     const auto& cam_pos = camera->get_position();
 
-                    ImGui::Text( "Position: %.1f %.1f %.2f", cam_pos.x, cam_pos.y, cam_pos.z );
+                    ImGui::Text( "Camera Position: %.1f %.1f %.2f", cam_pos.x, cam_pos.y, cam_pos.z );
+
+                    DXSM::Vector2 mouse_pos       = CoreAPI::get_inputsystem()->get_mouse_position();
+                    DXSM::Vector2 mouse_pos_scene = app->get_mouse_scene_pos();
+
+                    ImGui::Text( "Mouse Client Position: %.1f %.1f", mouse_pos.x, mouse_pos.y );
+                    ImGui::Text( "Mouse Scene Position: %.1f %.1f", mouse_pos_scene.x, mouse_pos_scene.y );
+
                     ImGui::EndTabItem();
                 }
 
