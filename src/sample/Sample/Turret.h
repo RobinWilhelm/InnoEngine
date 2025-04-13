@@ -45,6 +45,8 @@ protected:
     float m_ReloadTime     = 1.0f;
     float m_ReloadProgress = 1.0f;
 
+    float m_ProjectileMaxLifeTime = 1.0f;
+
     DXSM::Vector2 m_ManualTarget = {};
 
     InnoEngine::Ref<InnoEngine::Texture2D> m_Texture;

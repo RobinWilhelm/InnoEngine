@@ -120,6 +120,7 @@ void Turret::fire()
         new_projectile->PositionNext = m_WeaponMuzzlePosition;
         new_projectile->Position     = m_WeaponMuzzlePosition;
         new_projectile->Texture      = m_ProjectileTexture;
+        new_projectile->LifeTime     = m_ProjectileMaxLifeTime + SDL_randf() * 0.1f;
 
         b2BodyDef body_def            = b2DefaultBodyDef();
         body_def.type                 = b2_dynamicBody;

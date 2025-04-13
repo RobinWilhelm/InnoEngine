@@ -18,7 +18,7 @@ InnoEngine::Ref<World> World::create( DXSM::Vector2 dimensions )
     world->m_Dimensions          = dimensions;
 
     b2WorldDef world_def    = b2DefaultWorldDef();
-    world_def.gravity       = { 0.0f, -10.0f };
+    world_def.gravity       = { 0.0f, -30.0f };
     world->m_PhysicsWorldId = b2CreateWorld( &world_def );
 
     b2BodyDef groundbody_def = b2DefaultBodyDef();
@@ -93,6 +93,16 @@ void World::update( double delta_time )
         projectileIt->Position     = projectileIt->PositionNext;
         auto pos                   = b2Body_GetPosition( projectileIt->PhysicsBodyId );
         projectileIt->PositionNext = DXSM::Vector2( pos.x, pos.y );
+
+        projectileIt->LifeTime -= static_cast<float>( delta_time );
+
+        // b2Vec2 vel = b2Body_GetLinearVelocity( projectileIt->PhysicsBodyId );
+        if ( projectileIt->LifeTime <= 0.0f ) {
+            b2DestroyBody( projectileIt->PhysicsBodyId );
+            projectileIt->Texture.reset();
+            projectileIt = m_Projectiles.erase( projectileIt );
+            continue;
+        }
         ++projectileIt;
     }
     InnoEngine::Application* app   = InnoEngine::CoreAPI::get_application();

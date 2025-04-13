@@ -9,11 +9,23 @@
 
 struct Projectile
 {
+    Projectile& operator=( Projectile&& other )
+    {
+        Texture       = std::move( other.Texture );
+        Position      = other.Position;
+        PositionNext  = other.PositionNext;
+        Velocity      = other.Velocity;
+        PhysicsBodyId = other.PhysicsBodyId;
+        LifeTime      = other.LifeTime;
+        return *this;
+    }
+
     InnoEngine::Ref<InnoEngine::Texture2D> Texture;
     DXSM::Vector2                          Position;
     DXSM::Vector2                          PositionNext;
     DXSM::Vector2                          Velocity;
     b2BodyId                               PhysicsBodyId = {};
+    float                                  LifeTime;
 };
 
 struct Asteroid
@@ -41,9 +53,7 @@ public:
     Projectile* add_projectile();
     Asteroid*   add_asteroid();
 
-
-
-    b2WorldId   get_physics_world();
+    b2WorldId get_physics_world();
 
 private:
     DXSM::Vector2 m_Dimensions        = { 0.0f, 0.0f };

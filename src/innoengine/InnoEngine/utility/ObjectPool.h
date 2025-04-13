@@ -21,7 +21,7 @@ namespace InnoEngine
 
         // Moves the last object into the deallocated space to always retain sequentiality
         // New objects will always be created at the back
-        // The Object needs to be trivially copyable!
+        // The Object needs to be moveable
         Reorder
     };
 
