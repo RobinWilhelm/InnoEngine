@@ -8,6 +8,7 @@ set(INNOENGINE_PCH_SOURCE "InnoEngine/iepch.cpp")
 
 file(GLOB_RECURSE INNOENGINE_HEADERS RELATIVE ${CMAKE_CURRENT_LIST_DIR} "InnoEngine/*.h" "InnoEngine/*.hpp")
 file(GLOB_RECURSE INNOENGINE_SOURCES RELATIVE ${CMAKE_CURRENT_LIST_DIR} "InnoEngine/*.cpp")
+list(FILTER INNOENGINE_SOURCES EXCLUDE REGEX ".*\.Test\.cpp")
 file(GLOB_RECURSE INNOENGINE_SHADERS RELATIVE ${CMAKE_CURRENT_LIST_DIR} 
         "InnoEngine/graphics/shader/*.frag.hlsl"  
         "InnoEngine/graphics/shader/*.vert.hlsl"  
@@ -15,7 +16,7 @@ file(GLOB_RECURSE INNOENGINE_SHADERS RELATIVE ${CMAKE_CURRENT_LIST_DIR}
         "InnoEngine/graphics/shader/*.fragi.hlsl" 
         "InnoEngine/graphics/shader/*.comp.hlsl" 
         "InnoEngine/graphics/shader/*.compi.hlsl")
- 
+
 # just show them in the project for easier editing 
 set(INNOENGINE_OTHER_SOURCES ${PROJECT_SOURCE_DIR}/README.md ${PROJECT_SOURCE_DIR}/Todo.txt)
 
@@ -54,3 +55,14 @@ target_link_libraries(${NAME} PUBLIC Microsoft::DirectXTK)
 find_package(nlohmann_json CONFIG REQUIRED)
 target_link_libraries(${NAME} PRIVATE nlohmann_json::nlohmann_json)
 
+file(GLOB_RECURSE INNOENGINE_TEST_SOURCES RELATIVE ${CMAKE_CURRENT_LIST_DIR} "InnoEngine/*.Test.cpp")
+add_executable(
+  InnoEngine_Test
+  ${INNOENGINE_TEST_SOURCES}
+)
+target_link_libraries(
+  InnoEngine_Test
+  GTest::gtest_main
+)
+
+gtest_discover_tests(InnoEngine_Test)

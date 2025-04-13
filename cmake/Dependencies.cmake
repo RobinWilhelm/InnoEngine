@@ -33,5 +33,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(box2d)
 
+#https://google.github.io/googletest/quickstart-cmake.html
+message("Configure google test: ")
+FetchContent_Declare(
+  googletest
+  #GIT_REPOSITORY https://github.com/google/googletest
+  URL https://github.com/google/googletest/archive/refs/tags/v1.16.0.zip
+)
+# For Windows: Prevent overriding the parent project's compiler/linker settings
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
 
 set(CMAKE_FOLDER "")

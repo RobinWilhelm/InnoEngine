@@ -23,4 +23,8 @@ include(cmake/CompilerWarnings.cmake)
 set_project_warnings(project_warnings)
 
 include(cmake/Dependencies.cmake) 
+
+enable_testing()
+include(GoogleTest)
+
 add_subdirectory(src)
