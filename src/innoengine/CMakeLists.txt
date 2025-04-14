@@ -59,10 +59,13 @@ file(GLOB_RECURSE INNOENGINE_TEST_SOURCES RELATIVE ${CMAKE_CURRENT_LIST_DIR} "In
 add_executable(
   InnoEngine_Test
   ${INNOENGINE_TEST_SOURCES}
+  ${INNOENGINE_HEADERS}
 )
 target_link_libraries(
   InnoEngine_Test
-  GTest::gtest_main
+  PRIVATE ${NAME}
+  PRIVATE GTest::gtest_main
 )
+target_include_directories(InnoEngine_Test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 gtest_discover_tests(InnoEngine_Test)

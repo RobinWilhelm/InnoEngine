@@ -8,6 +8,7 @@
 namespace InnoEngine
 {
     using InternalAssetUID = uint16_t;
+    class AssetUID_TestFactory;
 
     template <typename T>
     class AssetView;
@@ -21,8 +22,9 @@ namespace InnoEngine
         friend class AssetView<T>;
         friend class AssetRepository<T>;
         friend class AssetManager;
+        friend class AssetUID_TestFactory;
 
-        // can only be constructed with a valid UID by AssetView<T>
+        // can only be constructed with a valid UID by AssetView<T> and AssetUID_TestFactory
         AssetUID( InternalAssetUID internalUID ) :
             m_uid( internalUID )
         { }
