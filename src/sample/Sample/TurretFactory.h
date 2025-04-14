@@ -2,10 +2,10 @@
 #include "InnoEngine/BaseTypes.h"
 
 class World;
-class Turret;
+class AAATurret;
 
 class TurretFactory
 {
 public:
-    static InnoEngine::Ref<Turret> create_mg_turret(World* world, DXSM::Vector2 position );
+    static InnoEngine::Ref<AAATurret> create_mg_turret( );
 };

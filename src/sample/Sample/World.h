@@ -7,37 +7,13 @@
 #include "box2d/collision.h"
 #include "box2d/math_functions.h"
 
-struct Projectile
-{
-    Projectile& operator=( Projectile&& other )
-    {
-        Texture       = std::move( other.Texture );
-        Position      = other.Position;
-        PositionNext  = other.PositionNext;
-        Velocity      = other.Velocity;
-        PhysicsBodyId = other.PhysicsBodyId;
-        LifeTime      = other.LifeTime;
-        return *this;
-    }
+#include "Enums.h"
 
-    InnoEngine::Ref<InnoEngine::Texture2D> Texture;
-    DXSM::Vector2                          Position;
-    DXSM::Vector2                          PositionNext;
-    DXSM::Vector2                          Velocity;
-    b2BodyId                               PhysicsBodyId = {};
-    float                                  LifeTime;
-};
+#include "Structs.h"
 
-struct Asteroid
-{
-    float         Size;
-    DXSM::Vector2 Position;
-    DXSM::Vector2 PositionNext;
-    DXSM::Vector2 Velocity;
-    b2BodyId      PhysicsBodyId = {};
-};
-
-class Turret;
+class Ground;
+class Building;
+class AAATurret;
 
 class World
 {
@@ -54,17 +30,20 @@ public:
     Asteroid*   add_asteroid();
 
     b2WorldId get_physics_world();
+    void      resolve_collision_asteroid_projectile( b2ContactHitEvent* hit_event, Asteroid* asteroid, Projectile* projectile );
+    void      resolve_collision_asteroid_ground( b2ContactHitEvent* hit_event, Asteroid* asteriod, Ground* ground );
+    void      resolve_collision_asteroid_building( b2ContactHitEvent* hit_event, Asteroid* asteroid, Building* building );
 
 private:
-    DXSM::Vector2 m_Dimensions        = { 0.0f, 0.0f };
-    float         m_LastAsteroidSpawn = 0.0f;
-    const float   m_AsteroidSpawnTime = 1.0f;
+    DXSM::Vector2                          m_Dimensions = { 0.0f, 0.0f };
+    InnoEngine::Ref<Ground>                m_Ground;
+    std::vector<InnoEngine::Ref<Building>> m_Buildings;
+
+    float       m_LastAsteroidSpawn = 0.0f;
+    const float m_AsteroidSpawnTime = 1.0f;
 
     InnoEngine::ObjectPool<Asteroid, uint16_t, InnoEngine::ObjectPoolType::RestoreSequence>   m_Asteroids;
     InnoEngine::ObjectPool<Projectile, uint32_t, InnoEngine::ObjectPoolType::RestoreSequence> m_Projectiles;
 
-    std::vector<InnoEngine::Ref<Turret>> m_Turrets;
-
-    b2WorldId m_PhysicsWorldId  = {};
-    b2BodyId  m_PhysicsGroundId = {};
+    b2WorldId m_PhysicsWorldId = {};
 };

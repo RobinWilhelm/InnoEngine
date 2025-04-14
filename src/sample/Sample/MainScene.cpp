@@ -28,6 +28,7 @@ GameScene::GameScene( SampleProject* parent ) :
     m_CameraController = PlayerCameraController::create( m_Parent->get_default_camera(), m_Parent->get_fullscreen_viewport() );
     m_CameraController->set_camera_borders( 0.0f, static_cast<float>( 3000.0f ), static_cast<float>( 6000.0f ), 0.0f );
     m_Parent->register_cameracontroller( m_CameraController );
+    m_Parent->get_default_camera()->set_position( { 1500.0f, 500.0f, 1.0f } );
 }
 
 GameScene::~GameScene()

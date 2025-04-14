@@ -4,10 +4,11 @@
 
 class World;
 
-class Turret
+class AAATurret
 {
     friend class TurretFactory;
-    Turret() = default;
+    friend class Building;
+    AAATurret() = default;
 
 public:
     void set_target( DXSM::Vector2 target );
@@ -17,7 +18,8 @@ public:
     void fire();
 
 protected:
-    World* m_World = nullptr;
+    World*    m_World  = nullptr;
+    Building* m_Parent = nullptr;
 
     DXSM::Vector2 m_Position;
 
@@ -28,11 +30,9 @@ protected:
     float         m_TargetElevation      = 0.0f;
 
     DXSM::Vector2 m_WeaponScale          = { 1.0f, 1.0f };
-    DXSM::Vector2 m_WeaponOffset         = { 0.0f, 0.0f };
     DXSM::Vector2 m_WeaponRotationOrigin = { 0.5f, 0.5f };
     DXSM::Vector2 m_WeaponMuzzleOrigin   = { 0.5f, 0.5f };
 
-    DXSM::Vector2 m_RotationOriginPosition       = { 0.0f, 0.0f };
     DXSM::Vector2 m_WeaponMuzzlePosition         = { 0.0f, 0.0f };
     DXSM::Vector2 m_WeaponMuzzleDirection        = { 0.0f, 0.0f };
     float         m_MuzzleRotationOriginDistance = 0.0f;
@@ -42,8 +42,10 @@ protected:
 
     float m_Accuracy = 100.0f;
 
-    float m_ReloadTime     = 1.0f;
-    float m_ReloadProgress = 1.0f;
+    float m_ReloadTime       = 1.0f;
+    float m_ReloadProgress   = 1.0f;
+    float m_ProjectileSpeed  = 900.0f;
+    float m_ProjectileDamage = 10.0f;
 
     float m_ProjectileMaxLifeTime = 1.0f;
 

@@ -4,6 +4,9 @@
 #include "InnoEngine/Application.h"
 #include "InnoEngine/InputSystem.h"
 
+#include "Ground.h"
+#include "BuildingFactory.h"
+#include "Building.h"
 #include "TurretFactory.h"
 #include "Turret.h"
 
@@ -15,28 +18,20 @@ World::~World()
 InnoEngine::Ref<World> World::create( DXSM::Vector2 dimensions )
 {
     InnoEngine::Ref<World> world = InnoEngine::Ref<World>( new World() );
-    world->m_Dimensions          = dimensions;
 
     b2WorldDef world_def    = b2DefaultWorldDef();
     world_def.gravity       = { 0.0f, -30.0f };
     world->m_PhysicsWorldId = b2CreateWorld( &world_def );
 
-    b2BodyDef groundbody_def = b2DefaultBodyDef();
-    groundbody_def.position  = { static_cast<float>( dimensions.x ) / 2, 25.0f };
-    world->m_PhysicsGroundId = b2CreateBody( world->m_PhysicsWorldId, &groundbody_def );
-    b2Polygon ground_box     = b2MakeBox( static_cast<float>( dimensions.x ) / 2, 23.0f );
-
-    b2ShapeDef groundshape_def = b2DefaultShapeDef();
-    b2CreatePolygonShape( world->m_PhysicsGroundId, &groundshape_def, &ground_box );
+    world->m_Ground     = Ground::create( world.get(), { 0.0f, 0.0f }, { dimensions.x, dimensions.y } );
+    world->m_Dimensions = dimensions;
 
     world->m_Asteroids.build_pool( 1000 );
     world->m_Projectiles.build_pool( 50000 );
 
-    world->m_Turrets.push_back( TurretFactory::create_mg_turret( world.get(), { 100, 50 } ) );
-    world->m_Turrets.push_back( TurretFactory::create_mg_turret( world.get(), { 200, 50 } ) );
-    world->m_Turrets.push_back( TurretFactory::create_mg_turret( world.get(), { 300, 50 } ) );
-    world->m_Turrets.push_back( TurretFactory::create_mg_turret( world.get(), { 400, 50 } ) );
-    world->m_Turrets.push_back( TurretFactory::create_mg_turret( world.get(), { 500, 50 } ) );
+    auto t1 = BuildingFactory::create_basic_defense_tower( world.get(), { 1500.0f, 50 } );
+    t1->insert_turret( TurretFactory::create_mg_turret() );
+    world->m_Buildings.push_back( t1 );
 
     return world;
 }
@@ -49,9 +44,11 @@ void World::update( double delta_time )
         // spawn asteroid
 
         Asteroid* new_asteroid     = add_asteroid();
+        new_asteroid->Catergory    = ShapeCategory::Asteroid;
         new_asteroid->Size         = 5 + SDL_randf() * 20;
         new_asteroid->PositionNext = { SDL_randf() * m_Dimensions.x, static_cast<float>( m_Dimensions.y ) };
         new_asteroid->Position     = new_asteroid->PositionNext;
+        new_asteroid->Hitpoints    = std::powf( new_asteroid->Size, 2.0f );
 
         b2BodyDef body_def          = b2DefaultBodyDef();
         body_def.type               = b2_dynamicBody;
@@ -63,9 +60,11 @@ void World::update( double delta_time )
         circle.center   = { 0.0f, 0.0f };
         circle.radius   = new_asteroid->Size;
 
-        b2ShapeDef shape_def = b2DefaultShapeDef();
-        shape_def.density    = 1.0f;
-        shape_def.friction   = 0.3f;
+        b2ShapeDef shape_def      = b2DefaultShapeDef();
+        shape_def.density         = 1.0f;
+        shape_def.friction        = 0.3f;
+        shape_def.enableHitEvents = true;
+        shape_def.userData        = static_cast<void*>( new_asteroid );
 
         b2CreateCircleShape( new_asteroid->PhysicsBodyId, &shape_def, &circle );
         m_LastAsteroidSpawn = 0.0f;
@@ -73,18 +72,48 @@ void World::update( double delta_time )
 
     b2World_Step( m_PhysicsWorldId, delta_time, 4 );
 
+    std::vector<b2ShapeId> collisions;
+    b2ContactEvents        contactEvents = b2World_GetContactEvents( m_PhysicsWorldId );
+    for ( int i = 0; i < contactEvents.hitCount; ++i ) {
+        b2ContactHitEvent* hitEvent = contactEvents.hitEvents + i;
+        //if ( hitEvent->approachSpeed > 10.0f ) {
+            PhysicsBodyUserData* ud_a = static_cast<PhysicsBodyUserData*>( b2Shape_GetUserData( hitEvent->shapeIdA ) );
+            PhysicsBodyUserData* ud_b = static_cast<PhysicsBodyUserData*>( b2Shape_GetUserData( hitEvent->shapeIdB ) );
+
+            if ( ud_a == nullptr || ud_b == nullptr ) {
+                continue;
+            }
+
+            if ( ud_a->Catergory == ShapeCategory::Projectile && ud_b->Catergory == ShapeCategory::Asteroid ) {
+                resolve_collision_asteroid_projectile( hitEvent, static_cast<Asteroid*>( ud_b ), static_cast<Projectile*>( ud_a ) );
+            }
+            if ( ud_a->Catergory == ShapeCategory::Asteroid && ud_b->Catergory == ShapeCategory::Projectile ) {
+                resolve_collision_asteroid_projectile( hitEvent, static_cast<Asteroid*>( ud_a ), static_cast<Projectile*>( ud_b ) );
+            }
+
+            if ( ud_a->Catergory == ShapeCategory::Ground && ud_b->Catergory == ShapeCategory::Asteroid ) {
+                resolve_collision_asteroid_ground( hitEvent, static_cast<Asteroid*>( ud_b ), static_cast<Ground*>( ud_a ) );
+            }
+            if ( ud_a->Catergory == ShapeCategory::Asteroid && ud_b->Catergory == ShapeCategory::Ground ) {
+                resolve_collision_asteroid_ground( hitEvent, static_cast<Asteroid*>( ud_a ), static_cast<Ground*>( ud_b ) );
+            }
+        //}
+    }
+
     auto asteroidIt = m_Asteroids.begin();
     while ( asteroidIt != m_Asteroids.end() ) {
+
+        float hitpoints = asteroidIt->Hitpoints;
+        if (hitpoints <= 0.0f ) {
+            b2DestroyBody( asteroidIt->PhysicsBodyId );
+            asteroidIt = m_Asteroids.erase( asteroidIt );
+            continue;
+        }
 
         asteroidIt->Position     = asteroidIt->PositionNext;
         auto pos                 = b2Body_GetPosition( asteroidIt->PhysicsBodyId );
         asteroidIt->PositionNext = DXSM::Vector2( pos.x, pos.y );
 
-        if ( asteroidIt->PositionNext.y - asteroidIt->Size + 2 <= 50 ) {
-            b2DestroyBody( asteroidIt->PhysicsBodyId );
-            asteroidIt = m_Asteroids.erase( asteroidIt );
-            continue;
-        }
         ++asteroidIt;
     }
 
@@ -96,7 +125,6 @@ void World::update( double delta_time )
 
         projectileIt->LifeTime -= static_cast<float>( delta_time );
 
-        // b2Vec2 vel = b2Body_GetLinearVelocity( projectileIt->PhysicsBodyId );
         if ( projectileIt->LifeTime <= 0.0f ) {
             b2DestroyBody( projectileIt->PhysicsBodyId );
             projectileIt->Texture.reset();
@@ -108,12 +136,8 @@ void World::update( double delta_time )
     InnoEngine::Application* app   = InnoEngine::CoreAPI::get_application();
     InnoEngine::InputSystem* input = InnoEngine::CoreAPI::get_inputsystem();
 
-    for ( auto turret : m_Turrets ) {
-        turret->set_target( app->get_mouse_scene_pos() );
-        if ( input->get_key_state( SDL_SCANCODE_SPACE ).Down )
-            turret->fire();
-
-        turret->update( delta_time );
+    for ( auto& building : m_Buildings ) {
+        building->update( delta_time );
     }
 }
 
@@ -142,14 +166,16 @@ void World::render( float interp_factor, const InnoEngine::RenderContext* render
                                        DirectX::XMConvertToDegrees( b2Rot_GetAngle( rotation ) ) );
     }
 
-    for ( auto turret : m_Turrets ) {
-        turret->render( render_ctx );
+    for ( auto& building : m_Buildings ) {
+        building->render( render_ctx );
     }
 }
 
 Projectile* World::add_projectile()
 {
-    return static_cast<Projectile*>( m_Projectiles.allocate() );
+    Projectile* p = static_cast<Projectile*>( m_Projectiles.allocate() );
+    p->Catergory  = ShapeCategory::Projectile;
+    return p;
 }
 
 Asteroid* World::add_asteroid()
@@ -160,4 +186,20 @@ Asteroid* World::add_asteroid()
 b2WorldId World::get_physics_world()
 {
     return m_PhysicsWorldId;
+}
+
+void World::resolve_collision_asteroid_projectile( b2ContactHitEvent* hit_event, Asteroid* asteroid, Projectile* projectile )
+{
+    asteroid->Hitpoints -= projectile->DamageKinetic * hit_event->approachSpeed;
+    projectile->LifeTime = 0.0f;
+}
+
+void World::resolve_collision_asteroid_ground( b2ContactHitEvent* hit_event, Asteroid* asteroid, Ground* ground )
+{
+    asteroid->Hitpoints = 0.0f;
+}
+
+void World::resolve_collision_asteroid_building( b2ContactHitEvent* hit_event, Asteroid* asteroid, Building* building )
+{
+    asteroid->Hitpoints = 0.0f;
 }
