@@ -83,11 +83,11 @@ namespace InnoEngine
         return mip_levels;
     }
 
-    SDL_GPUTextureFormat TextureBase::convert_to_sdltextureformat( TextureFormat texture_format )
+    SDL_GPUTextureFormat TextureBase::convert_to_sdltextureformat( PixelFormat texture_format )
     {
         switch ( texture_format ) {
-        case TextureFormat::RGBA:
-        case TextureFormat::RGBX:
+        case PixelFormat::RGBA:
+        case PixelFormat::RGBX:
             return SDL_GPUTextureFormat::SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
         default:
             IE_LOG_ERROR( "Invalid texture format \"{}\"", static_cast<uint32_t>( texture_format ) );
@@ -95,15 +95,28 @@ namespace InnoEngine
         }
     }
 
-    TextureFormat TextureBase::convert_sdlpixelformat( SDL_PixelFormat pixel_format )
+    PixelFormat TextureBase::convert_sdlpixelformat( SDL_PixelFormat pixel_format )
     {
         switch ( pixel_format ) {
         case SDL_PIXELFORMAT_RGB24:
-            return TextureFormat::RGBX;
+            return PixelFormat::RGBX;
         case SDL_PIXELFORMAT_RGBA32:
-            return TextureFormat::RGBA;
+            return PixelFormat::RGBA;
         default:
-            return TextureFormat::Invalid;
+            return PixelFormat::Invalid;
+        }
+    }
+
+    SDL_PixelFormat TextureBase::convert_pixelformat(PixelFormat pixel_format)
+    {
+        switch (pixel_format)
+        {
+            case PixelFormat::RGBX:
+                return SDL_PIXELFORMAT_RGB24;
+            case PixelFormat::RGBA:
+                return SDL_PIXELFORMAT_RGBA32;
+            default:
+                return SDL_PIXELFORMAT_UNKNOWN;
         }
     }
 

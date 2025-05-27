@@ -44,13 +44,13 @@ Demoscene::Demoscene( Sandbox* parent ) :
 
     IE::TextureSpecifications spec = {};
     spec.EnableMipmap              = false;
-    spec.Format                    = IE::TextureFormat::RGBX;
+    spec.Format                    = IE::PixelFormat::RGBX;
     spec.RenderTarget              = true;
     spec.Width                     = viewport_size.x;
     spec.Height                    = viewport_size.y;
 
-    IE::RenderContextSpecifications render_ctx_scene = {};
-    render_ctx_scene.ColorTarget                     = IE::Texture2D::create( spec ).value();
+    IE::RenderContextSpecifications render_ctx_scene = {};                    
+    render_ctx_scene.ColorTarget                     = IE::Texture2D::create_empty( spec ).value();
     render_ctx_scene.Camera                          = IE::OrthographicCamera::create( { viewport_size.x, viewport_size.y } );
     render_ctx_scene.Viewport                        = IE::Viewport( 0, 0, viewport_size.x, viewport_size.y );
     m_SceneCtxHandle                                 = m_Parent->get_renderer()->create_rendercontext( render_ctx_scene );

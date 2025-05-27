@@ -87,8 +87,8 @@ void AAATurret::update( double delta_time )
         m_WeaponMuzzleDirection.Normalize();
     }
 
-    if ( m_ReloadProgress <= 1.0f )
-        m_ReloadProgress += 1.0f / m_ReloadTime * delta_time;
+    if ( m_ReloadProgress < 1.0f )
+        m_ReloadProgress = min( m_ReloadProgress + 1.0f / m_ReloadTime * delta_time, 1.0f );
 }
 
 void AAATurret::render( const InnoEngine::RenderContext* render_ctx )
@@ -119,7 +119,7 @@ void AAATurret::render( const InnoEngine::RenderContext* render_ctx )
 
 void AAATurret::fire()
 {
-    if ( m_ReloadProgress >= 1.0f ) {
+    if ( m_ReloadProgress == 1.0f ) {
         Projectile* new_projectile    = m_World->add_projectile();
         new_projectile->PositionNext  = m_WeaponMuzzlePosition;
         new_projectile->Position      = m_WeaponMuzzlePosition;
@@ -127,11 +127,11 @@ void AAATurret::fire()
         new_projectile->LifeTime      = m_ProjectileMaxLifeTime + SDL_randf() * 0.1f;
         new_projectile->DamageKinetic = m_ProjectileDamage;
 
-        b2BodyDef body_def            = b2DefaultBodyDef();
-        body_def.type                 = b2_dynamicBody;
-        body_def.position             = { new_projectile->Position.x, new_projectile->Position.y };
-        body_def.linearVelocity       = { m_WeaponMuzzleDirection.x * m_ProjectileSpeed + SDL_randf() * ( 100 - m_Accuracy ), m_WeaponMuzzleDirection.y * m_ProjectileSpeed + SDL_randf() * ( 100 - m_Accuracy ) };
-         
+        b2BodyDef body_def      = b2DefaultBodyDef();
+        body_def.type           = b2_dynamicBody;
+        body_def.position       = { new_projectile->Position.x, new_projectile->Position.y };
+        body_def.linearVelocity = { m_WeaponMuzzleDirection.x * m_ProjectileSpeed + SDL_randf() * ( 100 - m_Accuracy ), m_WeaponMuzzleDirection.y * m_ProjectileSpeed + SDL_randf() * ( 100 - m_Accuracy ) };
+
         body_def.isBullet             = true;
         body_def.rotation             = b2MakeRot( m_CurrentElevation );
         new_projectile->PhysicsBodyId = b2CreateBody( m_World->get_physics_world(), &body_def );
@@ -141,14 +141,15 @@ void AAATurret::fire()
         circle.radius   = 1;
 
         b2ShapeDef shape_def          = b2DefaultShapeDef();
-        shape_def.density             = 1.0f;
+        shape_def.density             = 15.0f;
         shape_def.friction            = 0.3f;
         shape_def.enableHitEvents     = true;
         shape_def.userData            = static_cast<void*>( new_projectile );
         shape_def.filter.categoryBits = static_cast<uint32_t>( CollisionCategory::Projectile );
         shape_def.filter.maskBits     = static_cast<uint32_t>( CollisionCategory::Static ) |
-                                    static_cast<uint32_t>( CollisionCategory::Dynamic ) |
-                                    static_cast<uint32_t>( CollisionCategory::Projectile );
+                                    static_cast<uint32_t>( CollisionCategory::Dynamic );
+
+        shape_def.filter.groupIndex = -1;
 
         b2CreateCircleShape( new_projectile->PhysicsBodyId, &shape_def, &circle );
 

@@ -2,6 +2,7 @@
 #include "InnoEngine/AssetManager.h"
 
 #include "MainScene.h"
+#include "GUI.h"
 
 namespace IE = InnoEngine;
 
@@ -14,5 +15,7 @@ public:
     void       on_shutdown() override;
 
 private:
-    IE::Own<GameScene> m_demoScene;
+    IE::Ref<World>     m_GameWorld;
+    IE::Own<GameScene> m_GameLayer;
+    IE::Own<GUI>       m_GUILayer;
 };

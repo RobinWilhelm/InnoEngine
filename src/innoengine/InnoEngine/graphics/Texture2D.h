@@ -11,6 +11,8 @@
 
 namespace InnoEngine
 {
+    class Bitmap;
+
     class Texture2D : public TextureBase, public Asset<Texture2D>
     {
         friend class RenderContext;
@@ -20,13 +22,12 @@ namespace InnoEngine
         Texture2D() = default;
 
     public:
-        static auto create( TextureSpecifications specs ) -> std::optional<Ref<Texture2D>>;
-
+        static auto create_empty( TextureSpecifications specs ) -> std::optional<Ref<Texture2D>>;
         static auto create_from_file( const std::filesystem::path& full_path ) -> std::optional<Ref<Texture2D>>;
-
+        static auto create_from_bitmap( const Ref<Bitmap> bitmap ) -> std::optional<Ref<Texture2D>>;
+                              
         Result load_from_file( const std::filesystem::path& full_path );
         Result load_data( const void* pixels, uint32_t pixel_count, SDL_PixelFormat pixel_format );
-
     private:
         // Inherited via Asset
         Result load_asset( const std::filesystem::path& full_path ) override;

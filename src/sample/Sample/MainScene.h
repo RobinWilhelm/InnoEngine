@@ -23,8 +23,10 @@ class PlayerCameraController;
 
 class GameScene : public IE::Layer
 {
+    GameScene( SampleProject* parent, IE::Ref<World> game_world );
+
 public:
-    GameScene( SampleProject* parent );
+    static auto create( SampleProject* parent, IE::Ref<World> game_world ) -> IE::Own<GameScene>;
     ~GameScene();
 
     // Inherited via Layer
@@ -33,6 +35,6 @@ public:
     bool handle_event( const SDL_Event& pEvent ) override;
 
 private:
-    InnoEngine::Ref<PlayerCameraController> m_CameraController;
-    InnoEngine::Ref<World>                  m_GameWorld;
+    IE::Ref<PlayerCameraController> m_CameraController;
+    IE::Ref<World>                  m_GameWorld;
 };

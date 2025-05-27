@@ -20,15 +20,23 @@
 #include <thread>
 #include <optional>
 
-GameScene::GameScene( SampleProject* parent ) :
+GameScene::GameScene( SampleProject* parent, IE::Ref<World> game_world ) :
     IE::Layer( parent )
 {
-    m_GameWorld = World::create( { 3000.0f, 6000.0f } );
+    IE_ASSERT( parent != nullptr );
+    IE_ASSERT( game_world != nullptr );
+
+    m_GameWorld = game_world;
 
     m_CameraController = PlayerCameraController::create( m_Parent->get_default_camera(), m_Parent->get_fullscreen_viewport() );
     m_CameraController->set_camera_borders( 0.0f, static_cast<float>( 3000.0f ), static_cast<float>( 6000.0f ), 0.0f );
     m_Parent->register_cameracontroller( m_CameraController );
-    m_Parent->get_default_camera()->set_position( { 1500.0f, 500.0f, 1.0f } );
+    //m_Parent->get_default_camera()->set_position( { 1500.0f, 500.0f, 1.0f } );
+}
+
+auto GameScene::create( SampleProject* parent, IE::Ref<World> game_world ) -> IE::Own<GameScene>
+{
+    return IE::Own<GameScene>( new GameScene( parent, game_world ) );
 }
 
 GameScene::~GameScene()
@@ -43,20 +51,11 @@ void GameScene::update( double delta_time )
 void GameScene::render( float interp_factor, IE::GPURenderer* renderer )
 {
     (void)interp_factor;
-    renderer->set_clear_color( { 0.0f, 0.0f, 0.0f, 1.0f } );
+    renderer->set_clear_color( { 40 / 255.0f, 75 / 255.0f, 100 / 255.0f, 1.0f } );
 
     const IE::RenderContext* rc_screen = renderer->acquire_rendercontext( m_Parent->get_fullscreen_rch() );
     if ( rc_screen == nullptr )
         return;
-
-    rc_screen->add_quad( { 0.0f, 0.0f },
-                         InnoEngine::Origin::BottomLeft,
-                         { static_cast<float>( 3000.0f ), static_cast<float>( 50 ) },
-                         { 0.5f, 0.5f, 0.5f, 1.0f } );
-
-    rc_screen->add_circle( { 0, 0 },
-                           2,
-                           { 0.5f, 1.0f, 0.5f, 1.0f } );
 
     m_GameWorld->render( interp_factor, rc_screen );
 }

@@ -29,10 +29,14 @@ public:
     Projectile* add_projectile();
     Asteroid*   add_asteroid();
 
+    void create_random_meteor();
+
     b2WorldId get_physics_world();
-    void      resolve_collision_asteroid_projectile( b2ContactHitEvent* hit_event, Asteroid* asteroid, Projectile* projectile );
-    void      resolve_collision_asteroid_ground( b2ContactHitEvent* hit_event, Asteroid* asteriod, Ground* ground );
-    void      resolve_collision_asteroid_building( b2ContactHitEvent* hit_event, Asteroid* asteroid, Building* building );
+    bool      resolve_collision( b2ContactHitEvent* hit_event, PhysicsBodyUserData* left, PhysicsBodyUserData* right );
+
+    void resolve_collision_asteroid_projectile( b2ContactHitEvent* hit_event, Asteroid* asteroid, Projectile* projectile );
+    void resolve_collision_asteroid_ground( b2ContactHitEvent* hit_event, Asteroid* asteriod, Ground* ground );
+    void resolve_collision_asteroid_building( b2ContactHitEvent* hit_event, Asteroid* asteroid, Building* building );
 
 private:
     DXSM::Vector2                          m_Dimensions = { 0.0f, 0.0f };
@@ -46,4 +50,8 @@ private:
     InnoEngine::ObjectPool<Projectile, uint32_t, InnoEngine::ObjectPoolType::RestoreSequence> m_Projectiles;
 
     b2WorldId m_PhysicsWorldId = {};
+
+    InnoEngine::Ref<InnoEngine::Texture2D> m_SmallMeteor;
+    InnoEngine::Ref<InnoEngine::Texture2D> m_MediumMeteor;
+    InnoEngine::Ref<InnoEngine::Texture2D> m_LargeMeteor;
 };

@@ -8,11 +8,11 @@ namespace InnoEngine
 {
     struct TextureSpecifications
     {
-        uint32_t      Width;
-        uint32_t      Height;
-        TextureFormat Format;
-        bool          EnableMipmap;
-        bool          RenderTarget;
+        uint32_t    Width        = 0;
+        uint32_t    Height       = 0;
+        PixelFormat Format       = PixelFormat::Invalid;
+        bool        EnableMipmap = true;
+        bool        RenderTarget = false;
     };
 
     class TextureBase
@@ -28,8 +28,9 @@ namespace InnoEngine
         const TextureSpecifications& get_specs() const;
 
         static uint32_t             calculate_miplevels( uint32_t width, uint32_t height );
-        static SDL_GPUTextureFormat convert_to_sdltextureformat( TextureFormat texture_format );
-        static TextureFormat        convert_sdlpixelformat( SDL_PixelFormat pixel_format );
+        static SDL_GPUTextureFormat convert_to_sdltextureformat( PixelFormat texture_format );
+        static PixelFormat          convert_sdlpixelformat( SDL_PixelFormat pixel_format );
+        static SDL_PixelFormat      convert_pixelformat( PixelFormat pixel_format );
         static Result               copy_pixels_from_surface( void* texture_data, SDL_GPUTextureFormat destination_format, const void* surface_data, SDL_PixelFormat surface_format, uint32_t pixel_count );
 
     protected:

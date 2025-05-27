@@ -12,7 +12,7 @@ namespace InnoEngine
 
     public:
         [[nodiscard]]
-        static auto create( const DXSM::Vector2& view_port_size ) -> Ref<OrthographicCamera>;
+        static auto create( const DXSM::Vector2& view_port_size, Origin origin = Origin::BottomLeft ) -> Ref<OrthographicCamera>;
 
         virtual void update() override;
 
@@ -31,8 +31,15 @@ namespace InnoEngine
         DXSM::Matrix m_InvertedViewProjection;
 
         DXSM::Vector2 m_ViewPortSize;
+        DXSM::Vector2 m_HalfViewPortSize;
+
+        float m_Left;
+        float m_Right;
+        float m_Bottom;
+        float m_Top;
 
         DXSM::Vector3 m_Position;
+        Origin        m_Origin;
         bool          m_Dirty = false;
     };
 }    // namespace InnoEngine

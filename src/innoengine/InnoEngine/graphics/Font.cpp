@@ -192,11 +192,11 @@ namespace InnoEngine
         TextureSpecifications specs;
         specs.Width        = width;
         specs.Height       = height;
-        specs.Format       = TextureFormat::RGBX;
+        specs.Format       = PixelFormat::RGBX;
         specs.EnableMipmap = true;
         specs.RenderTarget = true;
 
-        m_AtlasTexture = Texture2D::create( specs ).value();
+        m_AtlasTexture = Texture2D::create_empty( specs ).value();
         Result res     = m_AtlasTexture->load_data( bmp.pixels, bmp.width * bmp.height, SDL_PIXELFORMAT_RGB24 );
 
         // Cleanup

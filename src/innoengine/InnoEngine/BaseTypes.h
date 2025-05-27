@@ -27,7 +27,7 @@ namespace InnoEngine
         AlreadyInitialized  = 2,
     };
 
-    enum class TextureFormat
+    enum class PixelFormat
     {
         Invalid = 0,
         RGBA,
@@ -144,6 +144,28 @@ namespace InnoEngine
     {
         float                        Depth        = 0;
         RenderCommandBufferIndexType ContextIndex = InvalidRenderCommandBufferIndex;
+    };
+
+    struct SDRColor
+    {
+        union
+        {
+#pragma warning( disable :4201 )
+
+            // anonymous structs are technically not allowed in c++ but accepted by all major compilers
+            // and it looks much nicer this way
+            struct
+            {
+                uint8_t R;
+                uint8_t G;
+                uint8_t B;
+                uint8_t A;
+            };
+
+#pragma warning( default :4201 )
+
+            uint32_t U32 = 0;
+        };
     };
 
 }    // namespace InnoEngine

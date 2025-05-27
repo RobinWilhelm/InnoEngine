@@ -11,6 +11,8 @@ class Ground : public PhysicsBodyUserData
 public:
     static auto create( World* world, DXSM::Vector2 position, DXSM::Vector2 size ) -> InnoEngine::Ref<Ground>;
 
+    void render( const InnoEngine::RenderContext* render_ctx ) const;
+
 private:
     b2BodyId      m_PhysicsBodyId = {};
     DXSM::Vector2 m_Position;

@@ -1,5 +1,6 @@
 #include "InnoEngine/iepch.h"
 #include "InnoEngine/graphics/Texture2D.h"
+#include "InnoEngine/graphics/Bitmap.h"
 
 #include "SDL3_image/SDL_image.h"
 
@@ -7,7 +8,7 @@
 
 namespace InnoEngine
 {
-    auto Texture2D::create( TextureSpecifications specs ) -> std::optional<Ref<Texture2D>>
+    auto Texture2D::create_empty( TextureSpecifications specs ) -> std::optional<Ref<Texture2D>>
     {
         Ref<Texture2D> texture = Ref<Texture2D>( new Texture2D() );
 
@@ -26,6 +27,34 @@ namespace InnoEngine
         return std::nullopt;
     }
 
+    auto Texture2D::create_from_bitmap( const Ref<Bitmap> bitmap ) -> std::optional<Ref<Texture2D>>
+    {
+        IE_ASSERT( bitmap != nullptr );
+        SDL_Surface* surface = bitmap->get_sdlsurface();
+        IE_ASSERT( surface != nullptr );
+
+        PixelFormat format = convert_sdlpixelformat( surface->format );
+        if ( format == PixelFormat::Invalid ) {
+            return std::nullopt;
+        }
+
+        TextureSpecifications specs = {};
+        specs.Width                 = surface->w;
+        specs.Height                = surface->h;
+        specs.Format                = format;
+        specs.EnableMipmap          = true;
+
+        std::optional<Ref<Texture2D>> opt = Texture2D::create_empty( specs );
+        if ( opt == std::nullopt )
+            return std::nullopt;
+
+        Ref<Texture2D> texture = opt.value();
+        if ( texture->load_data( surface->pixels, surface->w * surface->h, surface->format ) != Result::Success )
+            return std::nullopt;
+
+        return opt;
+    }
+
     Result Texture2D::load_asset( const std::filesystem::path& full_path )
     {
         return load_from_file( full_path );
@@ -42,8 +71,8 @@ namespace InnoEngine
             return Result::Fail;
         }
 
-        TextureFormat format = convert_sdlpixelformat( surface->format );
-        if ( format == TextureFormat::Invalid ) {
+        PixelFormat format = convert_sdlpixelformat( surface->format );
+        if ( format == PixelFormat::Invalid ) {
             IE_LOG_ERROR( "Loading texture \"{}\" failed: {}", full_path.filename().string(), "Unsupported texture format" );
             return Result::Fail;
         }
@@ -59,9 +88,9 @@ namespace InnoEngine
             res = load_data( surface->pixels, surface->w * surface->h, surface->format );
         }
         SDL_DestroySurface( surface );
-
+        
         if ( res == Result::Success )
-            IE_LOG_DEBUG( "Loaded texture \"{}\"", full_path.filename().string() );
+        IE_LOG_DEBUG( "Loaded texture \"{}\"", full_path.filename().string() );
 
         return res;
     }
@@ -72,7 +101,7 @@ namespace InnoEngine
         IE_ASSERT( m_Device != nullptr );
         IE_ASSERT( m_Texture != nullptr );
 
-        if ( convert_sdlpixelformat( pixel_format ) == TextureFormat::Invalid ) {
+        if ( convert_sdlpixelformat( pixel_format ) == PixelFormat::Invalid ) {
             IE_LOG_ERROR( "Loading texture \"{}\" failed: {}", get_path().filename().string(), "Pixel format not supported" );
             return Result::Fail;
         }

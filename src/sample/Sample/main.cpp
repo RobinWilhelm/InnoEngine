@@ -8,12 +8,11 @@ int main()
     creationParams.WindowParams.height = 1080;
     creationParams.EnableVSync         = false;
     creationParams.SimulationFrequency = 60;
-    // creationParams.AssetDirectory      = "..\\..\\..\\..\\sandbox_environment\\assets";
     creationParams.AssetDirectory      = "../assets";
     creationParams.RunAsync            = true;
 
     SampleProject sample;
     sample.init( creationParams );
-    sample.enable_debugui(true);
+    sample.enable_debugui( true );
     return static_cast<int>(sample.run() );
 }

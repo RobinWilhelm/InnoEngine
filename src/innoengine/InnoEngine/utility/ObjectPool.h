@@ -85,6 +85,12 @@ namespace InnoEngine
             return new ( p ) T( std::forward<Args>( args... ) );
         }
 
+        T* create()
+        {
+            void* p = allocate();
+            return new (p) T();
+        }
+
         void destroy( T* object )
         {
             object->~T();
